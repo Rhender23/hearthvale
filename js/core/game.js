@@ -28,7 +28,7 @@ export function createGame({ seed = 0, sandbox = true, rngSeed, gen, classic = f
     clock: 0, tod: 0.2, res: { ...(sandbox ? START.sandbox : START.modest) },
     age: 0, adv: 0, owned: {}, mods: { gather: { 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1 }, carry: 8, farmFood: 100, farmRate: 1, speed: 2.4, craft: {} },
     buildings: [], bmap: new Map(), villagers: [], nextId: 1, nameI: 0,
-    rally: null, focus: 0, freeWill: true, sandbox, ready: false,
+    rally: null, focus: 0, freeWill: true, freeBuild: false, sandbox, ready: false,
     unlocked: {}, pantry: {}, caught: {}, spent: {}, seasonalDone: 0, lastCelebration: 0,   // the first spring passes quietly while the village settles in
  culture: 0, lastFestival: 0, festival: null, events: makeBus(), crossed: [], dawns: 0, today: { in: {}, out: {} }, yday: null, beauty: null, beautyDirty: true, beautyT: 0,
   };

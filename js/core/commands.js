@@ -3,8 +3,10 @@
 import { dims, BUILD, TIERS, UPGRADES, AGES, ADVANCE_TIME, VILLAGER_COST, TRADE, KEY_NODE, NODE_INFO } from './config.js';
 import { bfs } from './path.js';
 import { idx, isOpen, nodeKind, besideRect, walkable, inMap, DIRS8 } from './world.js';
-import { siteOk, relocate, canTakeDown, takeDown, have, pay, addBuilding, removeBuilding, popCap, notice, addRes, levelName, hub, townCenter, hasMarket } from './state.js';
+import { canStore, slotKind, farmFor, siteOk, relocate, canTakeDown, takeDown, have, pay, addBuilding, removeBuilding, popCap, notice, addRes, levelName, hub, townCenter, hasMarket } from './state.js';
 import { upgradeTarget } from './directors.js';
+import { workFor } from './autonomy.js';
+import { dutyOf, dutyAction, resumeDuty, isJob } from './duty.js';
 import { stepCost } from './actions.js';
 import { homeScore, beautyLabel } from './beauty.js';
 import { PRI, RES } from './config.js';
@@ -12,13 +14,23 @@ import { action, command, enqueue, createVillager, finish } from './villagers.js
 
 const SPREAD = [[0, 0], [1, 0], [0, 1], [-1, 0], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]];
 
+// A job order: it becomes the villager's standing job (duty.js) until another job is given.
+function assign(g, v, a) { command(g, v, a); v.duty = dutyOf(g, a); v.dutyWait = 0; }
 export function orderGather(g, vs, node) {
   const k = nodeKind(g.w, node);
   if (!k) return false;
-  for (const v of vs) command(g, v, action('gather', { kind: k, node, key: NODE_INFO[k].key, why: 'Following your lead.' }));
+  for (const v of vs) assign(g, v, action('gather', { kind: k, node, key: NODE_INFO[k].key }));
   return true;
 }
-export function orderFarm(g, vs, b) { for (const v of vs) command(g, v, action('farm', { b: b.id, key: 'farm', why: 'Following your lead.' })); return true; }
+export function orderFarm(g, vs, b) { const key = { farm: 'farm', wheatfield: 'wheatfield', fiberfield: 'fiberfield' }[b.k] || 'farm'; for (const v of vs) assign(g, v, action('farm', { b: b.id, key })); return true; }
+// Put villagers to work at a workshop: they become its specialists, and it is their job.
+export function orderCraft(g, vs, b) {
+  const c = BUILD[b.k].craft;
+  if (!c || !b.done) return false;
+  for (const v of vs) { v.job = b.id; v.role = c.role; v.roleAt = g.clock; assign(g, v, action('craft', { b: b.id, key: 'craft' })); }
+  return true;
+}
+export function clearDuty(g, vs) { for (const v of vs) { v.duty = null; if (v.act && v.act.duty) finish(g, v); } }
 export function orderBuild(g, vs, b) { for (const v of vs) command(g, v, action('build', { b: b.id, key: 'build', why: 'Building what you asked for.' })); return true; }
 export function orderPlant(g, v, x, y) {
   if (!isOpen(g.w, x, y)) return false;
@@ -57,7 +69,7 @@ export function place(g, k, x, y, vs, rot = 0) {
   if (def.needs && !g.buildings.some(b => b.k === def.needs && b.done)) return { ok: false, reason: `Build a ${BUILD[def.needs].name.toLowerCase()} first.` };
   if (k === 'tc' && g.buildings.some(b => b.k === 'tc')) return { ok: false, reason: 'The village already has a town center.' };
   if (!vs.length) return { ok: false, reason: 'Select a villager to build.' };
-  if (!canPlace(g, k, x, y, rot)) return { ok: false, reason: def.nearWater ? 'It needs open ground near water.' : 'That spot is not free.' };
+  if (!canPlace(g, k, x, y, rot)) return { ok: false, reason: slotKind(k) && !farmFor(g, k, x, y, rot) ? `It needs a free ${slotKind(k) === 'fields' ? 'field' : 'animal'} slot at a farmhouse within 4 tiles.` : def.nearWater ? 'It needs open ground near water.' : 'That spot is not free.' };
   if (!have(g, def.cost)) return { ok: false, reason: 'Not enough resources yet.' };
   const b = addBuilding(g, k, x, y, false, rot);
   const reach = vs.filter(v => bfs(g.w, Math.round(v.x), Math.round(v.y), (a, c) => besideRect(a, c, x, y, b.w, b.h)));
@@ -132,11 +144,40 @@ export { planFestival as holdFestival } from './festival.js';
 export function rename(g, v, name) { const t = String(name).trim().slice(0, 16); if (t) v.name = t; }
 export function cycleFocus(g) { g.focus = (g.focus + 1) % 5; g.manager.arbitrate(g); }
 // Free will off: villagers stop what they chose themselves (they keep your orders, sleep and meals) and choose nothing new.
+// Three levels: 0 no free will, 1 free will (they choose their work; the default), 2 free build (they also build, research and advance).
+export const willLevel = g => !g.freeWill ? 0 : g.freeBuild ? 2 : 1;
+export function setWill(g, level) { setFreeWill(g, level > 0); g.freeBuild = level === 2; }
+// Quick orders for a selected villager.
+export function orderUnload(g, vs) {
+  let n = 0;
+  for (const v of vs) if (v.carry > 0 && canStore(g, v.carryRes)) { command(g, v, action('unload', { key: 'unload', why: 'Taking what they carry to the stores.' })); n++; }
+  return n;
+}
+// Drop what they were told or were idling at, and pick up the most useful work. Specialists head to their workshop.
+// With free will on the work stays their own choice; with it off it holds as an order.
+export function backToWork(g, vs) {
+  let n = 0;
+  for (const v of vs) {
+    if (v.act && v.act.type === 'sleep') continue;
+    v.stack = []; v.queue = [];
+    if (v.act) finish(g, v);
+    v.dutyWait = 0;
+    const a = (v.duty && dutyAction(g, v)) || workFor(g, v);   // their own job first
+    if (!a) continue;
+    command(g, v, a);
+    if (g.freeWill) { a.src = 'auto'; a.pri = PRI.AUTO; }
+    n++;
+  }
+  return n;
+}
+
 export function setFreeWill(g, on) {
-  g.freeWill = on;
+  g.freeWill = on; if (!on) g.freeBuild = false;
   if (!on) for (const v of g.villagers) {
+    // They remember what they were doing: self-chosen work becomes their job, and they keep at it day after day.
+    if (!v.duty) v.duty = isJob(v.act) ? dutyOf(g, v.act) : v.job && g.bmap.get(v.job) ? dutyOf(g, { type: 'craft', b: v.job }) : null;
     v.stack = v.stack.filter(a => a.src !== 'auto'); v.queue = v.queue.filter(a => a.src !== 'auto');
-    if (v.act && (v.act.src === 'auto' || ['egghunt', 'swim', 'trick', 'carol'].includes(v.act.type))) { v.swim = false; finish(g, v); }
+    if (v.act && v.act.src === 'auto') finish(g, v);
   }
 }
 

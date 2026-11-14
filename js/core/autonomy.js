@@ -8,6 +8,7 @@ import { inMap, idx, DIRS8, nodeKind, isOpen, buildingNear, WATER } from './worl
 import { farmers, canStore } from './state.js';
 import { action, choose } from './villagers.js';
 import { recipeFor } from './actions.js';
+import { dutyBonus, resumeDuty } from './duty.js';
 
 const GATHER_KEYS = ['wood', 'stone', 'gold', 'berry', 'fish', 'clay'];
 
@@ -53,8 +54,10 @@ export function options(g, v) {
     const wgt = W[key];
     if (!wgt) return;
     if (S[key] !== undefined && S[key] <= m.count(g, key, v)) return;
-    out.push({ key, d, target, score: 100 * wgt + quality - Math.min(40, d * 1.5) + (g.rng() * 8 - 4) });
+    out.push({ key, d, target, score: 100 * wgt + quality + dutyBonus(v, key, target) - Math.min(40, d * 1.5) + (g.rng() * 8 - 4) });
   };
+  // The villager's own job (a field or workshop you gave them) is always on the list, wherever it is.
+  { const dj = v.duty, b = dj && dj.b && g.bmap.get(dj.b); if (b && b.done && (dj.type === 'farm' || dj.type === 'craft') && (dj.type !== 'craft' || recipeFor(g, b))) add(dj.key, Math.hypot(b.x - v.x, b.y - v.y), 0, b.id); }
   add('rest', found.bench ? Math.min(found.bench.d, 10) : 0, 60 * Math.pow(1 - v.energy, 2) + (found.bench ? 8 : 0), found.bench ? found.bench.target : null);
   // Nature's steering: nearly used-up spots score lower, so villagers walk further for a healthy one.
   const NATURE = { '': 0, _low: -30, _last: -60 };
@@ -128,6 +131,13 @@ function makeAction(g, v, o) {
   return null;
 }
 
+// The best piece of real work for this villager right now (no leisure): used by "Back to work".
+const WORK = new Set(['farm', 'fiberfield', 'wheatfield', 'craft', 'water', 'build', 'upgrade', 'clear']);
+export function workFor(g, v) {
+  for (const o of options(g, v)) if (KEY_NODE[o.key] || WORK.has(o.key)) { const a = makeAction(g, v, o); if (a) return a; }
+  return null;
+}
+
 export function decide(g, v) {
   const opts = options(g, v);
   if (!opts.length) return false;
@@ -143,7 +153,8 @@ export function decide(g, v) {
 
 // Called every frame for each villager.
 export function autonomyTick(g, v, dt) {
-  if (!g.freeWill || v.held) return;
+  if (!g.freeWill) { if (!v.act) resumeDuty(g, v); return; }   // No free will: only orders, and the job they were given
+  if (v.held) return;
   if (!v.act) {
     v.decideT -= dt;
     if (v.decideT > 0) return;

@@ -63,7 +63,7 @@ export function choose(g, v, a) {
   start(v, a);
   return true;
 }
-function start(v, a) { v.act = a; v.why = a.why || v.why; }
+function start(v, a) { v.act = a; v.why = ''; } // what they are doing is read live from the action (activity.js); why holds only hold-ups
 
 // Called when the current action ends (done or failed). Resumes what was waiting.
 export function finish(g, v) {

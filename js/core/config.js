@@ -37,6 +37,9 @@ export const KEY_NODE = { wood: 1, stone: 2, gold: 3, berry: 4, fish: 5, clay: 6
 //   placer 'village' (Construction may place it on its own) or 'player' (only you)
 //   flat   no walls (drawn on the ground)   walk  villagers can walk over it
 //   Buildings with a TIERS entry start at level 0 and can be improved (see TIERS below).
+// Fields and penned animals belong to a farmhouse: each takes one of its slots, and must sit within FARM_REACH tiles of it.
+export const FARM_SLOT = { farm: 'fields', wheatfield: 'fields', fiberfield: 'fields', coop: 'animals', sheepfold: 'animals', pasture: 'animals', apiary: 'animals' };
+export const FARM_REACH = 4;
 export const BUILD = {
   campfire: { name: 'Campfire', size: 1, time: 1, cost: {}, age: 0, pop: 3, placer: 'none', fixed: true,
               store: { wood: 100, stone: 40, gold: 20, food: 60, water: 40, clay: 30, fiber: 30, pottery: 20, cloth: 20, furniture: 10, wheat: 20, beer: 5 },
@@ -44,31 +47,31 @@ export const BUILD = {
   tc:       { name: 'Town center', size: 2, time: 30, cost: { wood: 150, stone: 40 }, age: 0, pop: 5, placer: 'village', beauty: 1, hub: true,
               store: { wood: 200, stone: 100, gold: 400, food: 100, water: 60, clay: 40, fiber: 40, pottery: 30, cloth: 30, furniture: 20, jewelry: 10, wheat: 30, flour: 20, beer: 10, wool: 20, milk: 20, wax: 10, candles: 10 },
               desc: 'The heart of the village. Needed to grow beyond a hamlet. Trains villagers, researches upgrades and advances the age.' },
-  house:    { name: 'House', size: 1, time: 8, cost: { wood: 25 }, age: 0, home: true, placer: 'village',
+  house:    { name: 'House', size: 1, faces: true, time: 8, cost: { wood: 25 }, age: 0, home: true, placer: 'village',
               desc: 'A home. It improves as its surroundings grow lovelier.' },
   // Storehouse: 2x1, and can be turned to 1x2. Holds a lot, but only a little food (the granary and grange are for food).
   store:    { name: 'Storehouse', size: 2, w: 2, h: 1, turns: true, time: 10, cost: { wood: 60 }, age: 0, placer: 'village', beauty: -1.5, icon: '📦',
               store: { wood: 60, stone: 80, gold: 100, food: 15, water: 30, clay: 80, fiber: 80, pottery: 90, cloth: 90, furniture: 50, jewelry: 40, beer: 60, candles: 60, wool: 60, wax: 40 }, desc: 'Mainly for finished goods: pottery, cloth, furniture, jewelry, beer, candles. Only a little wood, stone and food.' },
-  lumbermill: { name: 'Lumber mill', size: 2, time: 10, cost: { wood: 40 }, age: 0, placer: 'village', beauty: -1, icon: '🪵',
+  lumbermill: { name: 'Lumber mill', size: 2, time: 10, cost: { wood: 40 }, age: 0, placer: 'village', beauty: -2.5, icon: '🪵',
               store: { wood: 600 }, desc: 'Stacks of logs and planks. Holds a great deal of wood, so woodcutters walk less.' },
-  farm:     { name: 'Vegetable field', size: 2, time: 8, cost: { wood: 60 }, age: 0, flat: true, food: 100, crop: 'food', placer: 'village', beauty: -1,
+  farm:     { name: 'Vegetable field', size: 2, time: 8, cost: { wood: 60 }, age: 0, flat: true, food: 100, crop: 'food', placer: 'village', beauty: -2,
               desc: 'Rows of carrots, cabbages and beans. Grows food. Re-sown for a little wood when it runs out.' },
-  wheatfield:{ name: 'Wheat field', size: 2, time: 8, cost: { wood: 50 }, age: 0, flat: true, food: 80, crop: 'wheat', placer: 'village', beauty: 0,
+  wheatfield:{ name: 'Wheat field', size: 2, time: 8, cost: { wood: 50 }, age: 0, flat: true, food: 80, crop: 'wheat', placer: 'village', beauty: -1.5,
               desc: 'Golden wheat. Milled into flour for bread, or brewed into beer. Re-sown for a little wood when it runs out.' },
   // Farm buildings. The grange is the farmers' hub: they bring the harvest there. The granary keeps food.
-  grange:   { name: 'Grange', size: 2, time: 14, cost: { wood: 80, stone: 10 }, age: 0, placer: 'village', beauty: 0.5,
+  grange:   { name: 'Grange', size: 2, time: 14, cost: { wood: 80, stone: 10 }, age: 0, placer: 'village', beauty: -1,
               store: { food: 150, wheat: 150, flour: 60, fiber: 100, beer: 20, wool: 60, milk: 40, wax: 30 }, desc: 'The farmers\' hall. Harvests come here, so fields near it need fewer long walks.' },
-  granary:  { name: 'Granary', size: 2, time: 16, cost: { wood: 80, stone: 30 }, age: 0, placer: 'village', beauty: -0.5, icon: '🛢️',
-              store: { food: 1500, wheat: 400, flour: 200, water: 300 }, desc: 'One great round silo with water barrels beside it. Holds an enormous amount of food, grain and water.' },
-  // The farmhouse: a home for farming folk. Only 2 beds, but it keeps food, rises with little regard for beauty,
+  granary:  { name: 'Granary', size: 2, time: 16, cost: { wood: 80, stone: 30 }, age: 0, placer: 'village', beauty: -4, icon: '🛢️',
+              store: { food: 1500, wheat: 400, flour: 200, milk: 100 }, desc: 'One great round silo. Holds an enormous amount of food and what food is made from (wheat, flour, milk). Very unsightly: keep it away from homes.' },
+    // The farmhouse: a home for farming folk. Only 2 beds, but it keeps food, rises with little regard for beauty,
   // holds the farming upgrades, and the village needs one before it can keep penned animals.
   farmhouse:{ name: 'Farmhouse', size: 2, time: 14, cost: { wood: 70, stone: 10 }, age: 0, home: true, placer: 'village', beauty: 0.5, icon: '🏡',
               store: { food: 200, wheat: 80, milk: 30 }, desc: 'A roomy farm home for two. Keeps food, needs no fancy surroundings to improve, and must stand before pens can be built.' },
-  mill:     { name: 'Mill', size: 1, time: 14, cost: { wood: 70, stone: 20 }, age: 0, placer: 'village', beauty: 1.5,
+  mill:     { name: 'Mill', size: 1, time: 14, cost: { wood: 70, stone: 20 }, age: 0, placer: 'village', beauty: -2,
               craft: { role: 'miller', in: { wheat: 2 }, out: { flour: 2 }, time: 8 }, desc: 'A miller grinds wheat into flour.' },
-  bakery:   { name: 'Bakery', size: 1, time: 12, cost: { wood: 60, stone: 15 }, age: 0, placer: 'village', beauty: 1,
+  bakery:   { name: 'Bakery', size: 1, time: 12, cost: { wood: 60, stone: 15 }, age: 0, placer: 'village', beauty: -2,
               craft: { role: 'baker', in: { flour: 2, wood: 1 }, out: { food: 8 }, kind: 'bread', time: 10 }, desc: 'A baker turns flour into bread: much more food than the wheat alone.' },
-  brewery:  { name: 'Brewery', size: 1, time: 12, cost: { wood: 60, stone: 10 }, age: 0, placer: 'village', beauty: 0.5,
+  brewery:  { name: 'Brewery', size: 1, time: 12, cost: { wood: 60, stone: 10 }, age: 0, placer: 'village', beauty: 0,
               craft: { role: 'brewer', in: { wheat: 3 }, out: { beer: 1 }, time: 12 }, desc: 'A brewer makes beer from wheat. Homes, the tavern and festivals all want it.' },
   well:     { name: 'Well', size: 1, time: 6, cost: { wood: 10, stone: 20 }, age: 0, placer: 'village', water: 60, refill: 40, beauty: 1,
               desc: 'Fresh water close to home.' },
@@ -94,24 +97,24 @@ export const BUILD = {
               store: { gold: 20, food: 60, water: 60 }, desc: 'A large home with 12 beds.' },
   market:   { name: 'Trading post', size: 2, time: 12, cost: { wood: 60, stone: 20 }, age: 0, placer: 'player', beauty: 1.5,
               store: { gold: 600, pottery: 40, cloth: 40, furniture: 20, jewelry: 20, candles: 20, wool: 20 }, desc: 'A traveling merchant visits every few days to buy what the village makes. You can also swap resources here.' },
-  fiberfield:{ name: 'Fiber field', size: 2, time: 6, cost: { wood: 40 }, age: 0, flat: true, food: 60, crop: 'fiber', placer: 'village', beauty: 0,
+  fiberfield:{ name: 'Fiber field', size: 2, time: 6, cost: { wood: 40 }, age: 0, flat: true, food: 60, crop: 'fiber', placer: 'village', beauty: -1.5,
               desc: 'Tall fiber plants for the weaver to spin and weave. Re-sown for a little wood when it runs out.' },
   shop:     { name: 'Stall', size: 1, time: 8, cost: { wood: 40 }, age: 0, placer: 'village', beauty: 1, shop: true,
               store: { pottery: 10, furniture: 5, cloth: 10, jewelry: 5, beer: 10, candles: 10 }, desc: 'Hands pottery, furniture, cloth, jewelry and beer to the homes around it, and sells a little of what is spare each day.' },
-  potter:   { name: "Potter's workshop", size: 1, time: 10, cost: { wood: 40, stone: 10 }, age: 0, placer: 'village', beauty: 0.5,
+  potter:   { name: "Potter's workshop", size: 1, time: 10, cost: { wood: 40, stone: 10 }, age: 0, placer: 'village', beauty: -2,
               craft: { role: 'potter', in: { clay: 2 }, out: { pottery: 1 }, time: 6 }, desc: 'A potter turns clay into pottery.' },
-  carpenter:{ name: "Carpenter's shop", size: 1, time: 10, cost: { wood: 50, stone: 10 }, age: 0, placer: 'village', beauty: 0.5,
+  carpenter:{ name: "Carpenter's shop", size: 1, time: 10, cost: { wood: 50, stone: 10 }, age: 0, placer: 'village', beauty: -2,
               craft: { role: 'carpenter', in: { wood: 4 }, out: { furniture: 1 }, time: 8 }, desc: 'A carpenter turns wood into furniture.' },
-  weaver:   { name: "Weaver's cottage", size: 1, time: 10, cost: { wood: 40, stone: 10 }, age: 1, placer: 'village', beauty: 0.5,
+  weaver:   { name: "Weaver's cottage", size: 1, time: 10, cost: { wood: 40, stone: 10 }, age: 1, placer: 'village', beauty: -2,
               craft: { role: 'weaver', in: { fiber: 2 }, alt: { wool: 2 }, out: { cloth: 1 }, time: 7 }, desc: 'A weaver turns fiber into cloth.' },
   // Mines and quarries: from the Town Age, very costly in wood and gold, and they work forever.
-  quarry:   { name: 'Stone quarry', size: 2, time: 24, cost: { wood: 300, gold: 150 }, age: 2, placer: 'village', beauty: -4, nearWater: 3,
+  quarry:   { name: 'Stone quarry', size: 2, time: 24, cost: { wood: 300, gold: 150 }, age: 2, placer: 'village', beauty: -5, nearWater: 3,
               craft: { role: 'stonecutter', in: {}, out: { stone: 2 }, time: 12 }, desc: 'A stonecutter cuts stone from the bedrock, steadily and forever. Noisy and dusty: keep it away from homes. Must be within 3 tiles of water.' },
-  claypit:  { name: 'Clay quarry', size: 2, time: 20, cost: { wood: 250, gold: 120 }, age: 2, placer: 'village', beauty: -3, nearWater: 2,
+  claypit:  { name: 'Clay quarry', size: 2, time: 20, cost: { wood: 250, gold: 120 }, age: 2, placer: 'village', beauty: -4, nearWater: 2,
               craft: { role: 'clay digger', in: {}, out: { clay: 2 }, time: 10 }, desc: 'A digger works a deep clay bed, steadily and forever. Muddy and unsightly. Must be within 2 tiles of water.' },
-  goldmine: { name: 'Gold mine', size: 2, time: 30, cost: { wood: 400, gold: 250 }, age: 2, placer: 'village', beauty: -4,
+  goldmine: { name: 'Gold mine', size: 2, time: 30, cost: { wood: 400, gold: 250 }, age: 2, placer: 'village', beauty: -5,
               craft: { role: 'miner', in: {}, out: { gold: 1 }, time: 14 }, desc: 'A miner brings up a little gold every few seconds, forever. Dark and dusty: keep it away from homes.' },
-  jeweler:  { name: "Jeweler's workshop", size: 1, time: 14, cost: { wood: 60, stone: 40, gold: 20 }, age: 2, placer: 'village', beauty: 1,
+  jeweler:  { name: "Jeweler's workshop", size: 1, time: 14, cost: { wood: 60, stone: 40, gold: 20 }, age: 2, placer: 'village', beauty: -1.5,
               craft: { role: 'jeweler', in: { gold: 2, clay: 1 }, out: { jewelry: 1 }, time: 20 }, desc: 'A jeweler makes rings and brooches. Manors need them, and the merchant pays well.' },
   // Culture. Time spent at these (and stories by the fire) adds to the village's culture, which each new age requires.
   school:   { name: 'Schoolhouse', size: 1, time: 12, cost: { wood: 60, stone: 15 }, age: 0, placer: 'village', beauty: 1, culture: true,
@@ -130,17 +133,17 @@ export const BUILD = {
               desc: 'Swings, a seesaw and a sandpit. Villagers come in the afternoon to play and laugh together.' },
   // Animals. Pens hold animals that slowly multiply (a new one every couple of days, up to `cap`). The keeper feeds them
   // wheat when there is some (or lets them graze, more slowly) and collects what they give.
-  coop:     { name: 'Chicken coop', needs: 'farmhouse', size: 1, time: 8, cost: { wood: 50 }, age: 0, placer: 'village', beauty: 0, icon: '🐔', animals: { kind: 'hen', cap: 6, start: 3 },
+  coop:     { name: 'Chicken coop', size: 1, time: 8, cost: { wood: 50 }, age: 0, placer: 'village', beauty: -1.5, icon: '🐔', animals: { kind: 'hen', cap: 6, start: 3 },
               craft: { role: 'hen keeper', in: { wheat: 1 }, out: { food: 3 }, kind: 'eggs', time: 12, graze: 2 }, desc: 'Hens that lay eggs. Fed on wheat, or left to peck about (slower).' },
-  sheepfold:{ name: 'Sheep pasture', needs: 'farmhouse', size: 2, time: 10, cost: { wood: 80 }, age: 1, placer: 'village', beauty: 0.5, icon: '🐑', flat: true, animals: { kind: 'sheep', cap: 5, start: 2 },
+  sheepfold:{ name: 'Sheep pasture', size: 2, time: 10, cost: { wood: 80 }, age: 1, placer: 'village', beauty: -1.5, icon: '🐑', flat: true, animals: { kind: 'sheep', cap: 5, start: 2 },
               craft: { role: 'shepherd', in: { wheat: 1 }, out: { wool: 2 }, time: 14, graze: 2 }, desc: 'Sheep for wool. The weaver can make cloth from wool as well as fiber.' },
-  pasture:  { name: 'Dairy pasture', needs: 'farmhouse', size: 2, time: 10, cost: { wood: 90 }, age: 1, placer: 'village', beauty: 0.5, icon: '🐄', flat: true, animals: { kind: 'cow', cap: 4, start: 2 },
+  pasture:  { name: 'Dairy pasture', size: 2, time: 10, cost: { wood: 90 }, age: 1, placer: 'village', beauty: -2, icon: '🐄', flat: true, animals: { kind: 'cow', cap: 4, start: 2 },
               craft: { role: 'cowherd', in: { wheat: 1 }, out: { milk: 2 }, time: 14, graze: 2 }, desc: 'Cows and goats for milk. The dairy turns milk into cheese.' },
-  dairy:    { name: 'Dairy', size: 1, time: 12, cost: { wood: 60, stone: 20 }, age: 1, placer: 'village', beauty: 0.5, icon: '🧀',
+  dairy:    { name: 'Dairy', size: 1, time: 12, cost: { wood: 60, stone: 20 }, age: 1, placer: 'village', beauty: -2, icon: '🧀',
               craft: { role: 'cheesemaker', in: { milk: 2 }, out: { food: 6 }, kind: 'cheese', time: 12 }, desc: 'A cheesemaker turns milk into cheese for the pantry.' },
-  apiary:   { name: 'Beehives', size: 1, time: 6, cost: { wood: 40 }, age: 1, placer: 'village', beauty: 1, icon: '🐝', animals: { kind: 'bees', cap: 4, start: 2 }, noWinter: true,
+  apiary:   { name: 'Beehives', size: 1, time: 6, cost: { wood: 40 }, age: 1, placer: 'village', beauty: -0.5, icon: '🐝', animals: { kind: 'bees', cap: 4, start: 2 }, noWinter: true,
               craft: { role: 'beekeeper', in: {}, out: { food: 2 }, kind: 'honey', extra: { wax: 1 }, time: 14 }, desc: 'Hives for honey and beeswax. The bees rest in winter.' },
-  chandler: { name: 'Chandler', size: 1, time: 12, cost: { wood: 60, stone: 15 }, age: 1, placer: 'village', beauty: 0.5, icon: '🕯️',
+  chandler: { name: 'Chandler', size: 1, time: 12, cost: { wood: 60, stone: 15 }, age: 1, placer: 'village', beauty: -2, icon: '🕯️',
               craft: { role: 'chandler', in: { wax: 2 }, out: { candles: 1 }, time: 10 }, desc: 'A chandler makes candles from beeswax. Fine homes love them, and the merchant buys them.' },
 };
 // Footprint in tiles: width (x) and height (y). Most buildings are square (size x size).
@@ -193,8 +196,9 @@ export const TIERS = {
     H('Grand manor', 3, 7.5, { stone: 150, gold: 80 }, 12, 100, 4, PFLJ),
   ],
   well: [
-    { name: 'Well', age: 0, need: -99, cost: {}, water: 60, refill: 40, beauty: 1 },
-    { name: 'Fountain', age: 1, need: 2, cost: { stone: 50 }, water: 100, refill: 70, beauty: 3 },
+    { name: 'Well', age: 0, need: -99, cost: {}, water: 60, refill: 40, beauty: 1, store: { water: 60 } },
+    { name: 'Fountain', age: 1, need: 2, cost: { stone: 50 }, water: 100, refill: 70, beauty: 3, store: { water: 120 } },
+    { name: 'Water tower', age: 2, need: 1, cost: { wood: 120, stone: 80 }, water: 400, refill: 220, beauty: 1, store: { water: 300 } },
   ],
   campfire: [
     { name: 'Campfire', age: 0, need: -99, cost: {}, beauty: 0.5, company: 1 },
@@ -207,14 +211,14 @@ export const TIERS = {
     { name: 'Grand storehouse', age: 2, need: -99, cost: { wood: 120, stone: 80 }, storeMult: 2.4, beauty: -0.5 },
   ],
   farmhouse: [
-    { name: 'Farmhouse', age: 0, need: -99, cost: {}, beds: 2, storeMult: 1, beauty: 0.5 },
-    { name: 'Large farmhouse', age: 1, need: 0, cost: { wood: 80, stone: 20 }, beds: 2, storeMult: 1.5, beauty: 1 },
-    { name: 'Manor farm', age: 2, need: 0.5, cost: { wood: 120, stone: 60, gold: 20 }, beds: 2, storeMult: 2, beauty: 1.5 },
+    { name: 'Farmhouse', age: 0, need: -99, cost: {}, beds: 2, storeMult: 1, beauty: 0.5, slots: { fields: 2, animals: 1 } },
+    { name: 'Large farmhouse', age: 1, need: 0, cost: { wood: 80, stone: 20 }, beds: 2, storeMult: 1.5, beauty: 1, slots: { fields: 3, animals: 2 } },
+    { name: 'Manor farm', age: 2, need: 0.5, cost: { wood: 120, stone: 60, gold: 20 }, beds: 2, storeMult: 2, beauty: 1.5, slots: { fields: 4, animals: 3 } },
   ],
   grange: [
-    { name: 'Grange', age: 0, need: -99, cost: {}, storeMult: 1, beauty: 0.5 },
-    { name: 'Large grange', age: 1, need: -99, cost: { wood: 80, stone: 30 }, storeMult: 1.6, beauty: 1 },
-    { name: 'Great grange', age: 2, need: -99, cost: { wood: 120, stone: 60 }, storeMult: 2.2, beauty: 1.5 },
+    { name: 'Grange', age: 0, need: -99, cost: {}, storeMult: 1, beauty: -1 },
+    { name: 'Large grange', age: 1, need: -99, cost: { wood: 80, stone: 30 }, storeMult: 1.6, beauty: -0.5 },
+    { name: 'Great grange', age: 2, need: -99, cost: { wood: 120, stone: 60 }, storeMult: 2.2, beauty: 0 },
   ],
   // The marketplace grows through three ranks. Each rank holds more and gets the merchant to pay 10% more.
   market: [

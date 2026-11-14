@@ -1,5 +1,5 @@
 // Shared state helpers used by every core module: resources, buildings, time, events.
-import { dims, BUILD, TIERS, DAY, SEASON, BEDTIME, WAKE, AGES, RES, STORE_MULT_SANDBOX } from './config.js';
+import { FARM_SLOT, FARM_REACH, dims, BUILD, TIERS, DAY, SEASON, BEDTIME, WAKE, AGES, RES, STORE_MULT_SANDBOX } from './config.js';
 import { idx } from './world.js';
 
 export function makeBus() {
@@ -54,6 +54,7 @@ export const hub = g => townCenter(g) || campfire(g);
 export const hasMarket = g => g.buildings.some(b => b.k === 'market' && b.done);
 export function addBuilding(g, k, x, y, done, rot = 0) {
   const def = BUILD[k], [bw, bh] = dims(k, rot), b = { id: g.nextId++, k, x, y, rot, w: bw, h: bh, s: Math.max(bw, bh), done: !!done, prog: done ? def.time : 0, time: def.time, food: def.food || 0, water: def.water || 0, sleepers: 0, lvl: 0 };
+  if (slotKind(k)) { const fh = farmFor(g, k, x, y, rot); b.farmId = fh ? fh.id : null; }
   g.buildings.push(b); g.bmap.set(b.id, b);
   for (let j = 0; j < b.h; j++) for (let i = 0; i < b.w; i++) { g.w.occ[idx(x + i, y + j)] = b.id; g.w.wk[idx(x + i, y + j)] = def.walk ? 1 : 0; }
   g.beautyDirty = true;
@@ -95,8 +96,25 @@ export function takeDown(g, b) {
 }
 
 // Extra placement rules beyond "the ground is open": e.g. a quarry must be near water.
-export function siteOk(g, k, x, y, rot = 0) {
+// Farm slots: a field or pen must sit within FARM_REACH tiles of a finished farmhouse that still has a free slot of its kind.
+export const slotKind = k => FARM_SLOT[k] || null;
+export const farmSlots = fh => (tierOf(fh) || {}).slots || { fields: 0, animals: 0 };
+export const slotsUsed = (g, fh, kind, except) => g.buildings.filter(b => b !== except && b.farmId === fh.id && slotKind(b.k) === kind).length;
+const rectGap = (x, y, w, h, b) => Math.max(Math.max(0, b.x - (x + w - 1), x - (b.x + b.w - 1)), Math.max(0, b.y - (y + h - 1), y - (b.y + b.h - 1)));
+export function farmFor(g, k, x, y, rot = 0, except = null) {
+  const kind = slotKind(k); if (!kind) return null;
+  const [w, h] = dims(k, rot);
+  let best = null, bd = 1e9;
+  for (const fh of g.buildings) {
+    if (fh.k !== 'farmhouse' || !fh.done) continue;
+    const d = rectGap(x, y, w, h, fh);
+    if (d <= FARM_REACH && slotsUsed(g, fh, kind, except) < farmSlots(fh)[kind] && d < bd) { bd = d; best = fh; }
+  }
+  return best;
+}
+export function siteOk(g, k, x, y, rot = 0, except = null) {
   const def = BUILD[k], [w, h] = dims(k, rot);
+  if (slotKind(k) && !farmFor(g, k, x, y, rot, except)) return false;
   if (def.nearWater) {
     const r = def.nearWater; let wet = false;
     for (let j = -r; j < h + r && !wet; j++) for (let i = -r; i < w + r && !wet; i++) { const a = x + i, b = y + j; if (a >= 0 && b >= 0 && a < 40 && b < 40 && g.w.T[idx(a, b)] === 1) wet = true; }
@@ -109,11 +127,12 @@ export function relocate(g, b, x, y, rot = b.rot || 0, isOpenFn) {
   if (BUILD[b.k].fixed) return { ok: false, reason: 'The campfire stays where the village began.' };
   const [w, h] = dims(b.k, rot), old = { x: b.x, y: b.y, rot: b.rot || 0, w: b.w, h: b.h };
   for (let j = 0; j < b.h; j++) for (let i = 0; i < b.w; i++) { g.w.occ[idx(b.x + i, b.y + j)] = 0; g.w.wk[idx(b.x + i, b.y + j)] = 0; }
-  let ok = siteOk(g, b.k, x, y, rot);
+  let ok = siteOk(g, b.k, x, y, rot, b);
   for (let j = 0; j < h && ok; j++) for (let i = 0; i < w && ok; i++) if (!isOpenFn(x + i, y + j)) ok = false;
   const put = p => { Object.assign(b, p, { s: Math.max(p.w, p.h) }); for (let j = 0; j < b.h; j++) for (let i = 0; i < b.w; i++) { g.w.occ[idx(b.x + i, b.y + j)] = b.id; g.w.wk[idx(b.x + i, b.y + j)] = BUILD[b.k].walk ? 1 : 0; } };
   if (!ok) { put(old); return { ok: false, reason: BUILD[b.k].nearWater ? 'It needs open ground near water.' : 'That spot is not free.' }; }
   put({ x, y, rot, w, h });
+  if (slotKind(b.k)) { const fh = farmFor(g, b.k, x, y, rot, b); b.farmId = fh ? fh.id : null; }
   for (const v of g.villagers) if (v.inside && v.act && v.act.bed === b.id) v.inside = false;
   g.beautyDirty = true;
   g.events.emit('moved', b);

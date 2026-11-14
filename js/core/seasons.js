@@ -89,9 +89,9 @@ export function createSeasons(g) {
   function begin(F) {
     contribute(F);
     F.phase = 'on'; F.t = 0;
-    // With free will off nobody is pulled away: the decorations go up, but villagers keep to what you asked.
-    const h = hub(g), vs = g.freeWill ? g.villagers.filter(v => !(v.act && (v.act.type === 'leave' || v.act.type === 'festival'))) : [];
-    const pri = PRI.SOCIAL + 0.5, base = { pri, src: 'schedule' };
+    // Everyone joins, whatever the free will setting; afterwards they go back to their jobs (which wait on their stack).
+    const h = hub(g), vs = g.villagers.filter(v => !(v.act && (v.act.type === 'leave' || v.act.type === 'festival')));
+    const pri = PRI.PLAYER + 0.5, base = { pri, src: 'schedule' };
     if (F.id === 'easter') {
       const spots = freeTilesNear(h.x, h.y, 2, 9).filter(([x, y]) => g.w.occ[idx(x, y)] === 0);
       const want = Math.min(spots.length, 4 + 2 * vs.length);

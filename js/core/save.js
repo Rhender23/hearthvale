@@ -1,5 +1,6 @@
 // Saving and loading. Only plain data is stored; actions are not, so villagers
 // simply re-decide what to do after a load. Unfinished buildings keep their progress.
+import { dutySave, dutyLoad } from './duty.js';
 import { UPGRADES, LEGACY_UPGRADE, BUILD, NODE_INFO, zeroRes } from './config.js';
 import { createGame, ensureRoad } from './game.js';
 import { addBuilding, removeBuilding } from './state.js';
@@ -13,10 +14,10 @@ const unb64 = (str, Type) => { const s = atob(str), u = new Uint8Array(s.length)
 export function serialize(g) {
   return JSON.stringify({
     v: VERSION, seed: g.seed, gen: g.gen, classic: g.classic, sandbox: g.sandbox, clock: g.clock, tod: g.tod, res: g.res, age: g.age, adv: g.adv,
-    culture: g.culture || 0, lastFestival: g.lastFestival || 0, caught: g.caught || {}, spent: g.spent || {}, seasonalDone: g.seasonalDone, lastCelebration: g.lastCelebration || 0, pantry: g.pantry || {}, festival: g.festival && g.festival.phase === 'planned' ? g.festival : null, owned: Object.keys(g.owned), unlocked: Object.keys(g.unlocked || {}), rally: g.rally, focus: g.focus, freeWill: g.freeWill, nameI: g.nameI, rng: g.rng.state(), dawns: g.dawns, today: g.today, yday: g.yday,
+    culture: g.culture || 0, lastFestival: g.lastFestival || 0, caught: g.caught || {}, spent: g.spent || {}, seasonalDone: g.seasonalDone, tipsSeen: g.tipsSeen || {}, lastCelebration: g.lastCelebration || 0, pantry: g.pantry || {}, festival: g.festival && g.festival.phase === 'planned' ? g.festival : null, owned: Object.keys(g.owned), unlocked: Object.keys(g.unlocked || {}), rally: g.rally, focus: g.focus, freeWill: g.freeWill, freeBuild: !!g.freeBuild, nameI: g.nameI, rng: g.rng.state(), dawns: g.dawns, today: g.today, yday: g.yday,
     R: b64(g.w.R), A: b64(g.w.A), G: b64(g.w.G),
     B: g.buildings.map(b => ({ id: b.id, k: b.k, x: b.x, y: b.y, rot: b.rot || 0, done: b.done, prog: b.prog, food: b.food, water: b.water, lvl: b.lvl, decor: b.decor, animals: b.animals })),
-    V: g.villagers.map(v => ({ name: v.name, x: Math.round(v.x), y: Math.round(v.y), col: v.col, energy: v.energy, full: v.full, hyd: v.hyd, comp: v.comp, tav: v.tav, ate: v.ate, hungryDays: v.hungryDays, skin: v.skin, hair: v.hair, role: v.role, jobAt: v.job && g.bmap.get(v.job) ? [g.bmap.get(v.job).x, g.bmap.get(v.job).y] : null, carry: v.carry, carryRes: v.carryRes, carryKind: v.carryKind })),
+    V: g.villagers.map(v => ({ name: v.name, x: Math.round(v.x), y: Math.round(v.y), col: v.col, energy: v.energy, full: v.full, hyd: v.hyd, comp: v.comp, tav: v.tav, ate: v.ate, hungryDays: v.hungryDays, skin: v.skin, hair: v.hair, role: v.role, jobAt: v.job && g.bmap.get(v.job) ? [g.bmap.get(v.job).x, g.bmap.get(v.job).y] : null, carry: v.carry, carryRes: v.carryRes, carryKind: v.carryKind, duty: dutySave(g, v) })),
   });
 }
 
@@ -36,7 +37,7 @@ export function deserialize(json) {
   // Saves before v5 come from villages that started with a town center on the original map.
   const old = d.v < 5, g = createGame({ seed: d.seed, sandbox: d.sandbox, gen: old ? 1 : d.gen, classic: old ? true : !!d.classic });
   if (!old) { for (const b of [...g.buildings]) removeBuilding(g, b); }
-  Object.assign(g, { clock: d.clock, tod: d.tod, res: { ...zeroRes(), water: 60, ...d.res }, age: d.age, adv: d.adv, culture: d.culture || 0, lastFestival: d.lastFestival ?? d.dawns ?? 0, caught: d.caught || {}, spent: d.spent || {}, seasonalDone: d.seasonalDone ?? -1, lastCelebration: d.lastCelebration ?? d.clock ?? 0, pantry: d.pantry || {}, festival: d.festival || null, rally: d.rally, focus: d.focus || 0, freeWill: d.freeWill !== false, nameI: d.nameI || 0, dawns: d.dawns || 0, today: d.today || { in: {}, out: {} }, yday: d.yday || null });
+  Object.assign(g, { clock: d.clock, tod: d.tod, res: { ...zeroRes(), water: 60, ...d.res }, age: d.age, adv: d.adv, culture: d.culture || 0, lastFestival: d.lastFestival ?? d.dawns ?? 0, caught: d.caught || {}, spent: d.spent || {}, seasonalDone: d.seasonalDone ?? -1, tipsSeen: d.tipsSeen || {}, lastCelebration: d.lastCelebration ?? d.clock ?? 0, pantry: d.pantry || {}, festival: d.festival || null, rally: d.rally, focus: d.focus || 0, freeWill: d.freeWill !== false, freeBuild: !!d.freeBuild, nameI: d.nameI || 0, dawns: d.dawns || 0, today: d.today || { in: {}, out: {} }, yday: d.yday || null });
   if (d.rng) g.rng.setState(d.rng);
   g.w.R.set(unb64(d.R, Uint8Array)); g.w.A.set(unb64(d.A, Int16Array)); g.w.G.set(unb64(d.G, Float32Array));
   const idMap = new Map();
@@ -44,6 +45,7 @@ export function deserialize(json) {
   if (g.rally && g.rally.type === 'farm') g.rally.id = idMap.get(g.rally.id);
   g.villagers = [];
   for (const s of d.V) createVillager(g, s.x, s.y, { name: s.name, col: s.col, energy: s.energy, full: s.full, hyd: s.hyd ?? 0.85, comp: s.comp ?? 36, tav: s.tav || 0, ate: s.ate ?? 1, hungryDays: s.hungryDays || 0, ...(s.skin ? { skin: s.skin, hair: s.hair } : {}), role: s.role || null, jobAt: s.jobAt || null, carry: s.carry, carryRes: s.carryRes, carryKind: s.carryKind });
+  g.villagers.forEach((v, i) => dutyLoad(g, v, d.V[i].duty));
   for (const v of g.villagers) { if (v.jobAt) { const id = g.w.occ[v.jobAt[1] * 40 + v.jobAt[0]]; v.job = id > 0 ? id : null; if (!v.job) v.role = null; } delete v.jobAt; }
   g.nameI = d.nameI || g.villagers.length;
   g.unlocked = {}; for (const k of d.unlocked || []) g.unlocked[k] = true;

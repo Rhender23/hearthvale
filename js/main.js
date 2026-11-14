@@ -41,7 +41,7 @@ const audio = createAudio();
 audio.setOn(settings.sound); audio.setVolume(settings.volume);
 const renderer = createRenderer(canvas);
 const ui = createUI({
-  getGame: () => game, view, settings, save, audio,
+  getGame: () => game, view, settings, save, audio, heightOf: (b, age) => renderer.heightOf(b, age),
   newGame() {
     store.del(SAVE_KEY);
     game = createGame({ seed: 1 + (Date.now() % 999983), sandbox: settings.sandbox });

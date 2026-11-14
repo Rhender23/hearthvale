@@ -36,7 +36,7 @@ export function createRenderer(canvas) {
   const box = (c, e, h, cl, cr, ct) => { const t = [c[0], c[1] - e * TH], r = [c[0] + e * TW, c[1]], d = [c[0], c[1] + e * TH], l = [c[0] - e * TW, c[1]]; poly([l, d, upp(d, h), upp(l, h)], cl); poly([d, r, upp(r, h), upp(d, h)], cr); poly([upp(t, h), upp(r, h), upp(d, h), upp(l, h)], ct); };
   const walls = (b, h, w) => { const [tp, rt, bt, lf] = cor(b); poly([lf, bt, upp(bt, h), upp(lf, h)], w[0]); poly([bt, rt, upp(rt, h), upp(bt, h)], w[1]); return [tp, rt, bt, lf]; };
   const door = (p, q, w, h, c) => { const d = mid(p, q), s = (q[1] - p[1]) / (q[0] - p[0]); poly([[d[0] - w, d[1] - s * w], [d[0] + w, d[1] + s * w], [d[0] + w, d[1] + s * w - h], [d[0] - w, d[1] - s * w - h]], c); };
-  const heightOf = (b, age) => ({ tc: 38 + age * 7, house: HOME_LOOK[b.lvl || 0].h + HOME_LOOK[b.lvl || 0].rf - 20, store: 22 + (b.lvl || 0) * 6, lodge: 26 + age * 3, market: 34, monument: 80, lamppost: 30, arbor: 30, school: 46, studio: 30, theater: 40, quarry: 34, claypit: 20, goldmine: 40, coop: 24, sheepfold: 10, pasture: 10, dairy: 28, apiary: 14, chandler: 28, church: 70, library: 44, playground: 22, jeweler: 32, fireflylamp: 20, grange: 46, granary: 80, lumbermill: 24, farmhouse: 52, mill: 54, bakery: 30, brewery: 30, shop: 26 + (b.lvl || 0) * 6, tavern: 34, well: 16, statue: 34, bench: 6, potter: 22, carpenter: 22, weaver: 24, campfire: 4 }[b.k] || 0);
+  const heightOf = (b, age) => ({ tc: 38 + age * 7, house: HOME_LOOK[b.lvl || 0].h + HOME_LOOK[b.lvl || 0].rf - 20, store: 22 + (b.lvl || 0) * 6, lodge: 26 + age * 3, market: 34, monument: 80, lamppost: 30, arbor: 30, school: 46, studio: 30, theater: 40, quarry: 34, claypit: 20, goldmine: 40, coop: 24, sheepfold: 10, pasture: 10, dairy: 28, apiary: 14, chandler: 28, church: 70, library: 44, playground: 22, jeweler: 32, fireflylamp: 20, grange: 46, granary: 80, lumbermill: 24, farmhouse: 52, mill: 54, bakery: 30, brewery: 30, shop: 26 + (b.lvl || 0) * 6, tavern: 34, well: (b.lvl || 0) >= 2 ? 78 : 16, statue: 34, bench: 6, potter: 22, carpenter: 22, weaver: 24, campfire: 4 }[b.k] || 0);
 
   const c0 = b => iso(b.x + (b.w - 1) / 2, b.y + (b.h - 1) / 2);
   const DB = {
@@ -171,6 +171,21 @@ export function createRenderer(canvas) {
     },
     well(b) {
       const c = iso(b.x, b.y);
+      if ((b.lvl || 0) >= 2) { // water tower: a round wooden tank on four legs, with a ladder
+        ctx.fillStyle = 'rgba(40,60,40,.22)'; ctx.beginPath(); ctx.ellipse(c[0], c[1] + 2, 22, 10, 0, 0, 7); ctx.fill();
+        ctx.strokeStyle = '#6a4a2c'; ctx.lineWidth = 3;
+        for (const [dx, dy] of [[-14, -3], [14, -3], [-8, 5], [8, 5]]) { ctx.beginPath(); ctx.moveTo(c[0] + dx, c[1] + dy); ctx.lineTo(c[0] + dx * 0.8, c[1] + dy - 46); ctx.stroke(); }
+        ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(c[0] - 13, c[1] - 14); ctx.lineTo(c[0] + 13, c[1] - 30); ctx.moveTo(c[0] + 13, c[1] - 14); ctx.lineTo(c[0] - 13, c[1] - 30); ctx.stroke();
+        const ty = c[1] - 48, rx = 20, ry = 9, th = 26;
+        ctx.fillStyle = '#9a6a42'; ctx.beginPath(); ctx.ellipse(c[0], ty, rx, ry, 0, 0, Math.PI); ctx.lineTo(c[0] - rx, ty - th); ctx.ellipse(c[0], ty - th, rx, ry, 0, Math.PI, 0, true); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = '#5a3a24'; ctx.lineWidth = 2; for (const f of [0.25, 0.75]) { ctx.beginPath(); ctx.ellipse(c[0], ty - th * f, rx, ry, 0, 0, Math.PI); ctx.stroke(); }
+        ctx.strokeStyle = 'rgba(90,58,36,.45)'; ctx.lineWidth = 1; for (let i = -3; i <= 3; i++) { const x = c[0] + i * 6; ctx.beginPath(); ctx.moveTo(x, ty - th + ry * Math.sqrt(1 - (i * 6 / rx) ** 2)); ctx.lineTo(x, ty + ry * Math.sqrt(1 - (i * 6 / rx) ** 2)); ctx.stroke(); }
+        poly([[c[0] - rx - 3, ty - th], [c[0], ty - th - 18], [c[0] + rx + 3, ty - th]], '#7a4a32');
+        ctx.fillStyle = '#7fb3d0'; ctx.beginPath(); ctx.ellipse(c[0], ty - th, rx - 3, ry - 2, 0, Math.PI, 0); ctx.fill();
+        ctx.strokeStyle = '#c9a171'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(c[0] + 17, c[1] - 2); ctx.lineTo(c[0] + 17, ty + 4); ctx.moveTo(c[0] + 22, c[1] - 4); ctx.lineTo(c[0] + 22, ty + 2); ctx.stroke();
+        for (let y = c[1] - 8; y > ty + 4; y -= 6) { ctx.beginPath(); ctx.moveTo(c[0] + 17, y); ctx.lineTo(c[0] + 22, y - 2); ctx.stroke(); }
+        return;
+      }
       if ((b.lvl || 0) >= 1) { // fountain
         box(c, 0.42, 8, '#c9c2b4', '#b2ab9c', '#7fb3d0');
         box([c[0], c[1] - 8], 0.12, 18, '#ddd6c8', '#c9c2b4', '#e6e0d3');
@@ -403,7 +418,10 @@ export function createRenderer(canvas) {
   }
   function drawBuilding(b, g) {
     ctx.globalAlpha = b.done ? 1 : 0.4 + 0.6 * b.prog / b.time;
-    DB[b.k](b, g.age);
+    if (BUILD[b.k].faces && b.rot) { // a turned house: mirrored so its front faces the other way
+      const cx = iso(b.x + (b.w - 1) / 2, b.y + (b.h - 1) / 2)[0];
+      ctx.save(); ctx.translate(cx * 2, 0); ctx.scale(-1, 1); DB[b.k](b, g.age); ctx.restore();
+    } else DB[b.k](b, g.age);
     ctx.globalAlpha = 1;
     if (!b.done) bar(b, g.age, g);
     if (b.demolish && b.demo) { // taking down: the bar empties as the villager works
@@ -668,8 +686,8 @@ export function createRenderer(canvas) {
     if (ui.selN) { const p = iso(ui.selN.i % N, (ui.selN.i / N) | 0); ctx.strokeStyle = '#fff3c4'; ctx.lineWidth = 3; dia(p[0], p[1], TW / 2 - 2, TH / 2 - 1); ctx.stroke(); }
     // Overlays on the ground: placement ghost, hover, selection
     if (ui.place) {
-      const [pw, ph] = dims(ui.place, ui.rot || 0), okp = ui.canPlace(ui.hover[0], ui.hover[1]);
-      for (let j = 0; j < ph; j++) for (let i = 0; i < pw; i++) { const [gx, gy] = iso(ui.hover[0] + i, ui.hover[1] + j); ctx.fillStyle = okp ? 'rgba(255,255,200,.55)' : 'rgba(220,70,60,.5)'; dia(gx, gy, TW / 2, TH / 2); ctx.fill(); }
+      const gh = ui.ghost || ui.hover, [pw, ph] = dims(ui.place, ui.rot || 0), okp = ui.canPlace(gh[0], gh[1]);   // the preview: where it was tapped, or under the mouse
+      for (let j = 0; j < ph; j++) for (let i = 0; i < pw; i++) { const [gx, gy] = iso(gh[0] + i, gh[1] + j); ctx.fillStyle = okp ? 'rgba(255,255,200,.55)' : 'rgba(220,70,60,.5)'; dia(gx, gy, TW / 2, TH / 2); ctx.fill(); }
     } else if (ui.hoverCells) { ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2.5; for (const [cx, cy] of ui.hoverCells) { const p = iso(cx, cy); dia(p[0], p[1], TW / 2 - 2, TH / 2 - 1); ctx.stroke(); } }
     if (ui.selB) { ctx.strokeStyle = '#fff3c4'; ctx.lineWidth = 3; const b = ui.selB; for (let j = 0; j < b.h; j++) for (let i = 0; i < b.w; i++) { const p = iso(b.x + i, b.y + j); dia(p[0], p[1], TW / 2 - 2, TH / 2 - 1); ctx.stroke(); } }
 
@@ -718,5 +736,5 @@ export function createRenderer(canvas) {
     }
     if (isNight(g)) for (const b of g.buildings) if (b.sleepers > 0) { const p = iso(b.x + (b.w - 1) / 2, b.y + (b.h - 1) / 2); ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('z', p[0] + 10, p[1] - 50 - Math.sin(T0 * 2 + b.x) * 3); }
   }
-  return { draw, iso };
+  return { draw, iso, heightOf };
 }

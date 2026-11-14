@@ -6,12 +6,12 @@
 //   tick()   - per-frame upkeep of its own domain
 //   think()  - once a second: posts wishes (activity weights for villagers) and demands (asks of other Directors)
 // Directors influence the world; they never command villagers or address the player with instructions.
-import { dims, BUILD, TIERS, AGES, NODE, PRI, MEAL_HOURS, RATION, DAY, WAKE, N, SLIDE_DAYS, SLIDE_MARGIN, SOCIAL, ROLE_NAME, LEAVE_HUNGRY_DAYS, GOODS_USE_DAYS, GOODS, FARM, CULTURE, UPGRADES, FESTIVAL, PANTRY, MERCHANT, SHOP_PRICE, HOME_CULTURE } from './config.js';
+import { dims, BUILD, TIERS, AGES, NODE, PRI, MEAL_HOURS, RATION, DAY, WAKE, N, SLIDE_DAYS, SLIDE_MARGIN, SOCIAL, ROLE_NAME, LEAVE_HUNGRY_DAYS, GOODS_USE_DAYS, GOODS, FARM, CULTURE, UPGRADES, FESTIVAL, PANTRY, MERCHANT, SHOP_PRICE, HOME_CULTURE, FARM_REACH } from './config.js';
 import { priceOf, surplus } from './merchant.js';
 import { festivalWant, wantedFestival, festivalCost, planFestival, affordableFestival } from './festival.js';
 import { research, advance } from './commands.js';
 import { idx, inMap, isOpen, countNear, walkable, besideRect, DIRS8, buildingNear } from './world.js';
-import { hour, isNight, nextAgeCost, have, pay, popCap, notice, cap, bedTotal, beds, addBuilding, removeBuilding, levelName, tierOf, hub, hasMarket, campfire, townCenter, siteOk } from './state.js';
+import { hour, isNight, nextAgeCost, have, pay, popCap, notice, cap, bedTotal, beds, addBuilding, removeBuilding, levelName, tierOf, hub, hasMarket, campfire, townCenter, siteOk, slotKind, slotsUsed, farmSlots } from './state.js';
 import { homeScore, villageBeauty, beautyLabel } from './beauty.js';
 import { action, interrupt, hasAction, createVillager } from './villagers.js';
 import { bfs, besideTile, visitorEdge, visitorPassable } from './path.js';
@@ -62,7 +62,7 @@ export const Economy = {
   think(g, post, demand) {
     const goal = this.goal(g);
     const p = this.prefs, nx = (goal && goal.cost) || {}, pop = g.villagers.length, sites = g.buildings.filter(b => !b.done).length, r = g.res;
-    const asked = {}; for (const d of demandsFor(g, 'Economy')) if (d.res) asked[d.res] = (asked[d.res] || 0) + d.amount;
+    const asked = {}, biggest = {}; for (const d of demandsFor(g, 'Economy')) if (d.res) { asked[d.res] = (asked[d.res] || 0) + d.amount; biggest[d.res] = Math.max(biggest[d.res] || 0, d.amount); }
     const need = (k, want) => { const c = cap(g, k), t = Math.min(c, want + (asked[k] || 0)); return r[k] >= c || t <= 0 ? 0 : clamp01((t - r[k]) / t); };
     const n = this.needs = {
       food: need('food', Math.max(rations(g, pop, p.daysOfRations), nx.food || 0)),
@@ -91,8 +91,10 @@ export const Economy = {
     if (n.stone > 0.05) post('Economy', 'stone', 0.15 + 0.6 * n.stone, asked.stone ? 'stone is needed for building' : `preparing for ${goal ? goal.name : 'the future'}`);
     if (n.gold > 0.05) post('Economy', 'gold', 0.15 + 0.6 * n.gold, asked.gold ? 'gold is needed for building' : `preparing for ${goal ? goal.name : 'the future'}`);
     // Storage is requested only when what the village actually needs is more than it can hold.
-    const wants = { food: Math.max(rations(g, pop, p.daysOfRations), nx.food || 0) + (asked.food || 0), water: Math.max(rations(g, pop, p.daysOfRations), nx.water || 0) + (asked.water || 0),
-      wood: Math.max(p.woodBase + p.woodPerSite * sites, nx.wood || 0) + (asked.wood || 0), stone: (nx.stone || 0) + (asked.stone || 0) };
+    // Only one thing is paid for at a time, so the biggest single request counts, not all of them added up
+    // (adding them up asked for storehouse after storehouse, each wanting stone to improve).
+    const wants = { food: Math.max(rations(g, pop, p.daysOfRations), nx.food || 0) + (biggest.food || 0), water: Math.max(rations(g, pop, p.daysOfRations), nx.water || 0) + (biggest.water || 0),
+      wood: Math.max(p.woodBase + p.woodPerSite * sites, nx.wood || 0, biggest.wood || 0), stone: Math.max(nx.stone || 0, biggest.stone || 0) };
     for (const k in wants) if (wants[k] > cap(g, k)) demand('Economy', 'Construction', { what: 'storage', res: k, amount: wants[k] - cap(g, k), why: `the village needs more ${k} than it can store` });
     for (const k of ['wood', 'stone']) if ((this.walk[k] || 0) > p.longWalk && this.from[k]) demand('Economy', 'Construction', { what: 'storage', res: k, near: this.from[k], amount: 1, why: `long walks to drop off ${k}` });
   },
@@ -173,14 +175,14 @@ export const Workforce = {
     const shops = g.buildings.filter(b => b.done && BUILD[b.k].craft).map(b => ({ b, p: this.shopPriority(g, b), who: g.villagers.find(v => v.job === b.id) })).sort((a, c) => c.p - a.p);
     const specialists = shops.filter(s => s.who).length, room = pop - keepGeneral;
     if (specialists > room + 1) { // clearly too few hands for everyday work: the lowest-priority specialist helps out for now
-      const s = [...shops].reverse().find(s => s.who);
+      const s = [...shops].reverse().find(s => s.who && !(s.who.duty && s.who.duty.b === s.b.id));   // a job you gave stays
       if (s) { s.who.job = null; s.who.role = null; this.roleCd = 120; g.events.emit('roleLeft', { v: s.who, b: s.b }); }
       return;
     }
     if (specialists >= room) return;
     const open = shops.find(s => !s.who && s.p > 0.2);
     if (!open) return;
-    const free = g.villagers.filter(v => !v.job && !v.held && !(v.act && v.act.src === 'player'));
+    const free = g.villagers.filter(v => !v.job && !v.held && !v.duty && !(v.act && v.act.src === 'player'));
     if (!free.length) return;
     const role = BUILD[open.b.k].craft.role, v = free.find(v => v.lastRole === role) || free[0];
     v.job = open.b.id; v.role = role; v.lastRole = role; this.roleCd = 6;
@@ -282,7 +284,7 @@ export const Construction = {
   plan(g) {
     const pop = g.villagers.length, sites = g.buildings.filter(b => !b.done && b.k !== 'tc').length, tc = hub(g);
     this.last = '';
-    if (!g.freeWill || sites >= Math.max(1, Math.ceil(pop / this.prefs.sitesPer))) return null;
+    if (!g.freeBuild || sites >= Math.max(1, Math.ceil(pop / this.prefs.sitesPer))) return null;   // only with Free build
     const homes = g.buildings.filter(b => BUILD[b.k].home), hx = homes.length ? Math.round(homes.reduce((s, b) => s + b.x, 0) / homes.length) : tc.x, hy = homes.length ? Math.round(homes.reduce((s, b) => s + b.y, 0) / homes.length) : tc.y;
     const beautyAt = (x, y) => (g.beauty ? g.beauty[idx(x, y)] : 0);
     const tryPlace = (k, ax, ay, opts, why) => {
@@ -293,6 +295,16 @@ export const Construction = {
       this.last = `${BUILD[k].name}: ${why}`;
       g.events.emit('planned', { b, why });
       return b;
+    };
+    // Fields and pens go into free slots at a farmhouse; with none free, a new farmhouse comes first (one per six villagers at most).
+    const slotPlace = (k, why) => {
+      const kind = slotKind(k);
+      for (const fh of g.buildings.filter(b => b.k === 'farmhouse' && b.done && slotsUsed(g, b, kind) < farmSlots(b)[kind])) {
+        const placed = tryPlace(k, fh.x, fh.y, { minR: 1, maxR: FARM_REACH + 1, score: (x, y) => -Math.hypot(x - fh.x, y - fh.y) * 0.1 }, why); if (placed) return placed;
+      }
+      const fhs = g.buildings.filter(b => b.k === 'farmhouse');
+      if (fhs.some(b => !b.done) || fhs.length >= 1 + Math.floor(pop / 6)) return null;
+      return tryPlace('farmhouse', tc.x, tc.y, { minR: 4, maxR: 12, score: (x, y) => -beautyAt(x, y) * 0.3 }, `room for more ${kind === 'fields' ? 'fields' : 'animals'}`);
     };
     const dem = demandsFor(g, 'Construction');
     // 0. The town center: once Economy has gathered what it needs, the village builds it themselves (a little way from the fire).
@@ -305,17 +317,17 @@ export const Construction = {
     if (bedsNow + plannedBeds < pop + 1) { const placed = tryPlace('house', hx, hy, { minR: 2, maxR: 11, score: (x, y) => beautyAt(x, y) * 0.5 }, 'everyone needs a bed'); if (placed) return placed; }   // no spot? carry on with the rest
     // 2. Storage where it is full, or near long walks.
     const st = dem.find(d => d.what === 'storage' && d.near) || dem.find(d => d.what === 'storage');
-    // Food goes to a granary, wood to a lumber mill, everything else (finished goods, stone) to a storehouse.
-    const storeK = st && (st.res === 'food' || st.res === 'water') ? 'granary' : st && st.res === 'wood' ? 'lumbermill' : 'store';
+    // Food and what it is made from go to a granary, water to a well, wood to a lumber mill, everything else to a storehouse.
+    const storeK = st && ['food', 'wheat', 'flour', 'milk'].includes(st.res) ? 'granary' : st && st.res === 'water' ? 'well' : st && st.res === 'wood' ? 'lumbermill' : 'store';
     if (st && !g.buildings.some(b => b.k === storeK && !b.done)) {
       const [ax, ay] = st.near || [tc.x, tc.y];
-      const placed = tryPlace(storeK, ax, ay, { minR: st.near ? 1 : 3, maxR: 10 }, st.why);
+      const placed = tryPlace(storeK, ax, ay, { minR: st.near ? 1 : 3, maxR: 10, ...(storeK === 'granary' ? { score: (x, y) => -beautyAt(x, y) } : {}) }, st.why);   // the unsightly granary keeps its distance from homes
       if (placed) return placed;
     }
     // 3. Farms when food runs short and there are few fields.
     const econ = g.manager.directors.find(d => d.name === 'Economy');
     const farms = g.buildings.filter(b => b.k === 'farm').length;
-    if (econ && econ.needs.food > 0.5 && farms < Math.ceil(pop / 3)) { const placed = tryPlace('farm', tc.x, tc.y, { minR: 3, maxR: 9 }, 'food is running short'); if (placed) return placed; }
+    if (econ && econ.needs.food > 0.5 && farms < Math.ceil(pop / 3)) { const placed = slotPlace('farm', 'food is running short'); if (placed) return placed; }
     // 4. A well near the homes once the village has grown.
     if (pop >= 4 && !g.buildings.some(b => b.k === 'well')) {
       if (affordable(g, BUILD.well.cost)) { const placed = tryPlace('well', hx, hy, { minR: 1, maxR: 6 }, 'water closer to home'); if (placed) return placed; }
@@ -328,7 +340,7 @@ export const Construction = {
       if (!has('potter') && clayNear) { const placed = tryPlace('potter', clayNear[0], clayNear[1], { minR: 2, maxR: 9 }, 'clay can become pottery for the merchant'); if (placed) return placed; }
       if (!has('carpenter') && g.res.wood >= 100) { const placed = tryPlace('carpenter', hx, hy, { minR: 2, maxR: 9 }, 'wood can become furniture for the merchant'); if (placed) return placed; }
       if (g.age >= 1 && !has('weaver')) { const placed = tryPlace('weaver', hx, hy, { minR: 2, maxR: 9 }, 'fiber can become cloth for the merchant'); if (placed) return placed; }
-      if (has('weaver') && !has('fiberfield')) { const placed = tryPlace('fiberfield', tc.x, tc.y, { minR: 3, maxR: 10 }, 'the weaver needs fiber'); if (placed) return placed; }
+      if (has('weaver') && !has('fiberfield')) { const placed = slotPlace('fiberfield', 'the weaver needs fiber'); if (placed) return placed; }
     }
     // 5a. Gold: from the Town Age a gold mine, once Economy's reserve runs short and the village can afford it.
     if (g.age >= 2 && econ && econ.needs.gold > 0.3 && !g.buildings.some(b => b.k === 'goldmine') && affordable(g, BUILD.goldmine.cost)) {
@@ -353,22 +365,21 @@ export const Construction = {
       const fields = g.buildings.filter(b => BUILD[b.k].crop);
       const fx = fields.length ? Math.round(fields.reduce((s, b) => s + b.x, 0) / fields.length) : tc.x, fy = fields.length ? Math.round(fields.reduce((s, b) => s + b.y, 0) / fields.length) : tc.y;
       const anchor = g.buildings.find(b => b.k === 'grange') || { x: tc.x, y: tc.y };
-      if (pop >= 4 && !has('wheatfield')) { const placed = tryPlace('wheatfield', anchor.x, anchor.y, { minR: 3, maxR: 10 }, 'wheat for bread and beer'); if (placed) return placed; }
+      if (pop >= 4 && !has('wheatfield')) { const placed = slotPlace('wheatfield', 'wheat for bread and beer'); if (placed) return placed; }
       if (has('wheatfield') && !has('brewery')) { const placed = tryPlace('brewery', hx, hy, { minR: 2, maxR: 9 }, 'every home wants beer'); if (placed) return placed; }
       if (fields.length >= 2 && !has('grange')) { const placed = tryPlace('grange', fx, fy, { minR: 1, maxR: 6 }, 'a hub for the farmers'); if (placed) return placed; }
       if (pop >= 6 && has('wheatfield') && !has('mill')) { const placed = tryPlace('mill', anchor.x, anchor.y, { minR: 2, maxR: 8 }, 'flour for bread'); if (placed) return placed; }
       if (has('mill') && !has('bakery')) { const placed = tryPlace('bakery', hx, hy, { minR: 2, maxR: 8 }, 'fresh bread'); if (placed) return placed; }
       // A farmhouse once there are fields: homes for farming folk, the farming upgrades, and needed before any pens.
-      if (pop >= 4 && fields.length >= 1 && !has('farmhouse')) { const placed = tryPlace('farmhouse', fx, fy, { minR: 2, maxR: 9 }, 'a home for the farmers'); if (placed) return placed; }
       // Animals: hens early; sheep once there is a weaver; cows and a dairy, bees and a chandler in the Village Age.
-      if (pop >= 4 && has('wheatfield') && !has('coop')) { const placed = tryPlace('coop', anchor.x, anchor.y, { minR: 2, maxR: 9 }, 'fresh eggs'); if (placed) return placed; }
-      if (g.age >= 1 && has('weaver') && !has('sheepfold')) { const placed = tryPlace('sheepfold', anchor.x, anchor.y, { minR: 2, maxR: 11 }, 'wool for the weaver'); if (placed) return placed; }
-      if (g.age >= 1 && pop >= 7 && !has('pasture')) { const placed = tryPlace('pasture', anchor.x, anchor.y, { minR: 2, maxR: 11 }, 'milk for cheese'); if (placed) return placed; }
+      if (pop >= 4 && has('wheatfield') && !has('coop')) { const placed = slotPlace('coop', 'fresh eggs'); if (placed) return placed; }
+      if (g.age >= 1 && has('weaver') && !has('sheepfold')) { const placed = slotPlace('sheepfold', 'wool for the weaver'); if (placed) return placed; }
+      if (g.age >= 1 && pop >= 7 && !has('pasture')) { const placed = slotPlace('pasture', 'milk for cheese'); if (placed) return placed; }
       if (has('pasture') && !has('dairy')) { const placed = tryPlace('dairy', anchor.x, anchor.y, { minR: 2, maxR: 8 }, 'a cheesemaker for the milk'); if (placed) return placed; }
-      if (g.age >= 1 && pop >= 6 && !has('apiary')) { const placed = tryPlace('apiary', hx, hy, { minR: 3, maxR: 10, score: (x, y) => beautyAt(x, y) * 0.3 }, 'honey and beeswax'); if (placed) return placed; }
+      if (g.age >= 1 && pop >= 6 && !has('apiary')) { const placed = slotPlace('apiary', 'honey and beeswax'); if (placed) return placed; }
       if (has('apiary') && !has('chandler')) { const placed = tryPlace('chandler', hx, hy, { minR: 2, maxR: 8 }, 'candles from the beeswax'); if (placed) return placed; }
       const wheatWanted = 1 + (has('mill') ? 1 : 0) + (has('coop') || has('sheepfold') || has('pasture') ? 1 : 0) + Math.floor(pop / 8);
-      if (has('brewery') && count('wheatfield') < wheatWanted && g.res.wheat < 20) { const placed = tryPlace('wheatfield', anchor.x, anchor.y, { minR: 2, maxR: 10 }, 'more wheat'); if (placed) return placed; }
+      if (has('brewery') && count('wheatfield') < wheatWanted && g.res.wheat < 20) { const placed = slotPlace('wheatfield', 'more wheat'); if (placed) return placed; }
     }
     // 5e. A stall (shop) within reach of homes that want goods, so they can be handed out.
     {
@@ -422,7 +433,7 @@ export const Social = {
     g.social = g.villagers.length ? g.villagers.reduce((s, v) => s + (v.social ?? 0.4), 0) / g.villagers.length : 0;
     if (crossed(g, WAKE)) this.arrivals(g);
     // Social's favourite thing: once the wish passes 0.6, plan a festival the moment the village can afford one (free will on).
-    if (g.freeWill && !g.festival && festivalWant(g) >= FESTIVAL.declareAt && hour(g) >= 6 && hour(g) < FESTIVAL.startHour - 1 && affordableFestival(g)) planFestival(g, 'Social');
+    if (g.freeBuild && !g.festival && festivalWant(g) >= FESTIVAL.declareAt && hour(g) >= 6 && hour(g) < FESTIVAL.startHour - 1 && affordableFestival(g)) planFestival(g, 'Social');
   },
   arrivals(g) {
     const p = this.prefs, pop = g.villagers.length, need = rations(g, pop + 1, p.foodDays);
@@ -517,7 +528,7 @@ export const Culture = {
       if (a && a.type === 'sit' && a.phase === 'wait' && a.key === 'tavern' && g.res.beer > 0) { g.res.beer = Math.max(0, g.res.beer - CULTURE.beerPerSec * dt); v.tav = (v.tav || 0) + dt; g.culture = (g.culture || 0) + CULTURE.tavernBeer * dt; }
     }
     this.t -= dt;
-    if (this.t > 0 || !g.freeWill) return;
+    if (this.t > 0 || !g.freeBuild) return;   // researching and advancing ages on their own: only with Free build
     this.t = this.prefs.every;
     // Upgrades are only taken up from a comfortable surplus, and not more than one every couple of minutes.
     const keep = { food: rations(g, g.villagers.length, 2), water: rations(g, g.villagers.length, 2), wood: 150, stone: 40, gold: 100 + 100 * g.age };

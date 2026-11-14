@@ -6,6 +6,7 @@ import { walkable, inMap, idx, tx, ty, DIRS8, besideRect, isOpen, nodeKind, isSh
 import { addRes, isNight, completeBuilding, canStore, acceptsAt, record, pay, have, notice, beds, levelName, cap, takeDown, seasonIndex } from './state.js';
 import { finish, action } from './villagers.js';
 
+import { dutyFailed } from './duty.js';
 const RUN = 0, DONE = 1, FAIL = 2;
 const FARM_KIND = 6;
 const at = v => [Math.round(v.x), Math.round(v.y)];
@@ -31,14 +32,14 @@ const isDropoff = (g, x, y, r) => g.buildings.some(b => acceptsAt(g, b, r) && be
 // Carry goods to the nearest building that holds them. Returns 'done', 'walking', 'fail' or 'full'.
 function haul(g, v, a) {
   if (v.carry <= 0) return 'done';
-  if (!canStore(g, v.carryRes)) { v.why = 'The stores are full.'; return 'full'; }
+  if (!canStore(g, v.carryRes)) { v.why = `Waiting for room in the stores for more ${v.carryRes === 'food' ? 'food' : v.carryRes}.`; return 'full'; }
   if (!a.haulT0) { a.haulT0 = g.clock; a.from = [Math.round(v.x), Math.round(v.y)]; }
   const s = go(g, v, a, (x, y) => isDropoff(g, x, y, v.carryRes));
   if (s !== 'arrived') return s;
   addRes(g, v.carryRes, v.carry); record(g, 'in', v.carryRes, v.carry);
   if (v.carryRes === 'food') { const p = g.pantry || (g.pantry = {}), k = PANTRY_KIND[v.carryKind] || 'provisions'; p[k] = (p[k] || 0) + v.carry; }
   g.events.emit('delivered', { v, res: v.carryRes, n: v.carry, walk: g.clock - a.haulT0, from: a.from });
-  a.haulT0 = 0;
+  a.haulT0 = 0; v.why = '';
   v.carry = 0; v.carryRes = null; v.carryKind = 0;
   return 'done';
 }
@@ -56,6 +57,12 @@ const hauling = (g, v, a, next) => {
 function face(v, x, y) { const d = (x - v.x) - (y - v.y); if (d) v.dir = d > 0 ? 1 : -1; }
 
 const H = {
+  // Take whatever is carried to the nearest place that keeps it, then stop.
+  unload(g, v, a) {
+    if (v.carry <= 0) return DONE;
+    const s = haul(g, v, a);
+    return s === 'done' ? DONE : s === 'fail' || s === 'full' ? FAIL : RUN;
+  },
   gather(g, v, a, dt) {
     const w = g.w, k = a.kind, info = NODE_INFO[k];
     switch (a.phase) {
@@ -409,8 +416,9 @@ export function stepVillager(g, v, dt) {
   if (!v.act || v.path.length) return;
   const a = v.act, st = H[a.type](g, v, a, e);
   if (st === RUN) return;
-  if (st === FAIL && a.src === 'player') { v.why = "Couldn't reach that."; g.events.emit('failed', { v, a }); }
-  if (st === DONE && a.next) { v.act = a.next; v.why = a.next.why || v.why; return; }
+  if (st === FAIL && a.duty) dutyFailed(g, v);
+  else if (st === FAIL && a.src === 'player') { v.why = "Couldn't reach that."; g.events.emit('failed', { v, a }); }
+  if (st === DONE && a.next) { v.act = a.next; v.why = ''; return; }
   finish(g, v);
 }
 export const ACTION_TYPES = Object.keys(H);
