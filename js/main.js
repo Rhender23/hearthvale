@@ -12,8 +12,8 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { /* storage unavailable */ } },
 };
-const settings = Object.assign({ sound: true, volume: 0.7, sandbox: store.get('hv-sbx') !== '0', speed: 1 }, JSON.parse(store.get('hv-settings') || '{}'));
-settings.persist = () => store.set('hv-settings', JSON.stringify({ sound: settings.sound, volume: settings.volume, sandbox: settings.sandbox, speed: settings.speed }));
+const settings = Object.assign({ sound: true, volume: 0.7, sandbox: store.get('hv-sbx') !== '0', speed: 1, hints: true, hintStep: 0 }, JSON.parse(store.get('hv-settings') || '{}'));
+settings.persist = () => store.set('hv-settings', JSON.stringify({ sound: settings.sound, volume: settings.volume, sandbox: settings.sandbox, speed: settings.speed, hints: settings.hints, hintStep: settings.hintStep }));
 
 let game = null, loadedFrom = 'new';
 function loadGame() {

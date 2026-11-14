@@ -303,7 +303,7 @@ export const Construction = {
         const placed = tryPlace(k, fh.x, fh.y, { minR: 1, maxR: FARM_REACH + 1, score: (x, y) => -Math.hypot(x - fh.x, y - fh.y) * 0.1 }, why); if (placed) return placed;
       }
       const fhs = g.buildings.filter(b => b.k === 'farmhouse');
-      if (fhs.some(b => !b.done) || fhs.length >= 1 + Math.floor(pop / 6)) return null;
+      if (fhs.some(b => !b.done)) return null;   // a new farmhouse only when every slot is in use (no head-count cap)
       return tryPlace('farmhouse', tc.x, tc.y, { minR: 4, maxR: 12, score: (x, y) => -beautyAt(x, y) * 0.3 }, `room for more ${kind === 'fields' ? 'fields' : 'animals'}`);
     };
     const dem = demandsFor(g, 'Construction');

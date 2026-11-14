@@ -19,6 +19,8 @@ import { createSheet } from './sheet.js';
 import { createActions, OWNS, PRIMARY } from './actions.js';
 import { NODE_NAME, buildingTitle, buildingSummary, buildingDetails, villagerTitle, villagerSummary, villagerJob, nodeSummary } from './panels.js';
 import { placeHint, orderNote } from '../core/hints.js';
+import { createCoach } from './coach.js';
+import { VERSION } from '../core/config.js';
 
 export { OWNS };
 
@@ -83,18 +85,22 @@ export function createUI(ctx) {
   // ---------- the actions and their buttons ----------
   const api = { ui, g, settings, audio, toast, say, pop, sheet, save: ctx.save, newGame: ctx.newGame };
   const ACT = createActions(api);
+  const coach = api.coach = createCoach({ ui, g, view, settings, toScreen, pop });
+  // Short captions under bubble buttons: icons are easier to learn with a word beside them.
+  const LABEL = { build: 'Build', unload: 'Unload', work: 'To work', plant: 'Plant', add: 'Group', rename: 'Name', clearjob: 'Clear job', remove: 'Remove', train: 'Villager', age: 'Age', festival: 'Festival', upgrades: 'Upgrades', rally: 'Rally', all: 'Everyone', idle: 'Idle', focus: 'Focus', improve: 'Improve', inside: 'Inside', move: 'Move', rotate: 'Turn', trade: 'Trade', info: 'Details', more: 'More', free: 'Free will', speed: 'Speed', pause: 'Pause', sound: 'Sound', overlay: 'Maps', album: 'Critters', save: 'Save', sandbox: 'Sandbox', newgame: 'New game', hints: 'Hints' };
   const rows = [];
   function button(k) {
     const a = ACT[k], b = el('button', { className: 'ic' + (a.danger ? ' danger' : '') + (k === 'more' ? ' more' : '') }); b.dataset.tip = k;
     b.setAttribute('aria-label', val(a.tip)[0]);
-    b.onclick = () => { a.run(); syncButtons(); };
-    rows.push([b, k]); return b;
+    b.onclick = () => { buzz(6); a.run(); syncButtons(); };
+    const w = el('div', { className: 'bw' }, [b, el('small', { textContent: LABEL[k] || val(a.tip)[0] })]);
+    rows.push([b, k, w]); return w;
   }
   function syncButtons() {
     for (let i = rows.length - 1; i >= 0; i--) {
-      const [b, k] = rows[i]; if (!b.isConnected) { rows.splice(i, 1); continue; }
+      const [b, k, w] = rows[i]; if (!b.isConnected) { rows.splice(i, 1); continue; }
       const a = ACT[k]; b.textContent = val(a.icon); b.disabled = a.dis ? !!a.dis() : false;
-      b.hidden = a.hide ? !!a.hide() : false;
+      w.hidden = a.hide ? !!a.hide() : false;
       b.classList.toggle('on', a.on ? !!a.on() : false); b.classList.toggle('ready', a.ready ? !!a.ready() : false);
     }
   }
@@ -154,7 +160,7 @@ export function createUI(ctx) {
   // ---------- the game menu: a bubble from its button ----------
   const gameLine = () => { const G = g(), h = hour(G); return `Day ${dayNumber(G)} · ${SEASONS[seasonIndex(G)]} · ${AGES[G.age].name} Age · ${clock12(Math.floor(h), Math.floor((h % 1) * 60), false)} · Beauty: ${beautyLabel(villageBeauty(G))}`; };
   function buildGameMenu(b) {
-    b.append(head('Hearthvale', gameLine()), el('div', { className: 'prow wrap' }, OWNS.game.map(button)));
+    b.append(head(`Hearthvale · v${VERSION}`, gameLine()), el('div', { className: 'prow wrap' }, OWNS.game.map(button)));
     if (settings.sound) {
       const vol = el('input', { type: 'range', min: '0', max: '100', step: '1', value: String(Math.round((settings.volume ?? 0.7) * 100)) });
       vol.setAttribute('aria-label', 'Volume');
@@ -164,6 +170,7 @@ export function createUI(ctx) {
   }
   api.refreshGame = () => { if (pop.key === 'game') pop.close(); };
   $('fab').onclick = () => { const was = ui.menuOpen; clearSel(); ui.menuOpen = !was; };
+  $('buildbtn').onclick = () => { if (ui.place) { cancelPlace(); return; } if (sheet.key === 'build') { sheet.close(); return; } ui.menuOpen = false; ui.selB = null; ui.selN = null; api.openBuild(); };
   $('hudbtn').onclick = () => { ui.hudMode = ((ui.hudMode || 0) + 1) % 3; ui.hudOpen = ui.hudMode > 0; };
 
   // ---------- sheets: build menu, upgrades, market, details ----------
@@ -258,9 +265,12 @@ export function createUI(ctx) {
       toast(`The ${name} has a new spot.`, { label: 'Undo', run: () => { if (G.bmap.has(b.id)) cmd.moveBuilding(G, b, from[0], from[1], from[2]); } });
       clearSel(); return;
     }
-    const vs = [...ui.sel], r = cmd.place(G, ui.place, x[0], x[1], vs, ui.rot);
+    // Built by the villagers chosen, or else by whoever is nearest and awake.
+    let vs = [...ui.sel];
+    if (!vs.length) { const v = G.villagers.filter(v => !v.inside && !(v.act && (v.act.type === 'sleep' || v.act.type === 'leave'))).sort((a, b) => Math.hypot(a.x - x[0], a.y - x[1]) - Math.hypot(b.x - x[0], b.y - x[1]))[0] || G.villagers[0]; if (v) vs = [v]; }
+    const r = cmd.place(G, ui.place, x[0], x[1], vs, ui.rot);
     if (!r.ok) { say(r.reason); return; }
-    ping(x[0] + (r.b.w - 1) / 2, x[1] + (r.b.h - 1) / 2, '#f2c14e'); buzz();
+    ping(x[0] + (r.b.w - 1) / 2, x[1] + (r.b.h - 1) / 2, '#f2c14e'); buzz(); ui.coachPlaced = true;
     say(orderNote(G, 'place', vs, r.b), ui.lastTap);
     clearSel();
   }
@@ -318,7 +328,6 @@ export function createUI(ctx) {
   // ---------- taps on the map ----------
   function tap(rx, ry, wx, wy) {
     if (ui.modal) return;
-    $('hint').classList.add('gone');
     ui.lastTap = toScreen(wx, wy);
     if (sheet.key && !ui.place) { sheet.close(); return; }   // a tap outside a sheet just closes it
     const G = g(), vs = [...ui.sel];
@@ -403,8 +412,6 @@ export function createUI(ctx) {
   { const h = $('hud'), item = (r, adv) => { const e = el('span', { id: 's-' + r, className: adv ? 'adv' : '' }, [ICON[r] + ' ', el('b', { id: 'r-' + r })]); e.dataset.tip = 'res-' + r; return e; }, grp = (id, label) => el('span', { id: 'g-' + id, className: 'grp adv' }, [label]);
     h.replaceChildren(...BASICS.map(r => item(r)), el('span', { id: 'pantry', className: 'grp sub adv' }), grp('farm', 'Farm'), ...FARM.map(r => item(r, true)), grp('goods', 'Goods'), ...GOODS.map(r => item(r, true)), el('span', { className: 'grp' }, ['']), (() => { const e = el('span', {}, ['🏠 ', el('b', { id: 'r-pop' })]); e.dataset.tip = 'res-pop'; return e; })(), (() => { const e = el('span', { id: 'r-age' }); e.dataset.tip = 'res-age'; return e; })());
     h.addEventListener('click', e => { const t = e.target.closest('[data-tip]'); if (t) showTip(t); }); }
-  const hideHint = () => $('hint').classList.add('gone');
-  document.addEventListener('pointerdown', hideHint, { once: true }); setTimeout(hideHint, 15000);
 
   // ---------- Director overlay (for the curious) ----------
   function drawDirectors() {
@@ -443,6 +450,8 @@ export function createUI(ctx) {
     if (ui.overlay === 'directors' && (ui.dirT = (ui.dirT || 0) + 1) % 30 === 1) drawDirectors();
     $('r-pop').textContent = `${G.villagers.length}/${popCap(G)}`;
     $('r-age').textContent = `${AGES[G.age].name} Age · 🎭 ${Math.floor(G.culture || 0)}${AGES[G.age + 1] ? '/' + AGES[G.age + 1].culture : ''} · ${SEASONS[seasonIndex(G)]}${darkness(G) > 0.6 ? ' 🌙' : ''}`;
+    $('buildbtn').classList.toggle('on', sheet.key === 'build' || !!ui.place);
+    coach.tick();
     syncButtons();
   }
 
@@ -453,7 +462,7 @@ export function createUI(ctx) {
     if (k === ' ' || k === 'p') { ACT.pause.run(); return; }
     if (k === 'r' && (ui.place || ui.selB)) { ACT.rotate.run(); return; }
     if (k === 'enter' && ui.place) { confirmPlace(); return; }
-    if (k === 'b') { if (ui.sel.size) api.openBuild(); else say('Select a villager to build.', [innerWidth / 2, innerHeight / 2]); }
+    if (k === 'b') api.openBuild();
     else if (k === 'm') { const was = ui.menuOpen; clearSel(); ui.menuOpen = !was; }
     else if (k === 'h') { const tc = hub(g()); selectBuilding(tc); center(tc.x + 0.5, tc.y + 0.5); }
     else if (k === '.') nextIdle();

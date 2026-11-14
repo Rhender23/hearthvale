@@ -75,6 +75,29 @@ body.hud-open #dir{top:calc(150px + var(--sa-t));max-height:44vh}
 #inside .deco{display:flex;flex-direction:column;gap:6px;max-height:30vh;overflow:auto}
 #inside .close{align-self:flex-end;padding:6px 16px;border-radius:12px;border:2px solid var(--line);background:var(--bar)}
 @media (prefers-reduced-motion:reduce){#toast,#hint{transition:none}}
+/* ---- bubble buttons with captions ---- */
+.bw{display:flex;flex-direction:column;align-items:center;gap:3px;width:52px}
+.bw small{font-size:11px;line-height:1.15;text-align:center;opacity:.85;max-width:56px}
+.prow.wrap{gap:8px 4px}
+/* ---- Build: always one tap away, bottom right where the thumb rests ---- */
+#buildbtn{position:fixed;z-index:5;right:16px;bottom:calc(16px + var(--sa-b));width:62px;height:62px;border-radius:50%;font-size:28px;background:var(--bar);border:2px solid var(--line);box-shadow:0 4px 14px rgba(40,30,20,.18)}
+#buildbtn.on{background:var(--on)}
+/* ---- first-steps hints ---- */
+#coach{position:fixed;z-index:9;max-width:min(92vw,420px);display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:16px;background:var(--bar);border:2px solid var(--glow);color:var(--ink);font-size:15px;line-height:1.35;box-shadow:0 6px 18px rgba(40,30,20,.2)}
+#coach .co-i{font-size:20px}
+#coach .co-t{flex:1}
+#coach .co-skip{flex:0 0 auto;min-height:36px;padding:0 10px;border-radius:12px;border:2px solid var(--line);background:transparent;font-size:12px}
+#ring{position:fixed;z-index:8;border-radius:50%;border:3px solid var(--glow);pointer-events:none;animation:ring 1.4s ease-in-out infinite}
+@keyframes ring{0%,100%{transform:scale(1);opacity:.95}50%{transform:scale(1.15);opacity:.5}}
+/* ---- looking inside ---- */
+#inside .dlg{max-height:calc(100vh - 24px);overflow:auto;width:min(600px,calc(100vw - 16px))}
+#inside .in-head{position:relative;display:flex;align-items:center;min-height:44px;padding-right:48px}
+#inside .in-head .sh-x{top:0;right:0}
+#inside canvas{align-self:center;touch-action:none}
+#inside .in-tools{display:flex;flex-direction:column;gap:8px}
+#inside .in-msg{opacity:.85;font-size:13px}
+@media (prefers-reduced-motion:reduce){#ring{animation:none}}
+
 /* ---- bubble menu (opens at what was tapped) ---- */
 .pop{position:fixed;z-index:7;border-radius:18px;padding:10px 12px;max-width:min(360px,calc(100vw - 20px));box-shadow:0 6px 20px rgba(40,30,20,.18);font-size:14px}
 .pop.in{animation:popin .16s ease-out}
@@ -136,10 +159,10 @@ ul.details{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px
   <span>🏠 <b id="r-pop">0</b></span><span id="r-age"></span>
 </div>
 <button id="fab" aria-label="Game menu">🏡</button>
+<button id="buildbtn" aria-label="Build" data-tip="build">🔨</button>
 <div id="dir" hidden></div>
 <div id="tip" hidden></div>
 <div id="toast" role="status"></div>
-<div id="hint">Tap a villager to select them, then tap a tree, field or the ground. Drag to look around.</div>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

@@ -1,3 +1,5 @@
+// Build number, shown in the game menu. Raise it with every published build.
+export const VERSION = 36;
 // Static game data. No logic, no state. Every other module reads from here.
 export const N = 40, TW = 64, TH = 32;
 export const DAY = 864;        // seconds of real time per game day (midnight to 5am lasts 180s)
@@ -51,9 +53,9 @@ export const BUILD = {
               desc: 'A home. It improves as its surroundings grow lovelier.' },
   // Storehouse: 2x1, and can be turned to 1x2. Holds a lot, but only a little food (the granary and grange are for food).
   store:    { name: 'Storehouse', size: 2, w: 2, h: 1, turns: true, time: 10, cost: { wood: 60 }, age: 0, placer: 'village', beauty: -1.5, icon: '📦',
-              store: { wood: 60, stone: 80, gold: 100, food: 15, water: 30, clay: 80, fiber: 80, pottery: 90, cloth: 90, furniture: 50, jewelry: 40, beer: 60, candles: 60, wool: 60, wax: 40 }, desc: 'Mainly for finished goods: pottery, cloth, furniture, jewelry, beer, candles. Only a little wood, stone and food.' },
+              store: { wood: 500, stone: 300, gold: 300, food: 250, water: 200, clay: 200, fiber: 200, pottery: 150, cloth: 150, furniture: 100, jewelry: 60, beer: 120, candles: 100, wool: 100, wax: 80, wheat: 120, flour: 80, milk: 60 }, desc: 'Holds a little of everything: one is enough for a hamlet until it becomes a village. The granary and lumber mill hold far more of food and wood.' },
   lumbermill: { name: 'Lumber mill', size: 2, time: 10, cost: { wood: 40 }, age: 0, placer: 'village', beauty: -2.5, icon: '🪵',
-              store: { wood: 600 }, desc: 'Stacks of logs and planks. Holds a great deal of wood, so woodcutters walk less.' },
+              store: { wood: 1500 }, desc: 'Stacks of logs and planks. Holds a great deal of wood, so woodcutters walk less.' },
   farm:     { name: 'Vegetable field', size: 2, time: 8, cost: { wood: 60 }, age: 0, flat: true, food: 100, crop: 'food', placer: 'village', beauty: -2,
               desc: 'Rows of carrots, cabbages and beans. Grows food. Re-sown for a little wood when it runs out.' },
   wheatfield:{ name: 'Wheat field', size: 2, time: 8, cost: { wood: 50 }, age: 0, flat: true, food: 80, crop: 'wheat', placer: 'village', beauty: -1.5,
@@ -62,7 +64,7 @@ export const BUILD = {
   grange:   { name: 'Grange', size: 2, time: 14, cost: { wood: 80, stone: 10 }, age: 0, placer: 'village', beauty: -1,
               store: { food: 150, wheat: 150, flour: 60, fiber: 100, beer: 20, wool: 60, milk: 40, wax: 30 }, desc: 'The farmers\' hall. Harvests come here, so fields near it need fewer long walks.' },
   granary:  { name: 'Granary', size: 2, time: 16, cost: { wood: 80, stone: 30 }, age: 0, placer: 'village', beauty: -4, icon: '🛢️',
-              store: { food: 1500, wheat: 400, flour: 200, milk: 100 }, desc: 'One great round silo. Holds an enormous amount of food and what food is made from (wheat, flour, milk). Very unsightly: keep it away from homes.' },
+              store: { food: 3000, wheat: 800, flour: 400, milk: 200 }, desc: 'One great round silo. Holds an enormous amount of food and what food is made from (wheat, flour, milk). Very unsightly: keep it away from homes.' },
     // The farmhouse: a home for farming folk. Only 2 beds, but it keeps food, rises with little regard for beauty,
   // holds the farming upgrades, and the village needs one before it can keep penned animals.
   farmhouse:{ name: 'Farmhouse', size: 2, time: 14, cost: { wood: 70, stone: 10 }, age: 0, home: true, placer: 'village', beauty: 0.5, icon: '🏡',
@@ -103,8 +105,8 @@ export const BUILD = {
               store: { pottery: 10, furniture: 5, cloth: 10, jewelry: 5, beer: 10, candles: 10 }, desc: 'Hands pottery, furniture, cloth, jewelry and beer to the homes around it, and sells a little of what is spare each day.' },
   potter:   { name: "Potter's workshop", size: 1, time: 10, cost: { wood: 40, stone: 10 }, age: 0, placer: 'village', beauty: -2,
               craft: { role: 'potter', in: { clay: 2 }, out: { pottery: 1 }, time: 6 }, desc: 'A potter turns clay into pottery.' },
-  carpenter:{ name: "Carpenter's shop", size: 1, time: 10, cost: { wood: 50, stone: 10 }, age: 0, placer: 'village', beauty: -2,
-              craft: { role: 'carpenter', in: { wood: 4 }, out: { furniture: 1 }, time: 8 }, desc: 'A carpenter turns wood into furniture.' },
+  carpenter:{ name: 'Furniture maker', size: 1, time: 10, cost: { wood: 50, stone: 10 }, age: 0, placer: 'village', beauty: -2, icon: '🪑',
+              craft: { role: 'carpenter', in: { wood: 4 }, out: { furniture: 1 }, time: 8 }, desc: 'A carpenter turns wood into furniture (🪑): homes use it, finer homes need it to level up, and you can furnish rooms with it.' },
   weaver:   { name: "Weaver's cottage", size: 1, time: 10, cost: { wood: 40, stone: 10 }, age: 1, placer: 'village', beauty: -2,
               craft: { role: 'weaver', in: { fiber: 2 }, alt: { wool: 2 }, out: { cloth: 1 }, time: 7 }, desc: 'A weaver turns fiber into cloth.' },
   // Mines and quarries: from the Town Age, very costly in wood and gold, and they work forever.
@@ -188,17 +190,17 @@ export const TIERS = {
     H('Hut', 0, 0, {}, 3, 20, 0),
     H('Cottage', 0, 1, { wood: 30 }, 4, 30, 0.5),
     H('Cozy cottage', 0, 2, { wood: 40, food: 20 }, 5, 40, 1, P),
-    H('Timber house', 1, 2.5, { wood: 60, stone: 20 }, 6, 50, 1.5, PF),
-    H('Fine timber house', 1, 3.5, { wood: 60, stone: 40 }, 7, 60, 2, PF),
-    H('Stone house', 2, 4, { wood: 40, stone: 80 }, 8, 70, 2.5, PFL),
-    H('Fine stone house', 2, 5, { stone: 100, gold: 10 }, 9, 80, 3, PFL),
-    H('Manor', 3, 6, { stone: 120, gold: 40 }, 10, 90, 3.5, PFLJ),
-    H('Grand manor', 3, 7.5, { stone: 150, gold: 80 }, 12, 100, 4, PFLJ),
+    H('Timber house', 1, 2.5, { wood: 60, stone: 20, furniture: 2 }, 6, 50, 1.5, PF),   // from here on, climbing a level spends furniture
+    H('Fine timber house', 1, 3.5, { wood: 60, stone: 40, furniture: 3 }, 7, 60, 2, PF),
+    H('Stone house', 2, 4, { wood: 40, stone: 80, furniture: 3 }, 8, 70, 2.5, PFL),
+    H('Fine stone house', 2, 5, { stone: 100, gold: 10, furniture: 4 }, 9, 80, 3, PFL),
+    H('Manor', 3, 6, { stone: 120, gold: 40, furniture: 5 }, 10, 90, 3.5, PFLJ),
+    H('Grand manor', 3, 7.5, { stone: 150, gold: 80, furniture: 6 }, 12, 100, 4, PFLJ),
   ],
   well: [
-    { name: 'Well', age: 0, need: -99, cost: {}, water: 60, refill: 40, beauty: 1, store: { water: 60 } },
-    { name: 'Fountain', age: 1, need: 2, cost: { stone: 50 }, water: 100, refill: 70, beauty: 3, store: { water: 120 } },
-    { name: 'Water tower', age: 2, need: 1, cost: { wood: 120, stone: 80 }, water: 400, refill: 220, beauty: 1, store: { water: 300 } },
+    { name: 'Well', age: 0, need: -99, cost: {}, water: 60, refill: 40, beauty: 1, store: { water: 100 } },
+    { name: 'Fountain', age: 1, need: 2, cost: { stone: 50 }, water: 100, refill: 70, beauty: 3, store: { water: 200 } },
+    { name: 'Water tower', age: 2, need: 1, cost: { wood: 120, stone: 80 }, water: 400, refill: 220, beauty: 1, store: { water: 400 } },
   ],
   campfire: [
     { name: 'Campfire', age: 0, need: -99, cost: {}, beauty: 0.5, company: 1 },
@@ -227,6 +229,12 @@ export const TIERS = {
     { name: 'General store', age: 2, need: -99, cost: { wood: 120, stone: 80, gold: 40 }, storeMult: 2, beauty: 2, priceBonus: 0.2 },
   ],
   // Shops hand goods to the homes around them (reach, in tiles) and sell a few spare goods each day (sells per day).
+  // The furniture maker: faster as it grows.
+  carpenter: [
+    { name: "Carpenter's bench", age: 0, need: -99, cost: {}, beauty: -2, craftMul: 1 },
+    { name: 'Joinery', age: 1, need: -99, cost: { wood: 80, stone: 20 }, beauty: -2, craftMul: 0.75 },
+    { name: 'Furniture workshop', age: 2, need: -99, cost: { wood: 100, stone: 60, gold: 20 }, beauty: -1.5, craftMul: 0.55 },
+  ],
   shop: [
     { name: 'Stall', age: 0, need: -99, cost: {}, beauty: 1, reach: 6, sells: 2 },
     { name: 'Shop', age: 1, need: -99, cost: { wood: 60, stone: 20 }, beauty: 1.5, reach: 8, sells: 4 },

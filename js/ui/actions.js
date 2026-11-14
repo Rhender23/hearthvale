@@ -12,7 +12,7 @@ import { buildingTitle } from './panels.js';
 
 // Who shows what. The first few become the bubble's buttons; the rest go under ••• More.
 export const OWNS = {
-  game: ['free', 'speed', 'pause', 'sound', 'overlay', 'album', 'save', 'sandbox', 'newgame'],
+  game: ['free', 'speed', 'pause', 'sound', 'hints', 'overlay', 'album', 'save', 'sandbox', 'newgame'],
   villager: ['build', 'unload', 'work', 'plant', 'add', 'rename', 'clearjob', 'remove'],
   villagers: ['build', 'work', 'unload', 'plant', 'add'],
   tc: ['train', 'age', 'festival', 'upgrades', 'rally', 'all', 'idle', 'focus', 'move', 'inside'],
@@ -51,7 +51,7 @@ export function createActions(api) {
     album:   { icon: '🦋', tip: ['Night critters', 'Your collection. At night, tap fireflies, moths, frogs and owls to catch them. They become treasures for homes.'],
                run: () => { const G = g(), c = G.caught || {}, sp = G.spent || {}, lines = Object.entries(CRITTERS).map(([k, C]) => `${C.icon} ${(c[k] || 0) - (sp[k] || 0)}`); toast('To spend: ' + lines.join('  ·  ') + ((c.firefly || 0) < LANTERN_UNLOCK ? `  ·  ${LANTERN_UNLOCK - (c.firefly || 0)} more fireflies for a firefly lantern` : '')); } },
     // ---- villagers
-    build:   { icon: '🔨', tip: ['Build', 'Choose a building, then tap the ground to see it there. Tap ✓ to place it.'], run: () => api.openBuild() },
+    build:   { icon: '🔨', tip: ['Build', 'Choose a building, then tap the ground to see it there. Tap ✓ to place it. These villagers will build it.'], run: () => api.openBuild() },
     unload:  { icon: '📦', tip: ['Unload', 'Take what they carry to the stores.'], dis: () => !vs().some(v => v.carry > 0),
                run: () => { const n = cmd.orderUnload(g(), vs()); api.say(n ? (n > 1 ? 'Taking it all to the stores.' : `${one() ? one().name + ' is t' : 'T'}aking it to the stores.`) : 'The stores are full of that for now: a storehouse would make room.'); } },
     work:    { icon: '🧺', tip: () => ['Back to work', one() && one().duty ? 'Back to their job.' : 'Pick up the most useful work there is.'],
@@ -95,6 +95,8 @@ export function createActions(api) {
                    : { text: `Say goodbye to ${v.name}?`, sub: 'They walk off down the road and leave the village.', ok: 'Say goodbye' };
                  api.pop.confirm({ ...q, onOk: () => { const r = cmd.removeThing(g(), t); if (!r.ok && r.reason) api.say(r.reason); else if (b) api.say(`A villager is on the way to take down the ${buildingTitle(b).toLowerCase()}.`); api.clearSel(); } });
                } },
+    hints:   { icon: '💡', tip: () => settings.hints ? ['Hints are on', 'Short tips that show how to play. Tap to turn them off.'] : ['Hints are off', 'Tap to turn the first-steps hints back on (they start again from the beginning).'], on: () => !!settings.hints,
+               run: () => { if (settings.hints) { settings.hints = false; settings.persist(); toast('Hints off. Turn them back on here any time.'); } else { api.coach.restart(); toast('Hints on.'); } } },
     more:    { icon: '•••', tip: ['More', 'More things to do.'], run: () => api.toggleMore() },
   };
   return ACT;

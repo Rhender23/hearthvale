@@ -200,7 +200,7 @@ const H = {
       }
       case 'work':
         a.t += dt;
-        if (a.t < c.time * (a.slow || 1) * ((g.mods.craft || {})[b.k] || 1)) return RUN;
+        if (a.t < c.time * (a.slow || 1) * ((g.mods.craft || {})[b.k] || 1) * ((TIERS[b.k] && TIERS[b.k][b.lvl || 0].craftMul) || 1)) return RUN;
         if (outRes === 'culture') { g.culture = (g.culture || 0) + c.out.culture; g.events.emit('crafted', { v, b, res: outRes, n: c.out.culture }); return a.src === 'auto' ? DONE : phase(a, 'go'); }
         { const an = BUILD[b.k].animals, scale = an ? 0.5 + 0.5 * (b.animals ?? an.start) / (an.cap + (g.mods.penAdd || 0)) : 1; v.carry = Math.max(1, Math.round(c.out[outRes] * scale)); }
         v.carryRes = outRes; v.carryKind = KIND_CODE[c.kind] || 9;

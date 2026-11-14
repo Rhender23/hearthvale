@@ -16,7 +16,7 @@ export function serialize(g) {
     v: VERSION, seed: g.seed, gen: g.gen, classic: g.classic, sandbox: g.sandbox, clock: g.clock, tod: g.tod, res: g.res, age: g.age, adv: g.adv,
     culture: g.culture || 0, lastFestival: g.lastFestival || 0, caught: g.caught || {}, spent: g.spent || {}, seasonalDone: g.seasonalDone, tipsSeen: g.tipsSeen || {}, lastCelebration: g.lastCelebration || 0, pantry: g.pantry || {}, festival: g.festival && g.festival.phase === 'planned' ? g.festival : null, owned: Object.keys(g.owned), unlocked: Object.keys(g.unlocked || {}), rally: g.rally, focus: g.focus, freeWill: g.freeWill, freeBuild: !!g.freeBuild, nameI: g.nameI, rng: g.rng.state(), dawns: g.dawns, today: g.today, yday: g.yday,
     R: b64(g.w.R), A: b64(g.w.A), G: b64(g.w.G),
-    B: g.buildings.map(b => ({ id: b.id, k: b.k, x: b.x, y: b.y, rot: b.rot || 0, done: b.done, prog: b.prog, food: b.food, water: b.water, lvl: b.lvl, decor: b.decor, animals: b.animals })),
+    B: g.buildings.map(b => ({ id: b.id, k: b.k, x: b.x, y: b.y, rot: b.rot || 0, done: b.done, prog: b.prog, food: b.food, water: b.water, lvl: b.lvl, decor: b.decor, furn: b.furn, animals: b.animals })),
     V: g.villagers.map(v => ({ name: v.name, x: Math.round(v.x), y: Math.round(v.y), col: v.col, energy: v.energy, full: v.full, hyd: v.hyd, comp: v.comp, tav: v.tav, ate: v.ate, hungryDays: v.hungryDays, skin: v.skin, hair: v.hair, role: v.role, jobAt: v.job && g.bmap.get(v.job) ? [g.bmap.get(v.job).x, g.bmap.get(v.job).y] : null, carry: v.carry, carryRes: v.carryRes, carryKind: v.carryKind, duty: dutySave(g, v) })),
   });
 }
@@ -41,7 +41,7 @@ export function deserialize(json) {
   if (d.rng) g.rng.setState(d.rng);
   g.w.R.set(unb64(d.R, Uint8Array)); g.w.A.set(unb64(d.A, Int16Array)); g.w.G.set(unb64(d.G, Float32Array));
   const idMap = new Map();
-  for (const s of d.B) { if (!BUILD[s.k]) continue; const b = addBuilding(g, s.k, s.x, s.y, s.done, s.rot || 0); b.prog = s.prog; b.food = s.food; if (s.water != null) b.water = s.water; b.lvl = s.lvl || 0; if (s.decor) b.decor = s.decor; if (s.animals != null) b.animals = s.animals; if (s.ruin) { b.done = true; b.prog = b.time; } idMap.set(s.id, b.id); }
+  for (const s of d.B) { if (!BUILD[s.k]) continue; const b = addBuilding(g, s.k, s.x, s.y, s.done, s.rot || 0); b.prog = s.prog; b.food = s.food; if (s.water != null) b.water = s.water; b.lvl = s.lvl || 0; if (s.decor) b.decor = s.decor; if (s.furn) b.furn = s.furn; if (s.animals != null) b.animals = s.animals; if (s.ruin) { b.done = true; b.prog = b.time; } idMap.set(s.id, b.id); }
   if (g.rally && g.rally.type === 'farm') g.rally.id = idMap.get(g.rally.id);
   g.villagers = [];
   for (const s of d.V) createVillager(g, s.x, s.y, { name: s.name, col: s.col, energy: s.energy, full: s.full, hyd: s.hyd ?? 0.85, comp: s.comp ?? 36, tav: s.tav || 0, ate: s.ate ?? 1, hungryDays: s.hungryDays || 0, ...(s.skin ? { skin: s.skin, hair: s.hair } : {}), role: s.role || null, jobAt: s.jobAt || null, carry: s.carry, carryRes: s.carryRes, carryKind: s.carryKind });

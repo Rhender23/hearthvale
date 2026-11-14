@@ -7,8 +7,9 @@
 // who are inside (asleep, at work, at the tavern) appear too. Homes can be given treasures from the critter collection.
 import { BUILD, TIERS, ICON, RES } from '../core/config.js';
 import { storeOf, cap, levelName, beds, hour, isNight } from '../core/state.js';
-import { HOME_DECOR, critterLeft, CRITTERS } from '../core/critters.js';
-import * as cmd from '../core/commands.js';
+import { CRITTERS, critterLeft } from '../core/critters.js';
+import { PIECES, FURNITURE, TREASURES, spotsFor, pieceAt, settleTreasures, canAfford, placePiece, movePiece, turnPiece, putAway, isHome } from '../core/furnish.js';
+import { fmt } from './dom.js';
 
 // Buildings you can look into: anything with walls that is finished.
 export const hasInside = b => b && b.done && !BUILD[b.k].flat && !BUILD[b.k].decor && !['campfire', 'quarry', 'claypit', 'goldmine', 'well', 'monument', 'playground', 'apiary'].includes(b.k);
@@ -28,54 +29,105 @@ function quality(b) {
   return BUILD[b.k].age >= 2 ? 3 : BUILD[b.k].age >= 1 ? 2 : 1;
 }
 
+// Room geometry, shared by drawing and by taps on the room.
+function geom(W, H) {
+  const bx0 = W * 0.16, bx1 = W * 0.84, by0 = H * 0.08, by1 = H * 0.6, mBack = (by1 - by0) / 2.7;
+  const M = d => mBack * (1 + d * (W / (bx1 - bx0) - 1));
+  const P = (u, d) => { const xb = bx0 + u * (bx1 - bx0), xf = u * W; return [xb + (xf - xb) * d, by1 + (H - by1) * d]; };
+  return { bx0, bx1, by0, by1, mBack, M, P };
+}
+
 export function openInterior(g, b, onClose) {
-  const wrap = document.createElement('div'); wrap.id = 'inside';
-  const box = document.createElement('div'); box.className = 'dlg';
-  const title = document.createElement('b'), cv = document.createElement('canvas'), cap1 = document.createElement('div'), deco = document.createElement('div'), close = document.createElement('button');
-  cap1.className = 'cap'; deco.className = 'deco'; close.textContent = 'Close'; close.className = 'close';
-  box.append(title, cv, cap1, deco, close); wrap.append(box); document.body.append(wrap);
-  const W = Math.min(window.innerWidth - 48, 460), H = Math.round(W * 0.66), dpr = Math.min(2, window.devicePixelRatio || 1);
+  const mk = (t, cls, txt) => { const e = document.createElement(t); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  const wrap = mk('div'); wrap.id = 'inside';
+  const box = mk('div', 'dlg'), head = mk('div', 'in-head'), title = mk('b'), close = mk('button', 'sh-x', '✕');
+  close.setAttribute('aria-label', 'Close');
+  const cv = mk('canvas'), cap1 = mk('div', 'cap'), tools = mk('div', 'in-tools');
+  head.append(title, close); box.append(head, cv, cap1, tools); wrap.append(box); document.body.append(wrap);
+  const W = Math.min(window.innerWidth - 40, 560), H = Math.round(W * 0.66), dpr = Math.min(2, window.devicePixelRatio || 1);
   cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + 'px'; cv.style.height = H + 'px';
   const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  let open = true, raf = 0, decoKey = '';
+  let open = true, raf = 0, toolsKey = '';
   const done = () => { if (!open) return; open = false; cancelAnimationFrame(raf); wrap.remove(); document.removeEventListener('keydown', key); onClose && onClose(); };
-  const key = e => { if (e.key === 'Escape') done(); };
+  const key = e => { if (e.key === 'Escape') { if (st.mode || st.sel) { st.mode = null; st.sel = null; st.piece = null; toolsKey = ''; } else done(); } };
   close.onclick = done; wrap.addEventListener('pointerdown', e => { if (e.target === wrap) done(); }); document.addEventListener('keydown', key);
-  // Treasures for homes, from the critter collection.
-  const drawDeco = () => {
-    if (!BUILD[b.k].home) { deco.hidden = true; return; }
-    const k = Object.keys(HOME_DECOR).map(id => id + (b.decor || []).includes(id) + critterLeft(g, HOME_DECOR[id].critter)).join();
-    if (k === decoKey) return; decoKey = k;
-    deco.replaceChildren(...Object.entries(HOME_DECOR).map(([id, d]) => {
-      const has = (b.decor || []).includes(id), left = critterLeft(g, d.critter), btn = document.createElement('button');
-      btn.className = 'wide';
-      btn.append(Object.assign(document.createElement('span'), { textContent: has ? `${d.name} ✓` : `Add ${/^[aeiou]/i.test(d.name) ? 'an' : 'a'} ${d.name.toLowerCase()}  (${d.n} ${CRITTERS[d.critter].icon})` }), Object.assign(document.createElement('small'), { textContent: has ? d.desc : `${d.desc} You have ${left}.` }));
-      btn.disabled = has || left < d.n;
-      btn.onclick = () => { const r = cmd.decorateHome(g, b, id); if (r.ok) decoKey = ''; };
-      return btn;
-    }));
-  };
+
+  // Furnishing (homes only): pick a piece, tap a glowing spot. Tap a placed piece to move, turn or put it away.
+  const st = { mode: null, piece: null, sel: null, tab: 'furniture', open: false, msg: '' };
+  if (isHome(b)) settleTreasures(b);
+  const say = t => { st.msg = t; toolsKey = ''; };
+  const btn = (txt, cls, on) => { const e = mk('button', cls, txt); e.onclick = on; return e; };
+  function drawTools() {
+    if (!isHome(b)) { tools.hidden = true; return; }
+    const k = [st.mode, st.piece, st.sel, st.tab, st.open, st.msg, FURNITURE.concat(TREASURES).map(id => +canAfford(g, id)).join(''), (b.furn || []).length].join('|');
+    if (k === toolsKey) return; toolsKey = k;
+    const kids = [];
+    if (st.msg) kids.push(mk('small', 'in-msg', st.msg));
+    if (st.sel) {
+      const f = pieceAt(b, st.sel), p = f && PIECES[f.id];
+      if (!p) { st.sel = null; return drawTools(); }
+      kids.push(mk('b', null, p.name));
+      kids.push(Object.assign(mk('div', 'pop-yn'), {}));
+      kids[kids.length - 1].append(
+        btn('✕', 'pbtn', () => { st.sel = null; st.mode = null; say(''); }),
+        btn('📦 Put away', 'pbtn', () => { putAway(g, b, st.sel); st.sel = null; say(p.treasure ? 'Put away. The critters are back in your collection.' : 'Put away. What it cost is back in the stores.'); }),
+        btn('🔄 Turn', 'pbtn', () => { turnPiece(b, st.sel); }),
+        btn(st.mode === 'move' ? '✋ Tap a spot…' : '✋ Move', 'pbtn primary', () => { st.mode = 'move'; say('Tap a glowing spot to move it there.'); }));
+    } else if (st.mode === 'place') {
+      kids.push(mk('b', null, `${PIECES[st.piece].icon} ${PIECES[st.piece].name}`));
+      const row = mk('div', 'pop-yn'); row.append(btn('✕ Cancel', 'pbtn', () => { st.mode = null; st.piece = null; say(''); })); kids.push(row);
+    } else if (!st.open) {
+      const row = mk('div', 'pop-yn'); row.append(btn('🛋️ Furnish', 'pbtn primary', () => { st.open = true; say('Choose a piece, then tap a glowing spot in the room. Tap anything you placed to move it.'); })); kids.push(row);
+    } else {
+      const tabs = mk('div', 'tabs');
+      for (const [id, label] of [['furniture', 'Furniture'], ['treasures', 'Treasures']]) { const t = btn(label, 'tab' + (st.tab === id ? ' on' : ''), () => { st.tab = id; toolsKey = ''; }); tabs.append(t); }
+      tabs.append(btn('Done', 'tab', () => { st.open = false; say(''); }));
+      kids.push(tabs);
+      const grid = mk('div', 'cards');
+      for (const id of st.tab === 'furniture' ? FURNITURE : TREASURES) {
+        const p = PIECES[id], c = mk('button', 'card');
+        const price = p.treasure ? `${HOME_DECOR_N(id)} ${CRITTERS[p.critter].icon} (you have ${critterLeft(g, p.critter)})` : fmt(p.cost);
+        c.append(mk('span', 'cn', `${p.icon} ${p.name}`), mk('small', null, p.age > g.age ? 'Comes with a later age' : price));
+        c.disabled = !canAfford(g, id) || (p.treasure && (b.decor || []).includes(id));
+        c.onclick = () => { st.mode = 'place'; st.piece = id; st.sel = null; say(`Tap a glowing spot ${p.spot === 'back' ? 'against the back wall' : 'on the floor'}.`); };
+        grid.append(c);
+      }
+      kids.push(grid);
+    }
+    tools.replaceChildren(...kids);
+  }
+  const G = geom(W, H);
+  const spotXY = s => { const [x, y] = G.P(s.u, s.d); return [x, y - (s.kind === 'back' ? 0.5 : 0.15) * G.M(s.d)]; };
+  cv.addEventListener('pointerdown', e => {
+    if (!isHome(b)) return;
+    const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+    let best = null, bd = 1e9;
+    for (const s of spotsFor(b)) { const [x, y] = spotXY(s), d = Math.hypot(px - x, py - y); if (d < Math.max(26, 0.7 * G.M(s.d)) && d < bd) { bd = d; best = s; } }
+    if (!best) { if (st.sel && st.mode !== 'move') { st.sel = null; say(''); } return; }
+    if (st.mode === 'place') { const res = placePiece(g, b, st.piece, best.id); if (res.ok) { const p = PIECES[st.piece]; st.mode = null; st.piece = null; say(`${p.name} placed.`); } else say(res.reason); return; }
+    if (st.mode === 'move' && st.sel) { const res = movePiece(g, b, st.sel, best.id); if (res.ok) { st.mode = null; st.sel = best.id; say('Moved.'); } else say(res.reason); return; }
+    if (pieceAt(b, best.id)) { st.sel = best.id; st.mode = null; st.open = false; say(''); }
+  });
   const frame = t => {
     if (!open) return;
     if (!g.bmap.has(b.id)) return done();
     title.textContent = levelName(b);
-    cap1.textContent = draw(ctx, g, b, W, H, t / 1000);
-    drawDeco();
+    cap1.textContent = draw(ctx, g, b, W, H, t / 1000, st);
+    drawTools();
     raf = requestAnimationFrame(frame);
   };
   raf = requestAnimationFrame(frame);
   return done;
 }
+const HOME_DECOR_N = id => ({ lantern: 5, aquarium: 3, owlcage: 2 })[id] || 0;
 
 // ---------------------------------------------------------------- the room
-function draw(c, g, b, W, H, T) {
+function draw(c, g, b, W, H, T, st) {
   const q = quality(b), L = LOOK[q];
-  // Back wall rectangle and the floor trapezoid in front of it.
-  const bx0 = W * 0.16, bx1 = W * 0.84, by0 = H * 0.08, by1 = H * 0.6;
-  const mBack = (by1 - by0) / 2.7;                       // pixels per metre on the back wall (the room is 2.7 m high)
-  const R = { c, g, b, W, H, T, L, q, notes: [], bx0, bx1, by0, by1, mBack };
-  R.M = d => mBack * (1 + d * (W / (bx1 - bx0) - 1));    // pixels per metre at depth d (0 = back wall, 1 = front edge)
-  R.P = (u, d) => { const xb = bx0 + u * (bx1 - bx0), xf = u * W; return [xb + (xf - xb) * d, by1 + (H - by1) * d]; };
+  // Back wall rectangle and the floor trapezoid in front of it; M(d) is pixels per metre at depth d (0 back, 1 front).
+  const G = geom(W, H), { bx0, bx1, by0, by1, mBack } = G;
+  const R = { c, g, b, W, H, T, L, q, notes: [], bx0, bx1, by0, by1, mBack, st: st || {} };
+  R.M = G.M; R.P = G.P;
   R.Wl = (u, h) => [bx0 + u * (bx1 - bx0), by1 - h * mBack];   // a point on the back wall, h metres up
   shell(R);
   const def = BUILD[b.k];
@@ -179,9 +231,7 @@ function home(R) {
   for (let i = 0; i < nWin; i++) windowAt(R, 0.42 + i * (0.5 / Math.max(1, nWin)), curtains);
   if (q >= 2) { const [x, y] = R.Wl(0.34, 1.55); rect(c, x - 0.35 * mBack, y - 0.45 * mBack, 0.7 * mBack, 0.45 * mBack, L.trim); rect(c, x - 0.3 * mBack, y - 0.4 * mBack, 0.6 * mBack, 0.35 * mBack, '#7fae5a'); c.fillStyle = '#f2c94c'; c.beginPath(); c.arc(x + 0.12 * mBack, y - 0.28 * mBack, 0.06 * mBack, 0, 7); c.fill(); }
   { const [x, y, m] = shelf(R, 0.9, 1.3, 0.7); if (uses('pottery') && has('pottery')) for (let i = 0; i < 3; i++) emoji(c, '🏺', x - 0.22 * m + i * 0.22 * m, y - 0.13 * m, 0.24 * m); if (uses('jewelry') && has('jewelry')) emoji(c, '💍', x, y - 0.5 * m, 0.2 * m); }
-  if (R.mantel && decor.includes('lantern')) { const [x, y] = R.mantel, m = mBack; rect(c, x - 0.08 * m, y - 0.3 * m, 0.16 * m, 0.24 * m, 'rgba(200,230,240,.6)'); for (let k = 0; k < 3; k++) { c.fillStyle = `rgba(240,255,170,${0.5 + 0.5 * Math.abs(Math.sin(R.T * 2 + k * 2))})`; c.beginPath(); c.arc(x - 0.04 * m + k * 0.04 * m, y - 0.18 * m - (k % 2) * 0.05 * m, 0.022 * m, 0, 7); c.fill(); } R.glows.push([x, y - 0.18 * m, 0.9 * m]); }
   if (q >= 4) { const [x] = R.Wl(0.5, 0), m = R.M(0.3); c.strokeStyle = '#8a7040'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(x, 0); c.lineTo(x, H * 0.12); c.stroke(); rect(c, x - 0.4 * m, H * 0.12, 0.8 * m, 4, '#b8963a'); for (const dx of [-0.32, 0, 0.32]) { c.fillStyle = '#ffe2a0'; c.beginPath(); c.arc(x + dx * m, H * 0.12 - 3, 3, 0, 7); c.fill(); R.glows.push([x + dx * m, H * 0.12, 0.8 * m]); } }
-  if (decor.includes('owlcage')) { const [x] = R.P(0.72, 0.2), m = R.M(0.2), y = H * 0.16; c.strokeStyle = '#8a7040'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(x, 0); c.lineTo(x, y - 0.3 * m); c.stroke(); for (let k = -3; k <= 3; k++) { c.beginPath(); c.moveTo(x + k * 0.07 * m, y - 0.28 * m); c.lineTo(x + k * 0.07 * m, y + 0.22 * m); c.stroke(); } c.beginPath(); c.ellipse(x, y - 0.28 * m, 0.22 * m, 0.08 * m, 0, Math.PI, 0); c.stroke(); rect(c, x - 0.24 * m, y + 0.2 * m, 0.48 * m, 3, '#8a7040'); c.fillStyle = '#8a6a4a'; c.beginPath(); c.ellipse(x, y, 0.09 * m, 0.13 * m, 0, 0, 7); c.fill(); c.fillStyle = '#f2d36a'; for (const s of [-1, 1]) { c.beginPath(); c.arc(x + s * 0.04 * m, y - 0.05 * m, 0.025 * m, 0, 7); c.fill(); } }
   // floor: rug, then everything from the back to the front
   if (q >= 2) { const [x, y] = R.P(0.47, 0.45), m = R.M(0.45); c.fillStyle = q >= 4 ? '#8a3a3a' : '#b5823a'; c.beginPath(); c.ellipse(x, y, (q >= 4 ? 1.6 : 1.1) * m, 0.42 * m, 0, 0, 7); c.fill(); c.strokeStyle = 'rgba(255,240,200,.35)'; c.lineWidth = 2; c.beginPath(); c.ellipse(x, y, (q >= 4 ? 1.4 : 0.95) * m, 0.34 * m, 0, 0, 7); c.stroke(); }
   const items = [];
@@ -190,19 +240,55 @@ function home(R) {
   const sleepers = g.villagers.filter(v => v.inside && v.act && v.act.type === 'sleep' && v.act.bed === b.id);
   const SPOTS = [[0.86, 0.06], [0.62, 0.06], [0.88, 0.42], [0.88, 0.8]], shown = Math.min(SPOTS.length, nBeds);   // the rest are upstairs
   for (let i = 0; i < shown; i++) items.push({ d: SPOTS[i][1], f: () => bed(R, SPOTS[i][0], SPOTS[i][1], quilt[i % quilt.length], sleepers[i]) });
-  // the table and chairs (with furniture), or a stump and a crate
+  // Placed pieces (the player's furnishing); a bare room gets its plain table and stool.
+  const placed = b.furn || [];
+  for (const f of placed) { const s = spotsFor(b).find(x => x.id === f.spot); if (s) items.push({ d: s.d + 0.001, f: () => piece(R, f, s) }); }
   const fine = q >= 2 && (!uses('furniture') || has('furniture'));
-  items.push({ d: 0.5, f: () => {
+  if (!placed.some(f => !PIECES[f.id].treasure)) items.push({ d: 0.5, f: () => {
     const p = g.pantry || {};
     if (fine) { floorBox(R, 0.28, 0.42, 0.45, 0.45, '#7a4a2c'); const [x, y, m] = floorBox(R, 0.4, 0.5, 1.2, 0.75, '#8a5a3a'); floorBox(R, 0.52, 0.58, 0.45, 0.45, '#7a4a2c'); tableTop(R, x, y, m, p, uses, has); }
     else { const [x, y, m] = floorBox(R, 0.4, 0.5, 0.6, 0.45, '#8a6a44'); tableTop(R, x, y, m, p, uses, has); }
   } });
-  if (decor.includes('aquarium')) items.push({ d: 0.78, f: () => { floorBox(R, 0.12, 0.78, 0.5, 0.55, '#6a4a2c'); const [x, y] = R.P(0.12, 0.78), m = R.M(0.78), top = y - 0.55 * m; c.fillStyle = 'rgba(150,200,220,.55)'; c.fillRect(x - 0.24 * m, top - 0.38 * m, 0.48 * m, 0.36 * m); c.fillStyle = '#4f8a44'; for (let k = 0; k < 3; k++) c.fillRect(x - 0.18 * m + k * 0.12 * m, top - 0.2 * m, 0.03 * m, 0.18 * m); c.fillStyle = '#5f9e4a'; c.beginPath(); c.ellipse(x + 0.06 * m, top - 0.08 * m, 0.07 * m, 0.045 * m, 0, 0, 7); c.fill(); c.strokeStyle = 'rgba(255,255,255,.6)'; c.lineWidth = 1; c.strokeRect(x - 0.24 * m, top - 0.38 * m, 0.48 * m, 0.36 * m); } });
   items.sort((a, z) => a.d - z.d).forEach(i => i.f());
+  spotsGlow(R);
   R.notes.push(`${beds(b)} beds` + (beds(b) > 4 ? ' (some upstairs)' : ''));
   R.notes.push(goods.length ? goods.map(r => `${ICON[r]} ${has(r) ? '✓' : '·'}`).join(' ') : 'Plain and snug');
-  if (decor.length) R.notes.push(decor.map(id => HOME_DECOR[id].name).join(', '));
+  if (placed.length) R.notes.push(`${placed.length} piece${placed.length === 1 ? '' : 's'} placed`);
   if (sleepers.length) R.notes.push(`${sleepers.length} asleep`);
+}
+// Glowing spots while choosing where a piece goes; a ring round the selected piece.
+function spotsGlow(R) {
+  const { c, b, st, T } = R;
+  if (!st || (!st.mode && !st.sel)) return;
+  const kind = st.mode === 'place' ? PIECES[st.piece].spot : st.sel ? PIECES[(pieceAt(b, st.sel) || {}).id || 'chair'].spot : null;
+  for (const s of spotsFor(b)) {
+    const [x, y] = R.P(s.u, s.d), m = R.M(s.d), mine = s.id === st.sel, fits = st.mode && s.kind === kind && (!pieceAt(b, s.id) || st.mode === 'move');
+    if (!mine && !fits) continue;
+    c.strokeStyle = mine ? '#f2c14e' : `rgba(255,236,160,${0.55 + 0.35 * Math.sin(T * 4)})`; c.lineWidth = mine ? 3 : 2.5;
+    c.beginPath(); c.ellipse(x, y, 0.5 * m, 0.16 * m, 0, 0, 7); c.stroke();
+    if (fits && !mine) { c.fillStyle = 'rgba(255,236,160,.22)'; c.fill(); }
+  }
+}
+// One placed piece, drawn to scale at its spot (mirrored when turned).
+function piece(R, f, s) {
+  const { c, T } = R, p = PIECES[f.id], [x0] = R.P(s.u, s.d);
+  c.save(); if (f.flip) { c.translate(x0 * 2, 0); c.scale(-1, 1); }
+  const [x, y] = R.P(s.u, s.d), m = R.M(s.d);
+  switch (f.id) {
+    case 'chair': { floorBox(R, s.u, s.d, 0.45, 0.45, p.col); rect(c, x + 0.15 * m, y - 1.0 * m, 0.07 * m, 0.6 * m, shade(p.col, 0.85)); rect(c, x - 0.22 * m, y - 1.0 * m, 0.44 * m, 0.08 * m, shade(p.col, 0.85)); break; }
+    case 'stool': floorBox(R, s.u, s.d, 0.4, 0.45, p.col); break;
+    case 'table': { const [tx, ty, tm] = floorBox(R, s.u, s.d, 1.1, 0.75, p.col); emoji(c, '🕯️', tx, ty - 0.12 * tm, 0.2 * tm); break; }
+    case 'chest': { floorBox(R, s.u, s.d, 0.9, 0.55, p.col); rect(c, x - 0.45 * m, y - 0.38 * m, 0.9 * m, 0.05 * m, '#c9a14a'); rect(c, x - 0.04 * m, y - 0.36 * m, 0.08 * m, 0.1 * m, '#e2c26a'); break; }
+    case 'rug': { c.fillStyle = p.col; c.beginPath(); c.ellipse(x, y, 0.85 * m, 0.24 * m, 0, 0, 7); c.fill(); c.strokeStyle = 'rgba(255,240,200,.45)'; c.lineWidth = 2; c.beginPath(); c.ellipse(x, y, 0.7 * m, 0.18 * m, 0, 0, 7); c.stroke(); break; }
+    case 'plant': { floorBox(R, s.u, s.d, 0.32, 0.3, '#b5653d'); c.fillStyle = p.col; for (const [dx, dy, r] of [[0, -0.55, 0.18], [-0.12, -0.45, 0.13], [0.12, -0.48, 0.14]]) { c.beginPath(); c.arc(x + dx * m, y + dy * m, r * m, 0, 7); c.fill(); } break; }
+    case 'bookcase': { const cols = ['#c9553d', '#4f7fb5', '#d19a3a', '#5f9e4a', '#8a5fb0']; floorBox(R, s.u, s.d, 1.0, 1.9, p.col); for (let r2 = 0; r2 < 4; r2++) for (let k = 0; k < 7; k++) rect(c, x - 0.42 * m + k * 0.12 * m, y - (0.4 + r2 * 0.42) * m - 0.3 * m, 0.09 * m, 0.3 * m, cols[(k + r2) % 5]); break; }
+    case 'cupboard': { floorBox(R, s.u, s.d, 1.0, 1.6, p.col); rect(c, x - 0.02 * m, y - 0.85 * m, 0.04 * m, 0.8 * m, shade(p.col, 0.7)); for (let k = 0; k < 3; k++) emoji(c, '🏺', x - 0.3 * m + k * 0.3 * m, y - 1.3 * m, 0.22 * m); rect(c, x - 0.48 * m, y - 1.1 * m, 0.96 * m, 0.04 * m, shade(p.col, 0.7)); break; }
+    case 'wardrobe': { floorBox(R, s.u, s.d, 1.1, 2.0, p.col); rect(c, x - 0.02 * m, y - 1.9 * m, 0.04 * m, 1.85 * m, shade(p.col, 0.7)); for (const dx of [-0.1, 0.1]) { c.fillStyle = '#e2c26a'; c.beginPath(); c.arc(x + dx * m, y - 1.0 * m, 0.035 * m, 0, 7); c.fill(); } break; }
+    case 'lantern': { floorBox(R, s.u, s.d, 0.4, 0.7, '#7a5638'); const ly = y - 0.75 * m; rect(c, x - 0.1 * m, ly - 0.3 * m, 0.2 * m, 0.28 * m, 'rgba(200,230,240,.6)'); for (let k = 0; k < 3; k++) { c.fillStyle = `rgba(240,255,170,${0.5 + 0.5 * Math.abs(Math.sin(T * 2 + k * 2))})`; c.beginPath(); c.arc(x - 0.05 * m + k * 0.05 * m, ly - 0.16 * m - (k % 2) * 0.06 * m, 0.025 * m, 0, 7); c.fill(); } R.glows.push([x, ly - 0.16 * m, 0.9 * m]); break; }
+    case 'aquarium': { floorBox(R, s.u, s.d, 0.5, 0.55, '#6a4a2c'); const top = y - 0.55 * m; c.fillStyle = 'rgba(150,200,220,.55)'; c.fillRect(x - 0.24 * m, top - 0.38 * m, 0.48 * m, 0.36 * m); c.fillStyle = '#4f8a44'; for (let k = 0; k < 3; k++) c.fillRect(x - 0.18 * m + k * 0.12 * m, top - 0.2 * m, 0.03 * m, 0.18 * m); c.fillStyle = '#5f9e4a'; c.beginPath(); c.ellipse(x + 0.06 * m, top - 0.08 * m, 0.07 * m, 0.045 * m, 0, 0, 7); c.fill(); c.strokeStyle = 'rgba(255,255,255,.6)'; c.lineWidth = 1; c.strokeRect(x - 0.24 * m, top - 0.38 * m, 0.48 * m, 0.36 * m); break; }
+    case 'owlcage': { rect(c, x - 0.03 * m, y - 1.1 * m, 0.06 * m, 1.1 * m, '#8a7040'); const cy = y - 1.3 * m; c.strokeStyle = '#8a7040'; c.lineWidth = 1.2; for (let k = -3; k <= 3; k++) { c.beginPath(); c.moveTo(x + k * 0.07 * m, cy - 0.28 * m); c.lineTo(x + k * 0.07 * m, cy + 0.22 * m); c.stroke(); } c.beginPath(); c.ellipse(x, cy - 0.28 * m, 0.22 * m, 0.08 * m, 0, Math.PI, 0); c.stroke(); c.fillStyle = '#8a6a4a'; c.beginPath(); c.ellipse(x, cy, 0.09 * m, 0.13 * m, 0, 0, 7); c.fill(); c.fillStyle = '#f2d36a'; for (const sg of [-1, 1]) { c.beginPath(); c.arc(x + sg * 0.04 * m, cy - 0.05 * m, 0.025 * m, 0, 7); c.fill(); } break; }
+  }
+  c.restore();
 }
 function bed(R, u, d, quilt, sleeper) {
   const { c, q, L } = R, [x, y] = R.P(u, d), m = R.M(d), len = 2.0 * m, hgt = (q === 0 ? 0.15 : 0.45) * m;
