@@ -4,13 +4,16 @@
 //   villager   -> build, add to selection, plant, rename
 //   town center-> train, age, upgrades, rally, select all, select idle, focus, free will
 //   market     -> trade; homes and farms show their own information
-import { BUILD, TIERS, BUILD_ORDER, ICON, RES, RES_NAME, BASICS, GOODS, ROLE_NAME, MERCHANT, AGES, UPGRADES, FOCI, SEASONS, VILLAGER_COST, TRADE, N, NODE_INFO } from '../core/config.js';
+import { BUILD_GROUPS, RES_DESC, PANTRY, PANTRY_ICON, FARM, BUILD, TIERS, BUILD_ORDER, ICON, RES, RES_NAME, BASICS, GOODS, ROLE_NAME, MERCHANT, AGES, UPGRADES, FOCI, SEASONS, VILLAGER_COST, TRADE, N, NODE_INFO } from '../core/config.js';
 import { idx, inMap, nodeKind, WATER, walkable } from '../core/world.js';
-import { have, popCap, hour, dayNumber, seasonIndex, darkness, beds, isNight, cap, storeOf, levelName, tierOf, hub, townCenter, hasMarket, beautyOf } from '../core/state.js';
+import { have, popCap, hour, dayNumber, seasonIndex, darkness, beds, isNight, cap, storeOf, levelName, tierOf, hub, townCenter, hasMarket, beautyOf, clock12 } from '../core/state.js';
 import { daysToMerchant, priceOf, waresFor, warePrice } from '../core/merchant.js';
-import { daysToGoods } from '../core/directors.js';
+import { daysToGoods, shopNear } from '../core/directors.js';
+import { wantedFestival, affordableFestival, festivalCost } from '../core/festival.js';
 import { homeScore, beautyLabel, villageBeauty, computeBeauty } from '../core/beauty.js';
 import * as cmd from '../core/commands.js';
+import { openInterior, hasInside } from './interior.js';
+import { CRITTERS, LANTERN_UNLOCK } from '../core/critters.js';
 
 const $ = id => document.getElementById(id);
 const el = (tag, props = {}, kids = []) => { const e = Object.assign(document.createElement(tag), props); for (const k of kids) e.append(k); return e; };
@@ -18,16 +21,18 @@ const fmt = c => Object.entries(c).filter(([, v]) => v).map(([k, v]) => v + ICON
 const plural = (n, a, b) => `${n} ${n === 1 ? a : b}`;
 
 export const OWNS = {
-  game: ['sound', 'save', 'speed', 'overlay', 'sandbox', 'newgame'],
-  villager: ['build', 'add', 'plant', 'rename', 'remove'],
-  tc: ['train', 'age', 'upgrades', 'rally', 'all', 'idle', 'focus', 'free'],
-  campfire: ['train', 'upgrades', 'rally', 'all', 'idle', 'focus', 'free', 'improve'], // until the town center is built
+  game: ['pause', 'free', 'sound', 'save', 'speed', 'overlay', 'album', 'sandbox', 'newgame'],
+  villager: ['build', 'rotate', 'add', 'plant', 'demolish', 'rename', 'remove'],
+  tc: ['train', 'age', 'festival', 'upgrades', 'rally', 'all', 'idle', 'focus', 'free', 'move', 'inside'],
+  campfire: ['train', 'festival', 'upgrades', 'rally', 'all', 'idle', 'focus', 'free', 'improve'], // until the town center is built
   campfireLater: ['improve'],                                                          // after: just a gathering place
-  market: ['trade', 'remove'],
-  house: ['improve', 'remove'],
-  well: ['improve', 'remove'],
-  store: ['improve', 'remove'],
-  building: ['remove'],   // every other building
+  market: ['trade', 'improve', 'move', 'remove', 'inside'],
+  shop: ['improve', 'move', 'remove', 'inside'],
+  grange: ['improve', 'upgrades', 'move', 'remove', 'inside'],
+  house: ['improve', 'move', 'remove', 'inside'],
+  well: ['improve', 'move', 'remove'],
+  store: ['improve', 'upgrades', 'move', 'rotate', 'remove', 'inside'],
+  building: ['upgrades', 'move', 'rotate', 'remove', 'inside'],   // every other building; 'look inside' always last
   node: ['remove'],       // trees, rocks, bushes, fish, saplings
 };
 const NODE_NAME = { 1: 'Tree', 2: 'Stone', 3: 'Gold', 4: 'Berry bush', 5: 'Fish', 6: 'Clay pit' };
@@ -36,7 +41,19 @@ export function createUI(ctx) {
   const { getGame, view, settings, save, newGame, audio } = ctx;
   const ui = { sel: new Set(), selB: null, selN: null, overlay: 'off', confirmAt: 0, place: null, mode: null, buildOpen: false, menuOpen: false, hudOpen: false, modal: false, hover: [-9, -9], hoverCells: null, ping: null, panelKey: '', plantI: 0, idleI: 0, upOpen: false, mkOpen: false, give: 'wood', get: 'food' };
   const g = () => getGame();
-  ui.canPlace = (x, y) => cmd.canPlace(g(), ui.place, x, y);
+  ui.rot = 0;
+  // While moving a building its own tiles count as free.
+  ui.canPlace = (x, y) => {
+    const G = g();
+    if (!ui.moving) return cmd.canPlace(G, ui.place, x, y, ui.rot);
+    const b = ui.moving, saved = [];
+    for (let j = 0; j < b.h; j++) for (let i = 0; i < b.w; i++) { const t = idx(b.x + i, b.y + j); saved.push([t, G.w.occ[t]]); G.w.occ[t] = 0; }
+    const ok = cmd.canPlace(G, b.k, x, y, ui.rot);
+    for (const [t, o] of saved) G.w.occ[t] = o;
+    return ok;
+  };
+  const turnable = () => { const k = ui.moving ? ui.moving.k : ui.place || (ui.selB && ui.selB.k); return !!(k && BUILD[k].turns); };
+  const fineMouse = () => { try { return matchMedia('(pointer: fine)').matches; } catch (e) { return false; } };
 
   // ---------- actions available to buttons ----------
   const ACT = {
@@ -46,23 +63,38 @@ export function createUI(ctx) {
     newgame: { icon: '🔄', tip: ['New game', 'Start a new village on a fresh map. Tap twice to confirm.'], run: () => { if (Date.now() - (ui.newAt || 0) < 3000) newGame(); else { ui.newAt = Date.now(); toast('Tap New game again to start over on a fresh map.'); } } },
     build:   { icon: '🔨', tip: ['Build', 'Choose a building, then tap the ground. Tap again or press Escape when done.'], on: () => ui.buildOpen || !!ui.place, run: () => { if (ui.place || ui.buildOpen) { ui.place = null; ui.buildOpen = false; } else { ui.buildOpen = true; ui.mode = null; } } },
     add:     { icon: '➕', tip: ['Add villagers', 'Tap more villagers to add them to, or remove them from, the selection.'], on: () => ui.mode === 'add', run: () => { ui.mode = ui.mode === 'add' ? null : 'add'; } },
+    demolish: { icon: '⛏️', tip: ['Take down', 'Tap a building and the selected villagers take it down. Everything it cost goes back to the stores.'], on: () => ui.mode === 'demolish', run: () => { ui.mode = ui.mode === 'demolish' ? null : 'demolish'; if (ui.mode) toast('Tap the building to take down.'); } },
+    inside:  { icon: '🚪', tip: ['Look inside', 'Open the door and peek in. What you see grows with the building and what the village has in store.'], dis: () => !hasInside(ui.selB),
+               run: () => { if (ui.modal || !hasInside(ui.selB)) return; ui.modal = true; openInterior(g(), ui.selB, () => { ui.modal = false; }); } },
+    move:    { icon: '✋', tip: ['Move', 'Pick this up and tap where it should go. It keeps everything: its level, its stores, its progress.'], on: () => !!ui.moving,
+               dis: () => !ui.selB || BUILD[ui.selB.k].fixed,
+               run: () => { if (ui.moving) { ui.moving = null; ui.place = null; return; } ui.moving = ui.selB; ui.place = ui.selB.k; ui.rot = ui.selB.rot || 0; toast('Tap where it should go.'); } },
+    rotate:  { icon: '🔄', tip: ['Turn', 'Turn it a quarter turn (press R on a keyboard).'], dis: () => !turnable(),
+               run: () => { if (ui.place || ui.moving) { ui.rot = ui.rot ? 0 : 1; return; } const b = ui.selB; if (b) { const r = cmd.moveBuilding(g(), b, b.x, b.y, b.rot ? 0 : 1); if (!r.ok) toast('There is no room to turn it here.'); } } },
+    album:   { icon: '🦋', tip: ['Night critters', 'Your collection. At night, tap fireflies, moths, frogs and owls to catch them.'],
+               run: () => { const c = g().caught || {}, lines = Object.entries(CRITTERS).map(([k, C]) => `${C.icon} ${c[k] || 0}`); toast('Collection: ' + lines.join('  ·  ') + ((c.firefly || 0) < LANTERN_UNLOCK ? `  ·  ${LANTERN_UNLOCK - (c.firefly || 0)} more fireflies for a firefly lantern` : '')); } },
     plant:   { icon: '🌱', tip: ['Plant trees', 'Tap open grass and a sapling is planted there.'], on: () => ui.mode === 'plant', run: () => { ui.mode = ui.mode === 'plant' ? null : 'plant'; toast(ui.mode ? 'Tap open grass to plant. Tap the sapling button again when done.' : 'Finished planting.'); } },
     rename:  { icon: '✏️', tip: ['Rename', 'Give this villager a name.'], dis: () => ui.sel.size !== 1, run: () => openRename([...ui.sel][0]) },
     train:   { icon: '🧑‍🌾', tip: ['Villager', 'Train a new villager.'], cost: () => VILLAGER_COST, dis: () => !have(g(), VILLAGER_COST) || g().villagers.length >= popCap(g()), run: () => { const r = cmd.train(g()); if (!r.ok) toast(r.reason); } },
     age:     { icon: () => g().adv > 0 ? Math.ceil(g().adv) + 's' : '⭐', tip: () => g().age >= 3 ? ['Final age', 'Your village has reached its final age.'] : ['Advance age', `Grow into the ${AGES[g().age + 1].name} Age. Unlocks new buildings and upgrades. Needs ${AGES[g().age + 1].culture} culture (the village has ${Math.floor(g().culture || 0)}).`], cost: () => AGES[g().age + 1] && AGES[g().age + 1].cost, ready: () => g().ready && g().adv === 0, dis: () => g().age >= 3 || g().adv > 0 || !townCenter(g()) || !have(g(), AGES[g().age + 1].cost) || (g().culture || 0) < AGES[g().age + 1].culture, run: () => { const r = cmd.advance(g()); if (!r.ok && r.reason) toast(r.reason); } },
-    upgrades:{ icon: '✨', tip: ['Upgrades', 'Research ways to work faster and carry more.'], on: () => ui.upOpen, run: () => { ui.upOpen = !ui.upOpen; ui.mkOpen = false; drawUpgrades(); } },
+    upgrades:{ icon: '✨', tip: ['Upgrades', 'Small improvements for this building and the villagers who use it, in tiers.'], dis: () => { const at = ui.selB && (ui.selB.k === 'campfire' ? 'tc' : ui.selB.k); return !UPGRADES.some(u => u.at === at); }, on: () => ui.upOpen, run: () => { ui.upOpen = !ui.upOpen; ui.mkOpen = false; drawUpgrades(); } },
     rally:   { icon: '🚩', tip: ['Rally point', 'Tap a tree, field or spot. New villagers head there first.'], on: () => ui.mode === 'rally', run: () => { ui.mode = ui.mode === 'rally' ? null : 'rally'; if (ui.mode) toast('Tap a tree, field or spot for the rally point.'); } },
     all:     { icon: '👥', tip: ['Select all', 'Select every villager who is awake.'], run: () => { ui.sel = new Set(g().villagers.filter(v => !v.inside && !(v.act && v.act.type === 'sleep'))); ui.selB = null; syncHeld(); } },
     idle:    { icon: '💤', tip: ['Find idle', 'Jump to a villager with nothing to do.'], dis: () => !idleList().length, run: () => nextIdle() },
+    festival: { icon: '🎉', tip: () => { const G = g(), f = G.festival ? null : wantedFestival(G); return G.festival ? ['Festival planned', `A ${G.festival.name.toLowerCase()} is coming. Everyone gathers at 5 PM.`] : ['Hold a festival', `A ${f.name.toLowerCase()}: a parade from the town center to the marketplace and the campfire, then a feast. Everyone's spirits stay high for days.`]; },
+               cost: () => { const G = g(), f = !G.festival && (affordableFestival(G) || wantedFestival(G)); return f ? festivalCost(G, f) : null; },
+               ready: () => !g().festival && !!affordableFestival(g()), dis: () => !!g().festival || !affordableFestival(g()),
+               run: () => { const r = cmd.holdFestival(g()); if (!r.ok && r.reason) toast(r.reason); } },
     focus:   { icon: () => FOCI[g().focus].icon, tip: () => ['Village focus: ' + FOCI[g().focus].name, 'Tap to change what the village leans toward: balanced, food, wood, building or relaxed.'], run: () => { cmd.cycleFocus(g()); toast('Village focus: ' + FOCI[g().focus].name + '.'); } },
     free:    { icon: '🕊️', tip: ['Free will', 'When on, villagers choose useful work on their own. Turn off to run things yourself.'], on: () => g().freeWill, run: () => { cmd.setFreeWill(g(), !g().freeWill); toast(g().freeWill ? 'Villagers are choosing their own work again.' : 'Free will is off. Villagers only do what you ask.'); } },
+    pause:   { icon: () => ui.paused ? '▶️' : '⏸️', tip: () => ui.paused ? ['Resume', 'Carry on (Space).'] : ['Pause', 'Stop time; you can still look around, look inside and plan (Space).'], on: () => ui.paused, run: () => { ui.paused = !ui.paused; toast(ui.paused ? 'Paused.' : 'Carrying on.'); } },
     speed:   { icon: () => settings.speed + '×', tip: ['Game speed', 'Tap to switch between 1×, 2× and 4× speed.'], run: () => { settings.speed = settings.speed === 1 ? 2 : settings.speed === 2 ? 4 : 1; settings.persist(); } },
     overlay: { icon: () => ({ off: '🗺️', beauty: '🌸', directors: '🧭' })[ui.overlay], tip: ['Overlays', 'Tap to cycle: beauty map (rose is lovely, blue unsightly, no tint neutral), what each Director wants, then off.'], on: () => ui.overlay !== 'off', run: () => { ui.overlay = ui.overlay === 'off' ? 'beauty' : ui.overlay === 'beauty' ? 'directors' : 'off'; if (ui.overlay === 'beauty') computeBeauty(g()); toast({ beauty: 'Beauty map: rose is lovely, blue is unsightly, no tint is neutral.', directors: 'Showing what each Director wants right now.', off: 'Overlays off.' }[ui.overlay]); } },
     improve: { icon: '⬆️', tip: () => { const i = ui.selB && cmd.improveInfo(g(), ui.selB); return !i ? ['Improve', ''] : i.reason ? ['Improve', i.reason] : ['Improve', `Becomes a ${i.next.name.toLowerCase()}. A villager will do the work.`]; },
                cost: () => { const i = ui.selB && cmd.improveInfo(g(), ui.selB); return i && i.cost; },
                ready: () => ui.selB && ui.selB.pending > ui.selB.lvl,
                run: () => { const r = cmd.improve(g(), ui.selB); toast(r.ok ? `${r.v.name} is on the way to improve it.` : r.reason); } },
-    remove:  { icon: () => Date.now() - ui.confirmAt < 3000 ? '❓' : '🗑️', tip: () => ui.selB ? ['Take down', 'Remove this and get its full cost back.'] : ui.selN ? ['Clear', 'Remove it. You get nothing from it.'] : ['Say goodbye', 'This villager leaves the village.'],
+    remove:  { icon: () => Date.now() - ui.confirmAt < 3000 ? '❓' : '🗑️', tip: () => ui.selB ? ['Take down', 'The nearest villager takes this down. Everything it cost goes back to the stores.'] : ui.selN ? ['Clear', 'Remove it. You get nothing from it.'] : ['Say goodbye', 'This villager leaves the village.'],
                dis: () => (ui.selB && (ui.selB.k === 'campfire' || (ui.selB.k === 'tc' && ui.selB.done))) || (!ui.selB && !ui.selN && ui.sel.size !== 1),
                run: () => {
                  if (Date.now() - ui.confirmAt >= 3000) { ui.confirmAt = Date.now(); toast('Tap 🗑️ again to confirm.'); return; }
@@ -84,6 +116,7 @@ export function createUI(ctx) {
     for (const [b, k] of rows) {
       if (!b.isConnected) continue;
       const a = ACT[k]; b.textContent = val(a.icon); b.disabled = a.dis ? !!a.dis() : false;
+      if (k === 'upgrades' || k === 'rotate' || k === 'inside') b.hidden = b.disabled;   // only shown where they apply
       b.classList.toggle('on', a.on ? !!a.on() : false); b.classList.toggle('ready', a.ready ? !!a.ready() : false);
     }
   }
@@ -101,12 +134,22 @@ export function createUI(ctx) {
       d.append(box2);
     }
   }
-  { const h = $('hud'); h.replaceChildren(...RES.map(r => el('span', { id: 's-' + r }, [ICON[r] + ' ', el('b', { id: 'r-' + r })])), el('span', {}, ['🏠 ', el('b', { id: 'r-pop' })]), el('span', { id: 'r-age' })); }
+  // Resources in groups: basics, the pantry (what the food is made of), farm goods, workshop goods. Empty groups stay hidden.
+  { const h = $('hud'), item = r => { const e = el('span', { id: 's-' + r }, [ICON[r] + ' ', el('b', { id: 'r-' + r })]); e.dataset.tip = 'res-' + r; return e; }, grp = (id, label) => el('span', { id: 'g-' + id, className: 'grp' }, [label]);
+    h.replaceChildren(...BASICS.map(item), el('span', { id: 'pantry', className: 'grp sub' }), grp('farm', 'Farm'), ...FARM.map(item), grp('goods', 'Goods'), ...GOODS.map(item), el('span', { className: 'grp' }, ['']), (() => { const e = el('span', {}, ['🏠 ', el('b', { id: 'r-pop' })]); e.dataset.tip = 'res-pop'; return e; })(), (() => { const e = el('span', { id: 'r-age' }); e.dataset.tip = 'res-age'; return e; })());
+    h.addEventListener('click', e => { const t = e.target.closest('[data-tip]'); if (t) showTip(t); }); }
 
   // ---------- static chrome ----------
   const gm = $('gm'); gm.append(actRow(OWNS.game), el('div', { id: 'gmc' }));
+  { // Volume
+    const vol = el('input', { type: 'range', id: 'vol', min: '0', max: '100', step: '1', value: String(Math.round((settings.volume ?? 0.7) * 100)) });
+    vol.setAttribute('aria-label', 'Volume');
+    vol.oninput = () => { settings.volume = vol.value / 100; audio.setVolume(settings.volume); settings.persist(); };
+    gm.append(el('label', { className: 'volrow', htmlFor: 'vol' }, [el('span', { textContent: '🔉 Volume' }), vol]));
+  }
   $('fab').onclick = () => { ui.menuOpen = !ui.menuOpen; };
   $('hudbtn').onclick = () => { ui.hudOpen = !ui.hudOpen; };
+  $('pausebtn').onclick = () => ACT.pause.run();
 
   // ---------- first-run hint: gone after the first touch anywhere, or after 15 seconds ----------
   const hideHint = () => $('hint').classList.add('gone');
@@ -138,23 +181,47 @@ export function createUI(ctx) {
   // ---------- build cards ----------
   const CARD_TIPS = {};
   for (const k of BUILD_ORDER) CARD_TIPS['card-' + k] = { tip: [BUILD[k].name, BUILD[k].desc], cost: BUILD[k].cost };
+  // Resource panel: every icon says what it is (hover, long-press, or tap).
+  for (const r of RES) CARD_TIPS['res-' + r] = { tip: [`${ICON[r]} ${RES_NAME[r]}`, RES_DESC[r] || ''] };
+  const PANTRY_NAME = { provisions: 'Provisions (mixed stores)', berries: 'Berries', fish: 'Fish', vegetables: 'Vegetables', bread: 'Bread' };
+  for (const k of PANTRY) CARD_TIPS['pan-' + k] = { tip: [`${PANTRY_ICON[k]} ${PANTRY_NAME[k]}`, 'Part of the food in the pantry.'] };
+  CARD_TIPS['res-pop'] = { tip: ['🏠 Villagers', 'How many live here, and how many the village has room for.'] };
+  CARD_TIPS['res-age'] = { tip: ['Age, culture and season', 'The village age; 🎭 culture now and needed for the next age; the season.'] };
   let cardsKey = '';
+  // The build menu: a row of category icons; tapping one drops down that category's buildings.
   function syncCards() {
     const c = $('bc'), show = ui.buildOpen && ui.sel.size && !ui.selB && !ui.place;
     c.hidden = !show; if (!show) { cardsKey = ''; return; }
-    const ks = BUILD_ORDER.filter(k => BUILD[k].age <= g().age && !(BUILD[k].unlock && !g().unlocked[k]) && !(k === 'tc' && g().buildings.some(b => b.k === 'tc'))), key = ks.join();
+    const ks = BUILD_ORDER.filter(k => BUILD[k].age <= g().age && !(BUILD[k].unlock && !g().unlocked[k]) && !(k === 'tc' && g().buildings.some(b => b.k === 'tc')));
+    const avail = new Set(ks), groups = BUILD_GROUPS.map(([label, list, icon]) => ({ label, icon, here: list.filter(k => avail.has(k)) }));
+    if (!groups.some(gp => gp.label === ui.buildCat && gp.here.length)) ui.buildCat = null;
+    const key = ks.join() + '|' + ui.buildCat;
     if (key !== cardsKey) {
       cardsKey = key; c.replaceChildren();
-      for (const k of ks) { const b = el('button', { className: 'card' }, [el('span', { textContent: BUILD[k].name }), el('small', { textContent: fmt(BUILD[k].cost) })]); b.dataset.k = k; b.dataset.tip = 'card-' + k; b.onclick = () => { ui.place = k; ui.buildOpen = false; toast('Tap the ground to place it. Tap 🔨 or press Escape when done.'); }; c.append(b); }
+      const row = el('div', { className: 'row cats' });
+      for (const gp of groups) {
+        const b = el('button', { className: 'ic' + (ui.buildCat === gp.label ? ' on' : ''), textContent: gp.icon }); b.disabled = !gp.here.length; b.dataset.tip = 'cat-' + gp.label;
+        CARD_TIPS['cat-' + gp.label] = { tip: [gp.label, gp.here.length ? gp.here.map(k => BUILD[k].name).join(', ') : 'Nothing to build here yet in this age.'] };
+        b.onclick = () => { ui.buildCat = ui.buildCat === gp.label ? null : gp.label; syncCards(); };
+        row.append(b);
+      }
+      c.append(row);
+      const gp = groups.find(x => x.label === ui.buildCat);
+      if (gp) { c.append(el('div', { className: 'bgrp', textContent: gp.label })); for (const k of gp.here) c.append(card(k)); }
+      else c.append(el('small', { className: 'bhint', textContent: 'Choose a kind of building.' }));
     }
-    for (const b of c.children) b.disabled = !have(g(), BUILD[b.dataset.k].cost);
+    for (const b of c.querySelectorAll('button.card')) { const d = BUILD[b.dataset.k]; b.disabled = !have(g(), d.cost) || (d.needs && !g().buildings.some(o => o.k === d.needs && o.done)); }
+  }
+  function card(k) {
+    { const b = el('button', { className: 'card' }, [el('span', { textContent: (BUILD[k].icon ? BUILD[k].icon + '  ' : '') + BUILD[k].name }), el('small', { textContent: fmt(BUILD[k].cost) + (BUILD[k].needs ? `  · needs a ${BUILD[BUILD[k].needs].name.toLowerCase()}` : '') })]); b.dataset.k = k; b.dataset.tip = 'card-' + k; b.onclick = () => { ui.place = k; ui.rot = 0; ui.buildOpen = false; toast(fineMouse() ? 'Click the ground to place it.' + (BUILD[k].turns ? ' Press R to turn it.' : '') : 'Tap the ground to place it. Tap 🔨 when done.'); }; return b; }
   }
 
   // ---------- upgrades and market ----------
   function drawUpgrades() {
-    const p = $('up'); p.hidden = !ui.upOpen || !(ui.selB && (ui.selB.k === 'tc' || ui.selB.k === 'campfire')); if (p.hidden) return;
+    const at = ui.selB && (ui.selB.k === 'campfire' ? 'tc' : ui.selB.k), list = UPGRADES.filter(u => u.at === at && (!u.req || g().owned[u.req]));
+    const p = $('up'); p.hidden = !ui.upOpen || !list.length; if (p.hidden) return;
     p.replaceChildren(el('b', { textContent: 'Upgrades' }));
-    for (const u of UPGRADES) {
+    for (const u of list) {
       const owned = g().owned[u.id], b = el('button', { className: 'wide' }, [el('span', { textContent: u.name + (owned ? ' ✓' : '  ' + fmt(u.cost)) }), el('small', { textContent: u.desc + (u.age > g().age ? ` Unlocks in the ${AGES[u.age].name} Age.` : '') })]);
       b.disabled = owned || u.age > g().age || !have(g(), u.cost);
       b.onclick = () => { cmd.research(g(), u.id); drawUpgrades(); };
@@ -224,9 +291,16 @@ export function createUI(ctx) {
         if (b.k === 'school') parts.push('Lessons by day add to the village\'s culture');
         if (b.k === 'theater') parts.push('Plays in the evening add to the village\'s culture');
         if (b.k === 'fiberfield') parts.push(`Fiber left: ${Math.max(0, Math.round(b.food))} of ${BUILD.fiberfield.food}`);
-        if (b.k === 'farm') parts.push(`Food left: ${Math.max(0, Math.round(b.food))} of ${G.mods.farmFood}`);
+        if (b.k === 'farm') parts.push(`Vegetables left: ${Math.max(0, Math.round(b.food))} of ${G.mods.farmFood}`);
+        if (b.k === 'wheatfield') parts.push(`Wheat left: ${Math.max(0, Math.round(b.food))} of ${BUILD.wheatfield.food}`);
+        if (b.k === 'shop') { const t = TIERS.shop[b.lvl || 0]; parts.push(`Hands goods to homes within ${t.reach} tiles · sells up to ${t.sells} spare goods a day`); if (b.earned) parts.push(`Sold today for ${b.earned}${ICON.gold}`); }
+        if (b.k === 'tc' || (b.k === 'campfire' && !townCenter(G))) { const f = wantedFestival(G); if (f && !G.festival) parts.push(`🎉 ${f.name}: ${fmt(festivalCost(G, f))}`); else if (G.festival) parts.push(`🎉 ${G.festival.name} planned`); if (G.seasonal) parts.push(`${G.seasonal.icon} ${G.seasonal.name}${G.seasonal.phase === 'on' ? ' today!' : ' coming'}`); }
+        if (def.animals) parts.push(`${def.animals.kind === 'bees' ? 'Hives' : 'Animals'}: ${b.animals ?? def.animals.start} of ${def.animals.cap + (G.mods.penAdd || 0)}`);
+        if (b.k === 'tc' || (b.k === 'campfire' && !townCenter(G))) parts.push(`Spirits ${Math.round((G.social || 0) * 100)}%` + (G.socialCap < 0.75 ? ' · it has been a while since the last celebration' : ''));
+        if (b.k === 'tavern') parts.push(G.res.beer >= 1 ? 'Beer in the cellar: evenings here lift spirits twice as fast' : 'No beer in the cellar yet');
         if (b.k === 'well') parts.push(`Water: ${Math.floor(b.water)} of ${def.water}`);
         if (def.beds) parts.push(`Beds: ${beds(b)}` + (isNight(G) ? ` · sleeping now: ${b.sleepers}` : ''));
+        if (def.home && TIERS[b.k] && !shopNear(G, b) && TIERS[b.k].some(t => (t.goods || []).length)) parts.push('No shop nearby yet: finer levels need one');
         if (def.home) { const sc = homeScore(G, b); parts.push(`Surroundings: ${beautyLabel(sc)} (${sc.toFixed(1)})`);
           const gd = TIERS[b.k] && TIERS[b.k][b.lvl].goods; if (gd && gd.length) { const dd = daysToGoods(G); parts.push(`Uses 1 ${gd.join(', 1 ')} ${dd ? `in ${dd} day${dd === 1 ? '' : 's'}` : 'tomorrow morning'}` + (gd.some(r => G.res[r] < 1) ? ` (short on ${gd.filter(r => G.res[r] < 1).join(' and ')})` : '')); } }
         { const bv = beautyOf(b); if (bv && !def.home) parts.push(bv > 0 ? `Adds ${bv} beauty nearby` : `A little unsightly (${bv} beauty nearby)`); }
@@ -263,14 +337,19 @@ export function createUI(ctx) {
 
   // ---------- selection helpers ----------
   function syncHeld() { for (const v of g().villagers) v.held = ui.sel.has(v); }
-  function clearSel() { ui.sel = new Set(); ui.selB = null; ui.selN = null; ui.place = null; ui.buildOpen = false; ui.mode = null; ui.upOpen = false; ui.mkOpen = false; syncHeld(); }
+  function clearSel() { ui.sel = new Set(); ui.selB = null; ui.selN = null; ui.place = null; ui.moving = null; ui.buildOpen = false; ui.mode = null; ui.upOpen = false; ui.mkOpen = false; syncHeld(); }
   const idleList = () => g().villagers.filter(v => !v.act && !v.inside);
   function center(x, y) { const p = [(x - y) * 32, (x + y) * 16]; view.cam.x = p[0]; view.cam.y = p[1]; }
   function nextIdle() { const l = idleList(); if (!l.length) return; const v = l[ui.idleI++ % l.length]; clearSel(); ui.sel.add(v); syncHeld(); center(v.x, v.y); ping(v.x, v.y, '#fff3c4'); }
-  function selectBuilding(b) { clearSel(); ui.selB = b; ui.selN = null; ui.menuOpen = false; ping(b.x + (b.s - 1) / 2, b.y + (b.s - 1) / 2, '#fff3c4'); }
+  function selectBuilding(b) { clearSel(); ui.selB = b; ui.selN = null; ui.menuOpen = false; ping(b.x + (b.w - 1) / 2, b.y + (b.h - 1) / 2, '#fff3c4'); }
   const ping = (x, y, c) => { ui.ping = { x, y, c, t: performance.now() }; };
 
   // ---------- hit testing ----------
+  function critterAt(wx, wy) {
+    let best = null, bd = 1e9;
+    for (const c of g().critters || []) { const sx = (c.x - c.y) * 32, sy = (c.x + c.y) * 16 - (c.type === 'owl' ? 40 : c.type === 'frog' ? 0 : 18), d = Math.hypot(wx - sx, wy - sy), r = Math.max(22, 26 / view.cam.z); if (d < r && d < bd) { bd = d; best = c; } }
+    return best;
+  }
   function villagerAt(wx, wy) {
     let best = null, bd = 1e9;
     for (const v of g().villagers) {
@@ -297,9 +376,14 @@ export function createUI(ctx) {
     if (ui.modal) return;
     $('hint').classList.add('gone');
     const G = g(), vs = [...ui.sel];
+    if (ui.moving) {
+      const b = ui.moving, r = cmd.moveBuilding(G, b, rx, ry, ui.rot);
+      if (r.ok) { ping(b.x + (b.w - 1) / 2, b.y + (b.h - 1) / 2, '#f2c14e'); ui.moving = null; ui.place = null; } else toast(r.reason);
+      return;
+    }
     if (ui.place) {
-      const r = cmd.place(G, ui.place, rx, ry, vs);
-      if (r.ok) ping(rx + (r.b.s - 1) / 2, ry + (r.b.s - 1) / 2, '#f2c14e'); else toast(r.reason);
+      const r = cmd.place(G, ui.place, rx, ry, vs, ui.rot);
+      if (r.ok) { ping(rx + (r.b.w - 1) / 2, ry + (r.b.h - 1) / 2, '#f2c14e'); if (fineMouse()) ui.place = null; } else toast(r.reason);
       return;
     }
     if (ui.mode === 'rally') {
@@ -310,12 +394,23 @@ export function createUI(ctx) {
       else { toast('Pick a tree, field or open ground.'); return; }
       ui.mode = null; ping(rx, ry, '#e86a5a'); toast('Rally point set.'); return;
     }
+    if (ui.mode === 'demolish') {
+      const b = buildingAt(rx, ry);
+      if (!b) { toast('Tap a building to take down.'); return; }
+      const r = cmd.orderDemolish(G, vs, b);
+      if (r.ok) { ping(b.x + (b.w - 1) / 2, b.y + (b.h - 1) / 2, '#c9a171'); ui.mode = null; clearSel(); } else toast(r.reason);
+      return;
+    }
     if (ui.mode === 'plant') {
       if (!vs.length) { ui.mode = null; return; }
       const v = vs[ui.plantI++ % vs.length];
       if (cmd.orderPlant(G, v, rx, ry)) ping(rx, ry, '#8fd16a'); else toast('That spot is not free.');
       return;
     }
+    const vis = (G.festival && G.festival.visitors || []).find(p => { const sx = (p.x - p.y) * 32, sy = (p.x + p.y) * 16; return Math.hypot(wx - sx, (wy - (sy - 12)) * 0.8) < Math.max(22, 26 / view.cam.z); });
+    if (vis && !ui.place) { toast('A visitor from up the road, here for the festival. 🎉'); return; }
+    const hitC = critterAt(wx, wy);
+    if (hitC && !ui.place) { const r = cmd.catchCritter(G, hitC.id); if (r.ok) { ping(hitC.x, hitC.y, '#fff3a0'); audio && audio.sfx && audio.sfx('tap'); } return; }
     const hitV = villagerAt(wx, wy);
     if (hitV) {
       if (ui.mode === 'add') { if (ui.sel.has(hitV)) ui.sel.delete(hitV); else ui.sel.add(hitV); }
@@ -326,8 +421,8 @@ export function createUI(ctx) {
     }
     const b = buildingAt(rx, ry), n = nodeAt(rx, ry);
     if (vs.length) {
-      if (b && !b.done) { cmd.orderBuild(G, vs, b); ping(b.x + (b.s - 1) / 2, b.y + (b.s - 1) / 2, '#f2c14e'); }
-      else if (b && b.k === 'farm') { cmd.orderFarm(G, vs, b); ping(b.x + 0.5, b.y + 0.5, '#8fd16a'); }
+      if (b && !b.done) { cmd.orderBuild(G, vs, b); ping(b.x + (b.w - 1) / 2, b.y + (b.h - 1) / 2, '#f2c14e'); }
+      else if (b && BUILD[b.k].crop && b.done) { cmd.orderFarm(G, vs, b); ping(b.x + 0.5, b.y + 0.5, '#8fd16a'); }
       else if (n >= 0) { cmd.orderGather(G, vs, n); ping(n % N, (n / N) | 0, '#8fd16a'); }
       else if (b) { selectBuilding(b); return; }
       else if (inMap(rx, ry) && G.w.T[idx(rx, ry)] !== WATER) { if (cmd.orderMove(G, vs, rx, ry)) ping(rx, ry, '#ffffff'); }
@@ -342,7 +437,7 @@ export function createUI(ctx) {
     ui.hover = [rx, ry];
     if (!ui.sel.size || ui.place) { ui.hoverCells = null; return; }
     const n = nodeAt(rx, ry), b = buildingAt(rx, ry);
-    ui.hoverCells = n >= 0 ? [[n % N, (n / N) | 0]] : b && b.k !== 'tc' ? Array.from({ length: b.s * b.s }, (_, i) => [b.x + i % b.s, b.y + ((i / b.s) | 0)]) : null;
+    ui.hoverCells = n >= 0 ? [[n % N, (n / N) | 0]] : b && b.k !== 'tc' ? Array.from({ length: b.w * b.h }, (_, i) => [b.x + i % b.w, b.y + ((i / b.w) | 0)]) : null;
   }
 
   // ---------- per-frame sync ----------
@@ -352,19 +447,23 @@ export function createUI(ctx) {
     if (ui.selB && !G.bmap.has(ui.selB.id)) ui.selB = null;
     $('hud').hidden = !ui.hudOpen; document.body.classList.toggle('hud-open', ui.hudOpen);
     $('gm').hidden = !ui.menuOpen; $('fab').classList.toggle('on', ui.menuOpen);
+    { const pb = $('pausebtn'); pb.textContent = ui.paused ? '▶️' : '⏸️'; pb.classList.toggle('on', !!ui.paused); pb.setAttribute('aria-label', ui.paused ? 'Resume' : 'Pause'); }
+    { const vr = document.querySelector('.volrow'); if (vr) vr.hidden = !settings.sound; }
     // How much the village has / how much it can hold. Workshop goods appear once the village can store or has them.
     for (const r of RES) {
       const c = Math.floor(cap(G, r)), n = Math.floor(G.res[r]);
       $('r-' + r).textContent = `${n}/${c}`;
-      $('s-' + r).hidden = GOODS.includes(r) && !c && !n;
+      $('s-' + r).hidden = (GOODS.includes(r) || FARM.includes(r)) && !c && !n;
     }
+    for (const [id, list] of [['farm', FARM], ['goods', GOODS]]) $('g-' + id).hidden = list.every(r => $('s-' + r).hidden);
+    { const p = G.pantry || {}, kinds = PANTRY.filter(k => (p[k] || 0) >= 1); $('pantry').hidden = !kinds.length; const key = kinds.map(k => k + Math.floor(p[k])).join(); if ($('pantry').dataset.k !== key) { $('pantry').dataset.k = key; $('pantry').replaceChildren(...kinds.map(k => { const e = el('span', { textContent: `${PANTRY_ICON[k]} ${Math.floor(p[k])}  ` }); e.dataset.tip = 'pan-' + k; return e; })); } }
     if (ui.selN && !(ui.selN.type === 'sapling' ? G.w.G[ui.selN.i] > 0 : G.w.A[ui.selN.i] > 0)) ui.selN = null;
     $('dir').hidden = ui.overlay !== 'directors';
     if (ui.overlay === 'directors' && (ui.dirT = (ui.dirT || 0) + 1) % 30 === 1) drawDirectors();
     $('r-pop').textContent = `${G.villagers.length}/${popCap(G)}`;
     const h = hour(G), hh = Math.floor(h), mm = Math.floor((h % 1) * 60);
     $('r-age').textContent = `${AGES[G.age].name} Age · 🎭 ${Math.floor(G.culture || 0)}${AGES[G.age + 1] ? '/' + AGES[G.age + 1].culture : ''} · ${SEASONS[seasonIndex(G)]}${darkness(G) > 0.6 ? ' 🌙' : ''}`;
-    $('gmc').textContent = `Day ${dayNumber(G)} · ${SEASONS[seasonIndex(G)]} · ${AGES[G.age].name} Age · ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')} · Village beauty: ${beautyLabel(villageBeauty(G))}`;
+    $('gmc').textContent = `Day ${dayNumber(G)} · ${SEASONS[seasonIndex(G)]} · ${AGES[G.age].name} Age · ${clock12(hh, mm, false)} · Village beauty: ${beautyLabel(villageBeauty(G))}`;
     const key = panelKey(); if (key !== ui.panelKey) { ui.panelKey = key; buildPanel(); if (!ui.selB || (ui.selB.k !== 'tc' && ui.selB.k !== 'campfire')) ui.upOpen = false; if (!ui.selB || ui.selB.k !== 'market') ui.mkOpen = false; }
     panelText(); syncCards(); syncButtons();
     $('up').hidden = !ui.upOpen; $('mk').hidden = !ui.mkOpen;
@@ -376,6 +475,8 @@ export function createUI(ctx) {
   addEventListener('keydown', e => {
     if (ui.modal || (e.target && e.target.tagName === 'INPUT')) return;
     const k = e.key.toLowerCase();
+    if (k === ' ' || k === 'p') { ACT.pause.run(); return; }
+    if (k === 'r' && (ui.place || ui.moving || ui.selB)) { ACT.rotate.run(); return; }
     if (k === 'b') { if (ui.sel.size) ACT.build.run(); else toast('Select a villager to build.'); }
     else if (k === 'm') ui.menuOpen = !ui.menuOpen;
     else if (k === 'h') { const tc = hub(g()); selectBuilding(tc); center(tc.x + 0.5, tc.y + 0.5); }

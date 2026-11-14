@@ -32,7 +32,7 @@ export function createManager(directors) {
       this.W = W; this.wishes = wishes;
       this.reasons = {}; for (const k in best) this.reasons[k] = best[k].why || '';
       const pop = g.villagers.length, farms = g.buildings.filter(b => b.k === 'farm' && b.done).length, sites = g.buildings.filter(b => !b.done).length;
-      this.slots = { fish: Math.ceil(pop * 0.5), berry: Math.ceil(pop * 0.4), wood: Math.ceil(pop * 0.6), water: Math.ceil(pop * 0.4), stone: Math.max(1, Math.ceil(pop * 0.2)), gold: Math.max(1, Math.ceil(pop * 0.2)), plant: 1, clear: 1, learn: 1, farm: farms * 2, fiberfield: g.buildings.filter(b => b.k === 'fiberfield' && b.done).length * 2, clay: Math.max(1, Math.ceil(pop * 0.25)), build: sites * 3, upgrade: Math.max(1, Math.ceil(pop / 3)) };
+      this.slots = { fish: Math.ceil(pop * 0.5), berry: Math.ceil(pop * 0.4), wood: Math.ceil(pop * 0.6), water: Math.ceil(pop * 0.4), stone: Math.max(1, Math.ceil(pop * 0.2)), gold: Math.max(1, Math.ceil(pop * 0.2)), plant: 1, clear: 1, learn: 1, read: 2, play: 3, church: g.dawns % 7 === 0 ? pop : 1, farm: farms * 2, fiberfield: g.buildings.filter(b => b.k === 'fiberfield' && b.done).length * 2, wheatfield: g.buildings.filter(b => b.k === 'wheatfield' && b.done).length * 2, clay: Math.max(1, Math.ceil(pop * 0.25)), build: sites * 3, upgrade: Math.max(1, Math.ceil(pop / 3)) };
     },
     count(g, key, except) { return g.villagers.filter(u => u !== except && u.act && u.act.src === 'auto' && u.act.key === key).length; },
   };

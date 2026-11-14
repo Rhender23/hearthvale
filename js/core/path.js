@@ -71,8 +71,8 @@ export function reachableEdge(w, x, y) {
 }
 // A walkable tile right beside a building (start point for searches from it).
 export function besideTile(w, b, ok = walkable) {
-  for (let y = b.y - 1; y <= b.y + b.s; y++) for (let x = b.x - 1; x <= b.x + b.s; x++) {
-    const inside = x >= b.x && x < b.x + b.s && y >= b.y && y < b.y + b.s;
+  for (let y = b.y - 1; y <= b.y + b.h; y++) for (let x = b.x - 1; x <= b.x + b.w; x++) {
+    const inside = x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h;
     if (!inside && ok(w, x, y)) return [x, y];
   }
   return null;

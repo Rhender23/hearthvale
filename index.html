@@ -22,11 +22,16 @@ button:focus-visible{outline:3px solid var(--glow);outline-offset:2px}
 .chip,#hud,#bp,#gm,#bc,#up,#mk,#tip,#toast,#hint{background:var(--bar);border:2px solid var(--line);color:var(--ink)}
 
 #hudbtn,#fab{position:fixed;z-index:5;border-radius:50%;background:var(--bar);border:2px solid var(--line)}
+#pausebtn{position:fixed;z-index:5;right:12px;top:calc(8px + var(--sa-t));width:42px;height:42px;font-size:18px;border-radius:50%;background:var(--bar);border:2px solid var(--line)}
+#pausebtn.on{background:var(--on);box-shadow:0 0 0 3px var(--glow)}
 #hudbtn{left:12px;top:calc(8px + var(--sa-t));width:42px;height:42px;font-size:20px}
 #fab{left:12px;bottom:calc(12px + var(--sa-b));width:54px;height:54px;font-size:26px}
 #fab.on{background:var(--on)}
-#hud{position:fixed;z-index:5;left:62px;top:calc(8px + var(--sa-t));max-width:calc(100vw - 74px);display:flex;flex-wrap:wrap;gap:2px 12px;padding:6px 12px;border-radius:14px;font-size:14px;line-height:1.5}
+#hud{position:fixed;z-index:5;left:62px;top:calc(8px + var(--sa-t));max-width:calc(100vw - 124px);display:flex;flex-wrap:wrap;gap:2px 12px;padding:6px 12px;border-radius:14px;font-size:14px;line-height:1.5}
 #hud b{font-variant-numeric:tabular-nums}
+#hud .grp{flex-basis:100%;font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.6;line-height:1.2;margin-top:2px}
+#hud .grp.sub{text-transform:none;letter-spacing:0;opacity:.85;font-size:12px;margin-top:-2px}
+#hud [hidden]{display:none}
 #hud small{font-size:11px;margin-left:3px;font-variant-numeric:tabular-nums}
 #hud small.pos{color:#4f8a3a}
 #hud small.neg{color:#b5523d}
@@ -38,6 +43,8 @@ button:focus-visible{outline:3px solid var(--glow);outline-offset:2px}
 
 #gm{position:fixed;z-index:6;left:12px;bottom:calc(76px + var(--sa-b));padding:10px 12px;border-radius:16px;display:flex;flex-direction:column;gap:8px;max-width:calc(100vw - 24px)}
 #gmc{font-size:13px;opacity:.9}
+.volrow{display:flex;align-items:center;gap:10px;font-size:13px}
+.volrow input{flex:1;min-width:120px;accent-color:var(--glow)}
 
 #bp{position:fixed;z-index:5;right:12px;bottom:calc(12px + var(--sa-b));width:min(72vw,320px);padding:10px 12px;border-radius:16px;display:flex;flex-direction:column;gap:6px;font-size:14px}
 #bp .sub{font-size:13px;line-height:1.4;opacity:.9}
@@ -49,6 +56,10 @@ button.ic.on{background:var(--on)}
 button.ic.ready{box-shadow:0 0 0 3px var(--glow)}
 button:disabled{opacity:.42;cursor:default}
 
+#bc .cats{gap:6px}
+#bc .bhint{opacity:.75;padding:2px 4px}
+#bc .bgrp{font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.65;margin:6px 2px 0}
+#hud [data-tip]{cursor:help}
 #bc,#up,#mk{position:fixed;z-index:5;right:12px;bottom:calc(150px + var(--sa-b));width:min(72vw,320px);max-height:44vh;overflow:auto;padding:8px;border-radius:16px;display:flex;flex-direction:column;gap:6px}
 button.card,button.wide{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:8px 10px;border:2px solid var(--line);border-radius:12px;background:transparent;font-size:14px}
 button.card small,button.wide small{font-size:12px;opacity:.85}
@@ -58,6 +69,7 @@ button.card small,button.wide small{font-size:12px;opacity:.85}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 body.hud-open #toast{top:calc(118px + var(--sa-t))}
 body.hud-open #dir{top:calc(150px + var(--sa-t));max-height:44vh}
+#dir{top:calc(58px + var(--sa-t))}
 #hint{position:fixed;z-index:4;left:50%;top:calc(62px + var(--sa-t));transform:translateX(-50%);max-width:min(88vw,420px);padding:8px 14px;border-radius:14px;font-size:13px;text-align:center;transition:opacity .8s}
 #hint.gone{opacity:0;pointer-events:none}
 
@@ -65,6 +77,12 @@ body.hud-open #dir{top:calc(150px + var(--sa-t));max-height:44vh}
 #nm .dlg{background:var(--bar);border:2px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px;width:min(86vw,300px)}
 #nm input{font:inherit;font-size:18px;padding:8px 10px;border-radius:10px;border:2px solid var(--line);background:transparent;color:var(--ink);user-select:text;-webkit-user-select:text}
 #nm button{padding:8px 16px;border-radius:12px;border:2px solid var(--line);background:var(--bar)}
+#inside{position:fixed;inset:0;z-index:20;background:rgba(20,30,30,.5);display:flex;align-items:center;justify-content:center}
+#inside .dlg{background:var(--bar);border:2px solid var(--line);border-radius:18px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;max-width:calc(100vw - 24px)}
+#inside canvas{border-radius:12px;border:2px solid var(--line)}
+#inside .cap{font-size:13px;opacity:.9;line-height:1.4}
+#inside .deco{display:flex;flex-direction:column;gap:6px;max-height:30vh;overflow:auto}
+#inside .close{align-self:flex-end;padding:6px 16px;border-radius:12px;border:2px solid var(--line);background:var(--bar)}
 @media (prefers-reduced-motion:reduce){#toast,#hint{transition:none}}
 </style>
 </head>
@@ -76,6 +94,7 @@ body.hud-open #dir{top:calc(150px + var(--sa-t));max-height:44vh}
   <span>🏠 <b id="r-pop">0</b></span><span id="r-age"></span>
 </div>
 <button id="fab" aria-label="Game menu">🏡</button>
+<button id="pausebtn" data-tip="pause" aria-label="Pause">⏸️</button>
 <div id="gm" hidden></div>
 <div id="bp" hidden></div>
 <div id="bc" hidden></div>

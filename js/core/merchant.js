@@ -5,13 +5,15 @@
 // It only buys the surplus: goods the homes will use at the next goods day stay in the stores.
 // While it is at the marketplace you can buy its wares (stone, decoration plans) for gold.
 // It arrives along the road from the map edge.
-import { N, MERCHANT, GOODS, BUILD } from './config.js';
+import { N, MERCHANT, GOODS, BUILD, TIERS } from './config.js';
 import { walkable, besideRect, idx } from './world.js';
 import { notice, cap, hasMarket, canStore } from './state.js';
 import { homeGoodsNeed } from './directors.js';
 import { bfsVisitor, visitorEdge, visitorPassable, besideTile } from './path.js';
 
-export const priceOf = (g, r) => Math.round(MERCHANT.price[r] * (1 + MERCHANT.ageBonus * g.age));
+// Price per good: grows with the age, and with the marketplace's rank (Trading post, Market, General store).
+const rankBonus = g => { const m = g.buildings.find(b => b.k === 'market' && b.done); return m && TIERS.market ? TIERS.market[m.lvl || 0].priceBonus || 0 : 0; };
+export const priceOf = (g, r) => Math.round(MERCHANT.price[r] * (1 + MERCHANT.ageBonus * g.age + rankBonus(g)));
 export const warePrice = (g, w) => w.repeat ? Math.round(w.price * (1 + MERCHANT.ageBonus * g.age)) : w.price;
 // Wares on offer: repeatable goods, plus plans the village does not have yet (and whose age has come).
 export const waresFor = g => MERCHANT.wares.filter(w => (w.age || 0) <= g.age && !(w.unlock && g.unlocked[w.unlock]));
@@ -38,8 +40,8 @@ export function createMerchant(g) {
       const market = g.buildings.find(b => b.k === 'market' && b.done);
       if (v.phase === 'arrive') {
         if (!market) { this.leave(); return; }
-        if (besideRect(Math.round(v.x), Math.round(v.y), market.x, market.y, market.s)) { v.phase = 'trade'; v.t = MERCHANT.stay; this.trade(); }
-        else { const p = bfsVisitor(g.w, Math.round(v.x), Math.round(v.y), (x, y) => besideRect(x, y, market.x, market.y, market.s)); if (p) v.path = p; else this.leave(); }
+        if (besideRect(Math.round(v.x), Math.round(v.y), market.x, market.y, market.w, market.h)) { v.phase = 'trade'; v.t = MERCHANT.stay; this.trade(); }
+        else { const p = bfsVisitor(g.w, Math.round(v.x), Math.round(v.y), (x, y) => besideRect(x, y, market.x, market.y, market.w, market.h)); if (p) v.path = p; else this.leave(); }
       } else if (v.phase === 'trade') {
         v.t -= dt;
         if (v.t <= 0) this.leave();
@@ -50,8 +52,8 @@ export function createMerchant(g) {
     arrive() {
       const market = g.buildings.find(b => b.k === 'market' && b.done), start = market && besideTile(g.w, market, visitorPassable);
       const edge = g.w.roadEnd || (start && visitorEdge(g.w, start[0], start[1]));
-      const p = edge && bfsVisitor(g.w, edge[0], edge[1], (a, b) => besideRect(a, b, market.x, market.y, market.s));
-      if (!p) { notice(g, 'A merchant caravan could not find a road to the marketplace.'); return; }
+      const p = edge && bfsVisitor(g.w, edge[0], edge[1], (a, b) => besideRect(a, b, market.x, market.y, market.w, market.h));
+      if (!p) return; // no road this time; it will try again next visit
       const [x, y] = edge;
       this.visit = { x, y, path: p, phase: 'arrive', t: 0, age: g.age, dir: 1, home: [x, y] };
       notice(g, 'A merchant caravan is on the road to the marketplace.');
@@ -59,7 +61,7 @@ export function createMerchant(g) {
     },
     trade() {
       const sold = {}; let earned = 0;
-      for (const r of GOODS) {
+      for (const r of Object.keys(MERCHANT.price)) {
         if (!MERCHANT.price[r]) continue;
         const p = priceOf(g, r);
         let left = surplus(g, r);
@@ -67,7 +69,7 @@ export function createMerchant(g) {
       }
       g.today.in.gold = (g.today.in.gold || 0) + earned;
       const list = Object.entries(sold).map(([r, n]) => `${n} ${r}`);
-      notice(g, list.length ? `The merchant bought ${list.join(', ')} for ${earned} gold.` : (GOODS.some(r => MERCHANT.price[r] && surplus(g, r) >= 1) ? 'The merchant would buy more, but there is no room left for gold.' : GOODS.some(r => MERCHANT.price[r] && g.res[r] >= 1) ? 'The merchant found nothing to spare: the homes need every good in the stores.' : 'The merchant found nothing to buy this time.'));
+      if (list.length) notice(g, `The merchant bought ${list.join(', ')} for ${earned} gold.`);
       g.events.emit('merchant', 'trade', { sold, earned });
       this.lastTrade = { sold, earned, day: g.dawns };
     },

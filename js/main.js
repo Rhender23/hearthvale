@@ -12,8 +12,8 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
   del(k) { try { localStorage.removeItem(k); } catch (e) { /* storage unavailable */ } },
 };
-const settings = Object.assign({ sound: true, sandbox: store.get('hv-sbx') !== '0', speed: 1 }, JSON.parse(store.get('hv-settings') || '{}'));
-settings.persist = () => store.set('hv-settings', JSON.stringify({ sound: settings.sound, sandbox: settings.sandbox, speed: settings.speed }));
+const settings = Object.assign({ sound: true, volume: 0.7, sandbox: store.get('hv-sbx') !== '0', speed: 1 }, JSON.parse(store.get('hv-settings') || '{}'));
+settings.persist = () => store.set('hv-settings', JSON.stringify({ sound: settings.sound, volume: settings.volume, sandbox: settings.sandbox, speed: settings.speed }));
 
 let game = null, loadedFrom = 'new';
 function loadGame() {
@@ -38,7 +38,7 @@ addEventListener('resize', resize); resize();
 view.cam.z = view.W < 600 ? 0.85 : 1.1;
 
 const audio = createAudio();
-audio.setOn(settings.sound);
+audio.setOn(settings.sound); audio.setVolume(settings.volume);
 const renderer = createRenderer(canvas);
 const ui = createUI({
   getGame: () => game, view, settings, save, audio,
@@ -63,7 +63,7 @@ let last = performance.now();
 function frame(now) {
   const dt = Math.max(0, Math.min(0.1, (now - last) / 1000)); last = Math.max(last, now); // first frame can arrive "before" start
   try {
-    for (let k = 0; k < settings.speed; k++) update(game, dt); // game speed: run the simulation more often, never in bigger steps
+    if (!ui.paused) for (let k = 0; k < settings.speed; k++) update(game, dt); // game speed: run the simulation more often, never in bigger steps
     input.tick(dt); ui.sync(); renderer.draw(game, view, ui, now);
   } catch (e) { console.error(e); }
   requestAnimationFrame(frame);

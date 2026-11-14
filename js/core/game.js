@@ -1,6 +1,7 @@
 // Creates a village and advances it in time. This is the only entry point the
 // browser layer (or a test) needs: createGame(), update(g, dt), plus commands.js.
 import { DAY, ADVANCE_TIME, AGES, WAKE } from './config.js';
+import { zeroRes } from './config.js';
 import { createWorld, C, layRoad } from './world.js';
 import { makeRng } from './rng.js';
 import { makeBus, addBuilding, notice, hour } from './state.js';
@@ -12,8 +13,11 @@ import { createManager } from './manager.js';
 import { makeDirectors } from './directors.js';
 import { createLand } from './land.js';
 import { createMerchant } from './merchant.js';
+import { createFestivals } from './festival.js';
+import { createCritters } from './critters.js';
+import { createSeasons } from './seasons.js';
 
-export const START = { sandbox: { wood: 2000, stone: 1000, gold: 1000, food: 1000, water: 600, clay: 0, fiber: 0, pottery: 0, cloth: 0, furniture: 0 }, modest: { wood: 100, stone: 0, gold: 0, food: 60, water: 40, clay: 0, fiber: 0, pottery: 0, cloth: 0, furniture: 0 } };
+export const START = { sandbox: { ...zeroRes(), wood: 2000, stone: 1000, gold: 1000, food: 1000, water: 600 }, modest: { ...zeroRes(), wood: 100, food: 60, water: 40 } };
 
 // New games: map generator 2 and a campfire, no town center (you place it).
 // classic: true rebuilds the original setup (generator 1, town center already standing) for older saves and tests.
@@ -22,10 +26,11 @@ export function createGame({ seed = 0, sandbox = true, rngSeed, gen, classic = f
   const g = {
     seed, gen, classic, w: createWorld(seed, gen), rng: makeRng(rngSeed ?? seed * 7919 + 17),
     clock: 0, tod: 0.2, res: { ...(sandbox ? START.sandbox : START.modest) },
-    age: 0, adv: 0, owned: {}, mods: { gather: { 1: 1, 2: 1, 3: 1, 4: 1, 5: 1 }, carry: 8, farmFood: 100, farmRate: 1, speed: 2.4 },
+    age: 0, adv: 0, owned: {}, mods: { gather: { 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1 }, carry: 8, farmFood: 100, farmRate: 1, speed: 2.4, craft: {} },
     buildings: [], bmap: new Map(), villagers: [], nextId: 1, nameI: 0,
     rally: null, focus: 0, freeWill: true, sandbox, ready: false,
-    unlocked: {}, culture: 0, events: makeBus(), crossed: [], dawns: 0, today: { in: {}, out: {} }, yday: null, beauty: null, beautyDirty: true, beautyT: 0,
+    unlocked: {}, pantry: {}, caught: {}, spent: {}, seasonalDone: 0, lastCelebration: 0,   // the first spring passes quietly while the village settles in
+ culture: 0, lastFestival: 0, festival: null, events: makeBus(), crossed: [], dawns: 0, today: { in: {}, out: {} }, yday: null, beauty: null, beautyDirty: true, beautyT: 0,
   };
   if (classic) addBuilding(g, 'tc', C, C, true);
   addBuilding(g, 'campfire', g.w.fire.x, g.w.fire.y, true);
@@ -34,6 +39,9 @@ export function createGame({ seed = 0, sandbox = true, rngSeed, gen, classic = f
   g.manager = createManager(makeDirectors());
   g.land = createLand(g);
   g.merchant = createMerchant(g);
+  g.festivals = createFestivals(g);
+  g.nightlife = createCritters(g);
+  g.seasons = createSeasons(g);
   g.manager.arbitrate(g);
   return g;
 }
@@ -58,6 +66,9 @@ export function update(g, dt) {
   }
   g.land.tick(dt);
   g.merchant.tick(dt);
+  g.festivals.tick(dt);
+  g.nightlife.tick(dt);
+  g.seasons.tick(dt);
   g.manager.tick(g, dt);
   for (const v of g.villagers) { autonomyTick(g, v, dt); stepVillager(g, v, dt); }
   if (g.villagers.some(v => v.gone)) { for (const v of g.villagers) if (v.gone) g.events.emit('left', v); g.villagers = g.villagers.filter(v => !v.gone); }

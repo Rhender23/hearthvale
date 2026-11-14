@@ -7,6 +7,7 @@ import { scan, bfs } from './path.js';
 import { inMap, idx, DIRS8, nodeKind, isOpen, buildingNear, WATER } from './world.js';
 import { farmers, canStore } from './state.js';
 import { action, choose } from './villagers.js';
+import { recipeFor } from './actions.js';
 
 const GATHER_KEYS = ['wood', 'stone', 'gold', 'berry', 'fish', 'clay'];
 
@@ -24,13 +25,16 @@ function probeFor(g) {
       if (id > 0) {
         const bl = g.bmap.get(id);
         if (!bl) continue;
-        if (bl.done && BUILD[bl.k].crop && farmers(g, bl) < FARM_MAX_WORKERS) (out = out || []).push([bl.k === 'farm' ? 'farm' : 'fiberfield', id]);
+        if (bl.done && BUILD[bl.k].crop && farmers(g, bl) < FARM_MAX_WORKERS) (out = out || []).push([bl.k, id]);   // farm, wheatfield, fiberfield
         else if (!bl.done) (out = out || []).push(['build', id]);
         if (bl.done && bl.pending > bl.lvl && !g.villagers.some(u => u.act && u.act.type === 'upgrade' && u.act.b === id)) (out = out || []).push(['upgrade', id]);
         if (bl.k === 'well' && bl.done && bl.water >= 1) (out = out || []).push(['well', id]);
         if (bl.k === 'tavern' && bl.done) (out = out || []).push(['tavern', id]);
         if (bl.k === 'school' && bl.done) (out = out || []).push(['learn', id]);
         if (bl.k === 'theater' && bl.done) (out = out || []).push(['theater', id]);
+        if (bl.k === 'church' && bl.done) (out = out || []).push(['church', id]);
+        if (bl.k === 'library' && bl.done) (out = out || []).push(['read', id]);
+        if (bl.k === 'playground' && bl.done) (out = out || []).push(['play', id]);
         if (bl.k === 'bench' && bl.done) (out = out || []).push(['bench', id]);
       }
       if (f && a === f.x && b === f.y) (out = out || []).push(['fire', null]);
@@ -63,9 +67,10 @@ export function options(g, v) {
   }
   if (found.farm && canStore(g, 'food')) add('farm', found.farm.d, hunger, found.farm.target);
   if (found.fiberfield && canStore(g, 'fiber')) add('fiberfield', found.fiberfield.d, 0, found.fiberfield.target);
+  if (found.wheatfield && canStore(g, 'wheat')) add('wheatfield', found.wheatfield.d, 0, found.wheatfield.target);
   // A specialist strongly prefers their own workshop while it has materials and room for its goods.
   const shop = v.job && g.bmap.get(v.job), c = shop && shop.done && BUILD[shop.k].craft;
-  if (c && Object.entries(c.in).every(([r, n]) => g.res[r] >= n) && (c.out.culture || canStore(g, Object.keys(c.out)[0]))) add('craft', Math.hypot(shop.x - v.x, shop.y - v.y), 40, shop.id);
+  if (c && recipeFor(g, shop) && (c.out.culture || canStore(g, Object.keys(c.out)[0]))) add('craft', Math.hypot(shop.x - v.x, shop.y - v.y), 40, shop.id);
   if (canStore(g, 'water')) {
     const thirst = g.res.water < 1 ? Math.pow(1 - v.hyd, 2) * 40 : 0;
     if (found.well && (!found.shore || found.well.d <= found.shore.d + 6)) add('water', found.well.d, 15 + thirst, { well: found.well.target });
@@ -75,6 +80,7 @@ export function options(g, v) {
   if (found.tavern) add('tavern', found.tavern.d, 0, found.tavern.target);
   if (found.learn) add('learn', found.learn.d, 0, found.learn.target);
   if (found.theater) add('theater', found.theater.d, 0, found.theater.target);
+  for (const k of ['church', 'read', 'play']) if (found[k]) add(k, found[k].d, 0, found[k].target);
   if (found.build) add('build', found.build.d, 0, found.build.target);
   if (found.fire) add('fire', found.fire.d, 0, null);
   if (W.plant) add('plant', 5, 0, null);
@@ -91,17 +97,21 @@ const nearPhrase = (key, d) => (d > 6 ? '' : key === 'fish' ? ', and the water i
 function makeAction(g, v, o) {
   const reason = g.manager.reasons[o.key] || '';
   const label = { wood: 'Chopping', stone: 'Mining stone', gold: 'Mining gold', berry: 'Gathering berries', fish: 'Fishing', water: 'Fetching water',
-    farm: 'Farming', fiberfield: 'Tending the fiber', craft: 'At the workshop', clay: 'Digging clay', build: 'Building', fire: 'Telling stories by the fire', tavern: 'At the tavern', learn: 'At the schoolhouse', theater: 'At the theater', upgrade: 'Improving a building', plant: 'Planting a tree', clear: 'Clearing the way', rest: 'Taking a breather' }[o.key];
+    farm: 'Tending the vegetables', fiberfield: 'Tending the fiber', wheatfield: 'Bringing in the wheat', craft: 'At the workshop', clay: 'Digging clay', build: 'Building', fire: 'Telling stories by the fire', tavern: 'At the tavern', learn: 'At the schoolhouse', theater: 'At the theater', church: 'At church', read: 'Reading at the library', play: 'Playing at the playground', egghunt: 'Hunting for eggs', swim: 'Swimming', picnic: 'Picnicking by the water', trick: 'Trick-or-treating', carol: 'Singing by the Christmas tree', upgrade: 'Improving a building', plant: 'Planting a tree', clear: 'Clearing the way', rest: 'Taking a breather' }[o.key];
   const why = label + (reason ? ': ' + reason : '') + nearPhrase(o.key, o.d) + '.';
   if (KEY_NODE[o.key]) return action('gather', { kind: KEY_NODE[o.key], node: o.target, key: o.key, why });
   if (o.key === 'farm') return action('farm', { b: o.target, key: 'farm', why });
   if (o.key === 'fiberfield') return action('farm', { b: o.target, key: 'fiberfield', why });
+  if (o.key === 'wheatfield') return action('farm', { b: o.target, key: 'wheatfield', why });
   if (o.key === 'craft') return action('craft', { b: o.target, key: 'craft', why });
   if (o.key === 'water') return action('water', { well: o.target && o.target.well, key: 'water', why });
   if (o.key === 'upgrade') { const b = g.bmap.get(o.target); return b ? action('upgrade', { b: b.id, to: b.pending, key: 'upgrade', why }) : null; }
   if (o.key === 'tavern') return action('sit', { tavern: o.target, dur: 20 + g.rng() * 15, key: 'tavern', why });
   if (o.key === 'learn') return action('sit', { tavern: o.target, dur: 20 + g.rng() * 10, key: 'learn', why });
   if (o.key === 'theater') return action('sit', { tavern: o.target, dur: 25 + g.rng() * 15, key: 'theater', why });
+  if (o.key === 'church') return action('sit', { tavern: o.target, dur: 30 + g.rng() * 20, key: 'church', why });
+  if (o.key === 'read') return action('sit', { tavern: o.target, dur: 25 + g.rng() * 15, key: 'read', why });
+  if (o.key === 'play') return action('sit', { tavern: o.target, dur: 15 + g.rng() * 10, key: 'play', why });
   if (o.key === 'build') return action('build', { b: o.target, key: 'build', why });
   if (o.key === 'fire') return action('sit', { dur: 14 + g.rng() * 10, key: 'fire', why });
   if (o.key === 'rest') return action('rest', { dur: 6 + g.rng() * 10, wander: g.rng() < 0.5, bench: o.target, key: 'rest', why: v.energy < 0.3 ? 'Taking a breather: feeling tired.' : 'Taking a moment to enjoy the day.' });

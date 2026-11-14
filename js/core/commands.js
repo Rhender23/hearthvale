@@ -1,14 +1,14 @@
 // Player commands: the only way the interface changes the village.
 // Player orders always win over autonomy and lock it until the task ends.
-import { BUILD, TIERS, UPGRADES, AGES, ADVANCE_TIME, VILLAGER_COST, TRADE, KEY_NODE, NODE_INFO } from './config.js';
+import { dims, BUILD, TIERS, UPGRADES, AGES, ADVANCE_TIME, VILLAGER_COST, TRADE, KEY_NODE, NODE_INFO } from './config.js';
 import { bfs } from './path.js';
 import { idx, isOpen, nodeKind, besideRect, walkable, inMap, DIRS8 } from './world.js';
-import { have, pay, addBuilding, removeBuilding, popCap, notice, addRes, levelName, hub, townCenter, hasMarket } from './state.js';
+import { siteOk, relocate, canTakeDown, takeDown, have, pay, addBuilding, removeBuilding, popCap, notice, addRes, levelName, hub, townCenter, hasMarket } from './state.js';
 import { upgradeTarget } from './directors.js';
 import { stepCost } from './actions.js';
 import { homeScore, beautyLabel } from './beauty.js';
 import { PRI, RES } from './config.js';
-import { action, command, enqueue, createVillager } from './villagers.js';
+import { action, command, enqueue, createVillager, finish } from './villagers.js';
 
 const SPREAD = [[0, 0], [1, 0], [0, 1], [-1, 0], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]];
 
@@ -42,21 +42,25 @@ export function orderMove(g, vs, x, y) {
   return any;
 }
 
-export const canPlace = (g, k, x, y) => {
-  const s = BUILD[k].size;
-  for (let j = 0; j < s; j++) for (let i = 0; i < s; i++) if (!isOpen(g.w, x + i, y + j)) return false;
-  return true;
+export const canPlace = (g, k, x, y, rot = 0) => {
+  const [w, h] = dims(k, rot);
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) if (!isOpen(g.w, x + i, y + j)) return false;
+  return siteOk(g, k, x, y, rot);
 };
+// Pick a building up and set it down somewhere else.
+export const moveBuilding = (g, b, x, y, rot) => relocate(g, b, x, y, rot, (a, c) => isOpen(g.w, a, c));
 // Returns { ok, reason, b }
-export function place(g, k, x, y, vs) {
+export function place(g, k, x, y, vs, rot = 0) {
   const def = BUILD[k];
   if (!def || def.age > g.age) return { ok: false, reason: 'Not available yet.' };
   if (def.unlock && !g.unlocked[k]) return { ok: false, reason: 'The merchant sells the plans for this.' };
+  if (def.needs && !g.buildings.some(b => b.k === def.needs && b.done)) return { ok: false, reason: `Build a ${BUILD[def.needs].name.toLowerCase()} first.` };
+  if (k === 'tc' && g.buildings.some(b => b.k === 'tc')) return { ok: false, reason: 'The village already has a town center.' };
   if (!vs.length) return { ok: false, reason: 'Select a villager to build.' };
-  if (!canPlace(g, k, x, y)) return { ok: false, reason: 'That spot is not free.' };
+  if (!canPlace(g, k, x, y, rot)) return { ok: false, reason: def.nearWater ? 'It needs open ground near water.' : 'That spot is not free.' };
   if (!have(g, def.cost)) return { ok: false, reason: 'Not enough resources yet.' };
-  const b = addBuilding(g, k, x, y, false);
-  const reach = vs.filter(v => bfs(g.w, Math.round(v.x), Math.round(v.y), (a, c) => besideRect(a, c, x, y, def.size)));
+  const b = addBuilding(g, k, x, y, false, rot);
+  const reach = vs.filter(v => bfs(g.w, Math.round(v.x), Math.round(v.y), (a, c) => besideRect(a, c, x, y, b.w, b.h)));
   if (!reach.length) { removeBuilding(g, b); return { ok: false, reason: 'Your villagers cannot reach that spot.' }; }
   pay(g, def.cost);
   for (const v of reach) enqueue(g, v, action('build', { b: b.id, key: 'build', why: 'Building what you asked for.' }));
@@ -67,7 +71,7 @@ export function train(g) {
   if (g.villagers.length >= popCap(g)) return { ok: false, reason: 'The village is full for now.' };
   if (!pay(g, VILLAGER_COST)) return { ok: false, reason: 'Not enough food yet.' };
   const tc = hub(g);
-  const p = bfs(g.w, tc.x, tc.y, (x, y) => besideRect(x, y, tc.x, tc.y, tc.s) && walkable(g.w, x, y));
+  const p = bfs(g.w, tc.x, tc.y, (x, y) => besideRect(x, y, tc.x, tc.y, tc.w, tc.h) && walkable(g.w, x, y));
   const [sx, sy] = p && p.length ? p[p.length - 1] : [tc.x - 1, tc.y + 1];
   const v = createVillager(g, sx, sy);
   g.events.emit('trained', v);
@@ -94,15 +98,20 @@ export function advance(g) {
 
 export function applyUpgrade(g, u) {
   const fx = u.fx;
-  if (fx.gather) for (const k in fx.gather) g.mods.gather[k] *= fx.gather[k];
-  if (fx.carry) g.mods.carry = fx.carry;
-  if (fx.farmFood) g.mods.farmFood = fx.farmFood;
-  if (fx.farmRate) g.mods.farmRate = fx.farmRate;
-  if (fx.speed) g.mods.speed = fx.speed;
+  const m = g.mods;
+  if (fx.gather) for (const k in fx.gather) m.gather[k] = (m.gather[k] || 1) * fx.gather[k];
+  if (fx.carryAdd) m.carry += fx.carryAdd;
+  if (fx.farmFoodAdd) m.farmFood += fx.farmFoodAdd;
+  if (fx.farmRate) m.farmRate *= fx.farmRate;
+  if (fx.speedMul) m.speed *= fx.speedMul;
+  if (fx.penAdd) m.penAdd = (m.penAdd || 0) + fx.penAdd;
+  if (fx.craft) for (const k in fx.craft) (m.craft || (m.craft = {}))[k] = (m.craft[k] || 1) * fx.craft[k];
 }
 export function research(g, id) {
   const u = UPGRADES.find(x => x.id === id);
   if (!u || g.owned[id] || u.age > g.age) return { ok: false };
+  if (u.req && !g.owned[u.req]) return { ok: false, reason: 'Needs the tier before it first.' };
+  if (u.at && u.at !== 'tc' && !g.buildings.some(b => b.k === u.at && b.done)) return { ok: false, reason: `Needs a ${BUILD[u.at].name.toLowerCase()}.` };
   if (!pay(g, u.cost)) return { ok: false, reason: 'Not enough resources yet.' };
   g.owned[id] = true; applyUpgrade(g, u);
   g.events.emit('researched', u);
@@ -116,22 +125,38 @@ export function trade(g, give, get) {
 }
 
 export const buyWare = (g, id) => g.merchant.buy(id);
+export const catchCritter = (g, id) => g.nightlife.catch(id);
+export { decorateHome } from './critters.js';
+export { planFestival as holdFestival } from './festival.js';
 
 export function rename(g, v, name) { const t = String(name).trim().slice(0, 16); if (t) v.name = t; }
 export function cycleFocus(g) { g.focus = (g.focus + 1) % 5; g.manager.arbitrate(g); }
-export function setFreeWill(g, on) { g.freeWill = on; }
+// Free will off: villagers stop what they chose themselves (they keep your orders, sleep and meals) and choose nothing new.
+export function setFreeWill(g, on) {
+  g.freeWill = on;
+  if (!on) for (const v of g.villagers) {
+    v.stack = v.stack.filter(a => a.src !== 'auto'); v.queue = v.queue.filter(a => a.src !== 'auto');
+    if (v.act && (v.act.src === 'auto' || ['egghunt', 'swim', 'trick', 'carol'].includes(v.act.type))) { v.swim = false; finish(g, v); }
+  }
+}
 
 // Delete or sell anything. Buildings refund their full cost; villagers walk off the map.
+// Villagers take a building down: they walk over, work a while (half its build time, at least 3 s), and its full cost returns.
+export function orderDemolish(g, vs, b) {
+  if (!canTakeDown(b)) return { ok: false, reason: b && b.k === 'campfire' ? 'The campfire stays: it is where the village began.' : 'The town center stays.' };
+  if (!vs.length) return { ok: false, reason: 'Select a villager first.' };
+  for (const v of vs) command(g, v, action('demolish', { b: b.id, key: 'demolish', why: `Taking down the ${BUILD[b.k].name.toLowerCase()}.` }));
+  b.demolish = true;
+  return { ok: true };
+}
 export function removeThing(g, t) {
   if (t.type === 'building') {
     const b = t.b;
-    if (!b || BUILD[b.k].fixed || (b.k === 'tc' && b.done) || !g.bmap.has(b.id)) return { ok: false, reason: b && b.k === 'campfire' ? 'The campfire stays: it is where the village began.' : 'The town center stays.' };
-    for (const v of g.villagers) if (v.job === b.id) { v.job = null; v.role = null; }
-    for (const r of RES) if (BUILD[b.k].cost[r]) addRes(g, r, BUILD[b.k].cost[r]);
-    for (const v of g.villagers) if (v.act && v.act.bed === b.id) { v.inside = false; v.act.bed = null; v.act.phase = 'start'; }
-    if (g.rally && g.rally.type === 'farm' && g.rally.id === b.id) g.rally = null;
-    removeBuilding(g, b);
-    notice(g, `The ${BUILD[b.k].name.toLowerCase()} was taken down. Its materials are back in the stores.`);
+    if (!canTakeDown(b) || !g.bmap.has(b.id)) return { ok: false, reason: b && b.k === 'campfire' ? 'The campfire stays: it is where the village began.' : 'The town center stays.' };
+    // The nearest villager walks over and takes it down (or it simply goes, if nobody is around).
+    const v = [...g.villagers].filter(v => !(v.act && v.act.type === 'leave')).sort((p, q) => Math.hypot(p.x - b.x, p.y - b.y) - Math.hypot(q.x - b.x, q.y - b.y))[0];
+    if (v && orderDemolish(g, [v], b).ok) return { ok: true, v };
+    takeDown(g, b);
     return { ok: true };
   }
   if (t.type === 'villager') {

@@ -4,15 +4,19 @@
 //   - saplings grow into trees; forests creep outward; berry bushes appear on long-empty grass near forest
 // Nothing grows in winter.
 import { N, NODE, NODE_INFO, DAY, REGROW_PER_DAY, STUMP_SAPLING } from './config.js';
-import { idx, tx, ty, isOpen, countNear, buildingNear } from './world.js';
+import { idx, tx, ty, isOpen, countNear, buildingNear, WATER } from './world.js';
 // Nature keeps paths clear: nothing new grows on the road or within LAND.clearAround tiles of a building.
 import { seasonIndex } from './state.js';
 
+// Fish come back: an emptied fishing spot returns after FISH.back seconds, and ponds slowly gain new spots (about one per FISH.perWater water tiles).
+export const FISH = { back: 2 * 864, perWater: 6, chance: 0.04 };
 export const LAND = { saplingTime: 900, spreadChance: 0.004, berryChance: 0.03, berryMax: 14, clearAround: 2 };  // slow on purpose
 const RENEWS = { [NODE.TREE]: true, [NODE.BERRY]: true, [NODE.FISH]: true, [NODE.CLAY]: true };
 
 export function createLand(g) {
   let t = 0;
+  const fishBack = [];
+  g.events.on('depleted', ({ i, k }) => { if (k === NODE.FISH) fishBack.push({ i, t: FISH.back }); });
   g.events.on('depleted', ({ i, k }) => { if (k === NODE.TREE && !g.w.road[i] && !buildingNear(g.w, tx(i), ty(i), LAND.clearAround) && g.rng() < STUMP_SAPLING) g.w.G[i] = 1; });
   return {
     tick(dt) {
@@ -27,7 +31,12 @@ export function createLand(g) {
         }
         if (isOpen(w, tx(i), ty(i))) w.E[i] += dt; else w.E[i] = 0;
       }
+      for (let n = fishBack.length - 1; n >= 0; n--) { const f = fishBack[n]; if ((f.t -= dt) > 0) continue; fishBack.splice(n, 1); if (w.T[f.i] === WATER && !(w.A[f.i] > 0)) { w.R[f.i] = NODE.FISH; w.A[f.i] = NODE_INFO[NODE.FISH].amt; } }
       t += dt;
+      if (t >= 4 && (this.ft = (this.ft || 0) + 1) % 2 === 0) { // every 8 s: maybe a new fishing spot
+        let water = 0, fish = 0; for (let i = 0; i < N * N; i++) { if (w.T[i] === WATER) water++; if (w.R[i] === NODE.FISH && w.A[i] > 0) fish++; }
+        if (fish < water / FISH.perWater && g.rng() < FISH.chance * 4) for (let n = 0; n < 10; n++) { const i = g.rng.int(N * N), x = tx(i), y = ty(i); if (w.T[i] === WATER && !(w.A[i] > 0) && countNear(w, x, y, NODE.FISH, 2) === 0) { w.R[i] = NODE.FISH; w.A[i] = NODE_INFO[NODE.FISH].amt; break; } }
+      }
       if (t < 4 || winter) return;
       t = 0;
       let berries = 0;

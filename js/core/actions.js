@@ -1,9 +1,9 @@
 // What villagers can do. Each action is a small step machine: it sets a path,
 // waits to arrive, works, and returns RUN, DONE or FAIL.
-import { NODE_INFO, BUILD, TIERS, RESOW_COST, WATER_RATE, UPGRADE_TIME, N, RES } from './config.js';
+import { NODE_INFO, BUILD, TIERS, RESOW_COST, WATER_RATE, UPGRADE_TIME, N, RES, PANTRY_KIND, KIND_CODE } from './config.js';
 import { bfs } from './path.js';
 import { walkable, inMap, idx, tx, ty, DIRS8, besideRect, isOpen, nodeKind, isShore } from './world.js';
-import { addRes, isNight, completeBuilding, canStore, acceptsAt, record, pay, have, notice, beds, levelName, cap } from './state.js';
+import { addRes, isNight, completeBuilding, canStore, acceptsAt, record, pay, have, notice, beds, levelName, cap, takeDown, seasonIndex } from './state.js';
 import { finish, action } from './villagers.js';
 
 const RUN = 0, DONE = 1, FAIL = 2;
@@ -13,7 +13,7 @@ const cheb = (x, y, a, b) => Math.max(Math.abs(x - a), Math.abs(y - b));
 const phase = (a, p) => { a.phase = p; a.t = 0; a.tries = 0; return RUN; };
 
 // Walk until goal(x,y) holds where the villager stands.
-function go(g, v, a, goal) {
+export function go(g, v, a, goal) {
   if (v.path.length) return 'walking';
   const [px, py] = at(v);
   if (goal(px, py)) return 'arrived';
@@ -27,7 +27,7 @@ function adjKind(w, x, y, k, ok) {
   for (const [dx, dy] of DIRS8) { const a = x + dx, b = y + dy; if (inMap(a, b) && nodeKind(w, idx(a, b)) === k && (!ok || ok(idx(a, b)))) return idx(a, b); }
   return -1;
 }
-const isDropoff = (g, x, y, r) => g.buildings.some(b => acceptsAt(g, b, r) && besideRect(x, y, b.x, b.y, b.s));
+const isDropoff = (g, x, y, r) => g.buildings.some(b => acceptsAt(g, b, r) && besideRect(x, y, b.x, b.y, b.w, b.h));
 // Carry goods to the nearest building that holds them. Returns 'done', 'walking', 'fail' or 'full'.
 function haul(g, v, a) {
   if (v.carry <= 0) return 'done';
@@ -36,6 +36,7 @@ function haul(g, v, a) {
   const s = go(g, v, a, (x, y) => isDropoff(g, x, y, v.carryRes));
   if (s !== 'arrived') return s;
   addRes(g, v.carryRes, v.carry); record(g, 'in', v.carryRes, v.carry);
+  if (v.carryRes === 'food') { const p = g.pantry || (g.pantry = {}), k = PANTRY_KIND[v.carryKind] || 'provisions'; p[k] = (p[k] || 0) + v.carry; }
   g.events.emit('delivered', { v, res: v.carryRes, n: v.carry, walk: g.clock - a.haulT0, from: a.from });
   a.haulT0 = 0;
   v.carry = 0; v.carryRes = null; v.carryKind = 0;
@@ -106,7 +107,7 @@ const H = {
     switch (a.phase) {
       case 'start': if (v.carry > 0 && v.carryRes !== crop) setDownIfFull(g, v); return phase(a, v.carry > 0 && v.carryRes !== crop ? 'haul' : 'go');
       case 'go': {
-        const s = go(g, v, a, (x, y) => besideRect(x, y, b.x, b.y, b.s));
+        const s = go(g, v, a, (x, y) => besideRect(x, y, b.x, b.y, b.w, b.h));
         if (s === 'fail') return FAIL;
         if (s === 'arrived') { face(v, b.x + 0.5, b.y + 0.5); return phase(a, 'work'); }
         return RUN;
@@ -139,7 +140,7 @@ const H = {
         if (a.well && !well()) a.well = null;
         if (a.well || a.shore) return phase(a, 'go');
         const [px, py] = at(v);
-        const wellAt = (x, y) => g.buildings.find(b => b.k === 'well' && b.done && b.water >= 1 && besideRect(x, y, b.x, b.y, b.s));
+        const wellAt = (x, y) => g.buildings.find(b => b.k === 'well' && b.done && b.water >= 1 && besideRect(x, y, b.x, b.y, b.w, b.h));
         const p = bfs(w, px, py, (x, y) => !!wellAt(x, y) || isShore(w, x, y));
         if (!p) return v.carry > 0 ? phase(a, 'haul') : FAIL;
         const [ex, ey] = p.length ? p[p.length - 1] : [px, py], b = wellAt(ex, ey);
@@ -150,7 +151,7 @@ const H = {
       case 'go': {
         const b = well(), sh = a.shore;
         if (a.well && !b) { a.well = null; return phase(a, 'find'); }
-        const s = b ? go(g, v, a, (x, y) => besideRect(x, y, b.x, b.y, b.s)) : go(g, v, a, (x, y) => x === sh[0] && y === sh[1]);
+        const s = b ? go(g, v, a, (x, y) => besideRect(x, y, b.x, b.y, b.w, b.h)) : go(g, v, a, (x, y) => x === sh[0] && y === sh[1]);
         if (s === 'fail') { a.well = null; a.shore = null; a.fails = (a.fails || 0) + 1; return a.fails > 3 ? FAIL : phase(a, 'find'); }
         return s === 'arrived' ? phase(a, 'work') : RUN;
       }
@@ -171,6 +172,7 @@ const H = {
   },
 
   // A specialist works their workshop: takes the inputs from the stores, works, carries the goods to storage.
+  // recipeFor picks what they can make right now (main inputs, the alternative, or grazing for animals).
   craft(g, v, a, dt) {
     const b = g.bmap.get(a.b), c = b && BUILD[b.k].craft;
     if (!b || !b.done || !c) return FAIL;
@@ -178,20 +180,24 @@ const H = {
     switch (a.phase) {
       case 'start': if (v.carry > 0 && v.carryRes !== outRes) setDownIfFull(g, v); return phase(a, v.carry > 0 && v.carryRes !== outRes ? 'haul' : 'go');
       case 'go': {
-        const s = go(g, v, a, (x, y) => besideRect(x, y, b.x, b.y, b.s));
+        const s = go(g, v, a, (x, y) => besideRect(x, y, b.x, b.y, b.w, b.h));
         if (s === 'fail') return FAIL;
         if (s !== 'arrived') return RUN;
         if (outRes !== 'culture' && !canStore(g, outRes)) { v.why = `The stores have no room for more ${outRes}.`; return a.src === 'auto' ? DONE : RUN; }
-        if (!pay(g, c.in)) { v.why = `Waiting for ${Object.keys(c.in).join(' and ')}.`; return a.src === 'auto' ? DONE : RUN; }
-        for (const r in c.in) record(g, 'out', r, c.in[r]);
+        const rec = recipeFor(g, b);
+        if (!rec || !pay(g, rec.in)) { v.why = BUILD[b.k].noWinter && seasonIndex(g) === 3 ? 'The bees are resting for the winter.' : `Waiting for ${Object.keys(c.in).join(' and ')}.`; return a.src === 'auto' ? DONE : RUN; }
+        for (const r in rec.in) record(g, 'out', r, rec.in[r]);
+        a.slow = rec.slow; if (rec.fed) b.fedDay = g.dawns;
         face(v, b.x, b.y);
         return phase(a, 'work');
       }
       case 'work':
         a.t += dt;
-        if (a.t < c.time) return RUN;
+        if (a.t < c.time * (a.slow || 1) * ((g.mods.craft || {})[b.k] || 1)) return RUN;
         if (outRes === 'culture') { g.culture = (g.culture || 0) + c.out.culture; g.events.emit('crafted', { v, b, res: outRes, n: c.out.culture }); return a.src === 'auto' ? DONE : phase(a, 'go'); }
-        v.carry = c.out[outRes]; v.carryRes = outRes; v.carryKind = 9;
+        { const an = BUILD[b.k].animals, scale = an ? 0.5 + 0.5 * (b.animals ?? an.start) / (an.cap + (g.mods.penAdd || 0)) : 1; v.carry = Math.max(1, Math.round(c.out[outRes] * scale)); }
+        v.carryRes = outRes; v.carryKind = KIND_CODE[c.kind] || 9;
+        if (c.extra) for (const r in c.extra) if (canStore(g, r)) { addRes(g, r, c.extra[r]); record(g, 'in', r, c.extra[r]); }
         g.events.emit('crafted', { v, b, res: outRes, n: v.carry });
         return phase(a, 'haul');
       case 'haul': {
@@ -211,7 +217,7 @@ const H = {
     if (!b || !b.done || !tiers || a.to <= b.lvl || !tiers[a.to]) return a.phase === 'work' ? DONE : FAIL;
     if (a.phase === 'start') return phase(a, 'go');
     if (a.phase === 'go') {
-      const s = go(g, v, a, (x, y) => besideRect(x, y, b.x, b.y, b.s));
+      const s = go(g, v, a, (x, y) => besideRect(x, y, b.x, b.y, b.w, b.h));
       if (s === 'fail') return FAIL;
       if (s !== 'arrived') return RUN;
       const c = stepCost(b, a.to);
@@ -248,7 +254,7 @@ const H = {
     }
     if (a.phase === 'start') return phase(a, 'go');
     if (a.phase === 'go') {
-      const s = go(g, v, a, (x, y) => besideRect(x, y, b.x, b.y, b.s));
+      const s = go(g, v, a, (x, y) => besideRect(x, y, b.x, b.y, b.w, b.h));
       if (s === 'fail') return FAIL;
       if (s === 'arrived') { face(v, b.x, b.y); return phase(a, 'work'); }
       return RUN;
@@ -278,6 +284,23 @@ const H = {
     if (w.R[i] === 1 && w.A[i] > 0) { const n = Math.min(w.A[i], Math.max(0, cap(g, 'wood') - g.res.wood)); if (n > 0) { addRes(g, 'wood', n); record(g, 'in', 'wood', n); } }
     w.R[i] = 0; w.A[i] = 0; w.G[i] = 0; w.F[i] = 0;
     g.events.emit('cleared', i);
+    return DONE;
+  },
+
+  demolish(g, v, a, dt) {
+    const b = g.bmap.get(a.b);
+    if (!b) return DONE;
+    if (a.phase === 'start') return phase(a, 'go');
+    if (a.phase === 'go') {
+      const s = go(g, v, a, (x, y) => besideRect(x, y, b.x, b.y, b.w, b.h));
+      if (s === 'fail') { b.demolish = false; return FAIL; }
+      if (s === 'arrived') { face(v, b.x, b.y); return phase(a, 'work'); }
+      return RUN;
+    }
+    const need = Math.max(3, b.time * 0.5);
+    b.demo = Math.min(need, (b.demo || 0) + dt); b.demoNeed = need;
+    if (b.demo < need) return RUN;
+    takeDown(g, b);
     return DONE;
   },
 
@@ -321,10 +344,10 @@ const H = {
   },
 
   sit(g, v, a, dt) {
-    const tv = a.tavern && g.bmap.get(a.tavern), f = tv ? { x: tv.x + 0.5, y: tv.y + 0.5 } : g.w.fire;
+    const tv = a.tavern && g.bmap.get(a.tavern), f = tv ? { x: tv.x + (tv.w - 1) / 2, y: tv.y + (tv.h - 1) / 2 } : g.w.fire;
     if (a.phase === 'start') {
       const spots = tv ? [] : DIRS8.map(([dx, dy]) => [f.x + dx, f.y + dy]).filter(([x, y]) => walkable(g.w, x, y));
-      if (tv) for (let y = tv.y - 1; y <= tv.y + tv.s; y++) for (let x = tv.x - 1; x <= tv.x + tv.s; x++) if (besideRect(x, y, tv.x, tv.y, tv.s) && walkable(g.w, x, y)) spots.push([x, y]);
+      if (tv) for (let y = tv.y - 1; y <= tv.y + tv.h; y++) for (let x = tv.x - 1; x <= tv.x + tv.w; x++) if (besideRect(x, y, tv.x, tv.y, tv.w, tv.h) && walkable(g.w, x, y)) spots.push([x, y]);
       if (!spots.length) return FAIL;
       [a.x, a.y] = g.rng.pick(spots);
       return phase(a, 'go');
@@ -361,7 +384,7 @@ const H = {
     }
     if (a.phase === 'go') {
       const b = a.bed && g.bmap.get(a.bed);
-      const s = b ? go(g, v, a, (x, y) => besideRect(x, y, b.x, b.y, b.s)) : go(g, v, a, (x, y) => x === a.x && y === a.y);
+      const s = b ? go(g, v, a, (x, y) => besideRect(x, y, b.x, b.y, b.w, b.h)) : go(g, v, a, (x, y) => x === a.x && y === a.y);
       if (s === 'fail') { if (b) { b.sleepers--; a.bed = null; } return phase(a, 'start'); }
       if (s === 'arrived') { if (b) v.inside = true; return phase(a, 'sleep'); }
       return RUN;
@@ -373,7 +396,7 @@ const H = {
 function move(g, v, dt) {
   const [nx, ny] = v.path[0];
   if (!walkable(g.w, nx, ny)) { v.path = []; v.moving = false; return; }
-  const onPath = g.w.wk[idx(Math.round(v.x), Math.round(v.y))] === 1, dx = nx - v.x, dy = ny - v.y, d = Math.hypot(dx, dy), st = g.mods.speed * dt * (onPath ? 1.2 : 1);
+  const dx = nx - v.x, dy = ny - v.y, d = Math.hypot(dx, dy), st = g.mods.speed * dt;   // paths are decoration only
   v.moving = true;
   if (dx - dy !== 0) v.dir = dx - dy > 0 ? 1 : -1;
   if (d <= st) { v.x = nx; v.y = ny; v.path.shift(); if (!v.path.length) v.moving = false; }
@@ -391,6 +414,19 @@ export function stepVillager(g, v, dt) {
   finish(g, v);
 }
 export const ACTION_TYPES = Object.keys(H);
+// Other modules (festivals) add their own action types here.
+// What a workshop can make right now: its main recipe, its alternative (the weaver can use wool), or, for animals,
+// grazing without feed (slower). Bees rest in winter. Returns { in, slow, fed } or null.
+export function recipeFor(g, b) {
+  const def = BUILD[b.k], c = def.craft;
+  if (!c) return null;
+  if (def.noWinter && seasonIndex(g) === 3) return null;
+  if (have(g, c.in)) return { in: c.in, slow: 1, fed: !!def.animals && Object.keys(c.in).length > 0 };
+  if (c.alt && have(g, c.alt)) return { in: c.alt, slow: 1 };
+  if (c.graze) return { in: {}, slow: c.graze };
+  return null;
+}
+export function registerAction(type, fn) { H[type] = fn; ACTION_TYPES.push(type); }
 
 // Total cost of climbing from a building's current level to level `to`.
 export function stepCost(b, to) {

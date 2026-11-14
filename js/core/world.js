@@ -106,22 +106,31 @@ export function buildingNear(w, x, y, r) {
   return false;
 }
 // Tile next to (Chebyshev distance 1) the given rectangle, and not inside it.
-export const besideRect = (x, y, rx, ry, s) => x >= rx - 1 && x <= rx + s && y >= ry - 1 && y <= ry + s && !(x >= rx && x < rx + s && y >= ry && y < ry + s);
+export const besideRect = (x, y, rx, ry, w, h = w) => x >= rx - 1 && x <= rx + w && y >= ry - 1 && y <= ry + h && !(x >= rx && x < rx + w && y >= ry && y < ry + h);
 
 // The road: a dirt track from the map edge into the village. Nothing grows or is built on it; walking on it is quicker.
 // Laid along the shortest dry route (trees are cleared, water is avoided), from the tile beside (fx, fy) to the nearest edge.
-export function layRoad(w, fx, fy) {
+// Each map's road comes in from its own side and spot (chosen from the map's seed, so a reload lays the same road).
+export function roadTarget(seed) {
+  const h = Math.imul((seed | 0) + 0x9e37, 2654435761) >>> 0, side = h % 4, at = 6 + ((h >>> 3) % (N - 12));
+  return { side, at };
+}
+const onSide = (x, y, side) => side === 0 ? y === 0 : side === 1 ? x === N - 1 : side === 2 ? y === N - 1 : x === 0;
+export function layRoad(w, fx, fy, tries = 0) {
+  const tgt = roadTarget(w.seed + tries * 7919);
   const passable = (x, y) => inMap(x, y) && w.T[idx(x, y)] !== WATER && (w.occ[idx(x, y)] === 0 || w.wk[idx(x, y)] === 1);
   const par = new Int32Array(N * N).fill(-2), q = [];
   for (const [dx, dy] of DIRS4) { const x = fx + dx, y = fy + dy; if (passable(x, y)) { const i = idx(x, y); par[i] = -1; q.push(i); } }
   for (let h = 0; h < q.length; h++) {
     const c = q[h], cx = c % N, cy = (c / N) | 0;
-    if (cx === 0 || cy === 0 || cx === N - 1 || cy === N - 1) {
+    const along = tgt.side % 2 === 0 ? cx : cy;
+    if (onSide(cx, cy, tgt.side) && (Math.abs(along - tgt.at) <= 4 || tries >= 4)) {
       for (let n = c; n !== -1; n = par[n]) { w.road[n] = 1; w.A[n] = 0; w.R[n] = 0; w.G[n] = 0; }
       w.roadEnd = [cx, cy];
       return true;
     }
     for (const [dx, dy] of DIRS4) { const x = cx + dx, y = cy + dy, i = idx(x, y); if (passable(x, y) && par[i] === -2) { par[i] = c; q.push(i); } }
   }
-  return false;
+  // That spot is cut off by water: try another side (after a few tries, any reachable spot on a side will do).
+  return tries < 8 ? layRoad(w, fx, fy, tries + 1) : false;
 }
