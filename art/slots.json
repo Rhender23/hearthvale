@@ -1,0 +1,662 @@
+{
+ "ground/grass": {
+  "w": 128,
+  "h": 64,
+  "ground": "tile centre",
+  "group": "Ground"
+ },
+ "ground/sand": {
+  "w": 128,
+  "h": 64,
+  "ground": "tile centre",
+  "group": "Ground"
+ },
+ "ground/water": {
+  "w": 128,
+  "h": 64,
+  "ground": "tile centre",
+  "group": "Ground"
+ },
+ "ground/road": {
+  "w": 128,
+  "h": 64,
+  "ground": "tile centre",
+  "group": "Ground"
+ },
+ "node/tree": {
+  "w": 96,
+  "h": 128,
+  "ground": "base of the trunk",
+  "group": "Nature"
+ },
+ "node/sapling": {
+  "w": 96,
+  "h": 128,
+  "ground": "base of the trunk",
+  "group": "Nature"
+ },
+ "node/stone": {
+  "w": 96,
+  "h": 80,
+  "ground": "bottom centre",
+  "group": "Nature"
+ },
+ "node/gold": {
+  "w": 96,
+  "h": 80,
+  "ground": "bottom centre",
+  "group": "Nature"
+ },
+ "node/clay": {
+  "w": 96,
+  "h": 80,
+  "ground": "bottom centre",
+  "group": "Nature"
+ },
+ "node/berry": {
+  "w": 96,
+  "h": 80,
+  "ground": "bottom centre",
+  "group": "Nature"
+ },
+ "node/fish": {
+  "w": 96,
+  "h": 48,
+  "ground": "tile centre (bottom of the image)",
+  "group": "Nature"
+ },
+ "building/campfire/0": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/campfire/1": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/campfire/2": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/tc": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/house/0": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/house/1": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/house/2": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/house/3": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/house/4": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/house/5": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/house/6": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/house/7": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/house/8": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/store/0": {
+  "w": 192,
+  "h": 211,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/store/1": {
+  "w": 192,
+  "h": 211,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/store/2": {
+  "w": 192,
+  "h": 211,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/lumbermill": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/farm": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/wheatfield": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/grange/0": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/grange/1": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/grange/2": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/granary": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/farmhouse/0": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/farmhouse/1": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/farmhouse/2": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/mill": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/bakery": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/brewery": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/well/0": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/well/1": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/well/2": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/flowerbed": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/bench": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/path/0": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/path/1": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/path/2": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/statue": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/garden": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/arbor": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/fireflylamp": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/tavern": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/lodge": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/market/0": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/market/1": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/market/2": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/fiberfield": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/shop/0": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/shop/1": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/shop/2": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/potter": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/carpenter/0": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/carpenter/1": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/carpenter/2": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/weaver": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/quarry": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/claypit": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/goldmine": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/jeweler": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/school": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/studio": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/theater": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/monument": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/church": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/library": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/playground": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/coop": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/sheepfold": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/pasture": {
+  "w": 256,
+  "h": 282,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/dairy": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/apiary": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "building/chandler": {
+  "w": 128,
+  "h": 205,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "site/1x1": {
+  "w": 128,
+  "h": 128,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "site/2x1": {
+  "w": 192,
+  "h": 192,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "site/2x2": {
+  "w": 256,
+  "h": 256,
+  "ground": "front point of the footprint",
+  "group": "Buildings"
+ },
+ "villager/idle": {
+  "w": 40,
+  "h": 64,
+  "ground": "feet",
+  "group": "Villagers"
+ },
+ "villager/walk": {
+  "w": 40,
+  "h": 64,
+  "ground": "feet",
+  "group": "Villagers"
+ },
+ "villager/work": {
+  "w": 40,
+  "h": 64,
+  "ground": "feet",
+  "group": "Villagers"
+ },
+ "villager/carry": {
+  "w": 40,
+  "h": 64,
+  "ground": "feet",
+  "group": "Villagers"
+ },
+ "critter/firefly": {
+  "w": 24,
+  "h": 24,
+  "ground": "its centre",
+  "group": "Animals"
+ },
+ "critter/moth": {
+  "w": 24,
+  "h": 24,
+  "ground": "its centre",
+  "group": "Animals"
+ },
+ "critter/frog": {
+  "w": 24,
+  "h": 24,
+  "ground": "its centre",
+  "group": "Animals"
+ },
+ "critter/owl": {
+  "w": 24,
+  "h": 24,
+  "ground": "its centre",
+  "group": "Animals"
+ },
+ "critter/fox": {
+  "w": 52,
+  "h": 40,
+  "ground": "feet",
+  "group": "Animals"
+ },
+ "critter/raccoon": {
+  "w": 52,
+  "h": 40,
+  "ground": "feet",
+  "group": "Animals"
+ },
+ "critter/wolf": {
+  "w": 52,
+  "h": 40,
+  "ground": "feet",
+  "group": "Animals"
+ },
+ "critter/bear": {
+  "w": 72,
+  "h": 56,
+  "ground": "feet",
+  "group": "Animals"
+ },
+ "seasonal/egg": {
+  "w": 20,
+  "h": 24,
+  "ground": "bottom centre",
+  "group": "Festivals"
+ },
+ "seasonal/bunny": {
+  "w": 40,
+  "h": 48,
+  "ground": "bottom centre",
+  "group": "Festivals"
+ },
+ "seasonal/pumpkin": {
+  "w": 32,
+  "h": 28,
+  "ground": "bottom centre",
+  "group": "Festivals"
+ },
+ "seasonal/pumpkin-lit": {
+  "w": 32,
+  "h": 28,
+  "ground": "bottom centre",
+  "group": "Festivals"
+ },
+ "seasonal/scarecrow": {
+  "w": 48,
+  "h": 80,
+  "ground": "bottom centre",
+  "group": "Festivals"
+ },
+ "seasonal/leaves": {
+  "w": 32,
+  "h": 16,
+  "ground": "bottom centre",
+  "group": "Festivals"
+ },
+ "seasonal/bat": {
+  "w": 40,
+  "h": 20,
+  "ground": "bottom centre",
+  "group": "Festivals"
+ },
+ "seasonal/tree": {
+  "w": 80,
+  "h": 140,
+  "ground": "bottom centre",
+  "group": "Festivals"
+ },
+ "seasonal/snowman": {
+  "w": 40,
+  "h": 80,
+  "ground": "bottom centre",
+  "group": "Festivals"
+ },
+ "seasonal/santa": {
+  "w": 40,
+  "h": 90,
+  "ground": "bottom centre",
+  "group": "Festivals"
+ },
+ "seasonal/sleigh": {
+  "w": 64,
+  "h": 48,
+  "ground": "bottom centre",
+  "group": "Festivals"
+ },
+ "seasonal/parasol": {
+  "w": 56,
+  "h": 64,
+  "ground": "bottom centre",
+  "group": "Festivals"
+ }
+}

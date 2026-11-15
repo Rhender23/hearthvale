@@ -1,0 +1,822 @@
+{
+ "models": [
+  {
+   "slot": "building/house/0",
+   "group": "homes",
+   "file": "out/building-house-0.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "turn": true
+  },
+  {
+   "slot": "building/house/1",
+   "group": "homes",
+   "file": "out/building-house-1.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "turn": true
+  },
+  {
+   "slot": "building/house/2",
+   "group": "homes",
+   "file": "out/building-house-2.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "turn": true
+  },
+  {
+   "slot": "building/house/3",
+   "group": "homes",
+   "file": "out/building-house-3.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "turn": true
+  },
+  {
+   "slot": "building/house/4",
+   "group": "homes",
+   "file": "out/building-house-4.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "turn": true
+  },
+  {
+   "slot": "building/house/5",
+   "group": "homes",
+   "file": "out/building-house-5.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "turn": true
+  },
+  {
+   "slot": "building/house/6",
+   "group": "homes",
+   "file": "out/building-house-6.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "turn": true
+  },
+  {
+   "slot": "building/house/7",
+   "group": "homes",
+   "file": "out/building-house-7.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "turn": true
+  },
+  {
+   "slot": "building/house/8",
+   "group": "homes",
+   "file": "out/building-house-8.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "turn": true
+  },
+  {
+   "slot": "building/farmhouse/0",
+   "group": "homes",
+   "file": "out/building-farmhouse-0.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/farmhouse/1",
+   "group": "homes",
+   "file": "out/building-farmhouse-1.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/farmhouse/2",
+   "group": "homes",
+   "file": "out/building-farmhouse-2.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/lodge",
+   "group": "homes",
+   "file": "out/building-lodge.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/store/0",
+   "group": "workshops",
+   "file": "out/building-store-0.glb",
+   "tiles": [
+    2,
+    1
+   ],
+   "turn": true
+  },
+  {
+   "slot": "building/store/1",
+   "group": "workshops",
+   "file": "out/building-store-1.glb",
+   "tiles": [
+    2,
+    1
+   ],
+   "turn": true
+  },
+  {
+   "slot": "building/store/2",
+   "group": "workshops",
+   "file": "out/building-store-2.glb",
+   "tiles": [
+    2,
+    1
+   ],
+   "turn": true
+  },
+  {
+   "slot": "building/granary",
+   "group": "workshops",
+   "file": "out/building-granary.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/grange/0",
+   "group": "workshops",
+   "file": "out/building-grange-0.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/grange/1",
+   "group": "workshops",
+   "file": "out/building-grange-1.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/grange/2",
+   "group": "workshops",
+   "file": "out/building-grange-2.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/lumbermill",
+   "group": "workshops",
+   "file": "out/building-lumbermill.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/mill",
+   "group": "workshops",
+   "file": "out/building-mill-f0.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "fps": 4,
+   "frames": [
+    "out/building-mill-f0.glb",
+    "out/building-mill-f1.glb",
+    "out/building-mill-f2.glb",
+    "out/building-mill-f3.glb"
+   ]
+  },
+  {
+   "slot": "building/bakery",
+   "group": "workshops",
+   "file": "out/building-bakery.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/brewery",
+   "group": "workshops",
+   "file": "out/building-brewery.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/potter",
+   "group": "workshops",
+   "file": "out/building-potter.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/carpenter/0",
+   "group": "workshops",
+   "file": "out/building-carpenter-0.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/carpenter/1",
+   "group": "workshops",
+   "file": "out/building-carpenter-1.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/carpenter/2",
+   "group": "workshops",
+   "file": "out/building-carpenter-2.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/weaver",
+   "group": "workshops",
+   "file": "out/building-weaver.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/jeweler",
+   "group": "workshops",
+   "file": "out/building-jeweler.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/chandler",
+   "group": "workshops",
+   "file": "out/building-chandler.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/dairy",
+   "group": "workshops",
+   "file": "out/building-dairy.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/quarry",
+   "group": "workshops",
+   "file": "out/building-quarry.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/claypit",
+   "group": "workshops",
+   "file": "out/building-claypit.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/goldmine",
+   "group": "workshops",
+   "file": "out/building-goldmine.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/market/0",
+   "group": "workshops",
+   "file": "out/building-market-0.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/market/1",
+   "group": "workshops",
+   "file": "out/building-market-1.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/market/2",
+   "group": "workshops",
+   "file": "out/building-market-2.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/shop/0",
+   "group": "workshops",
+   "file": "out/building-shop-0.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/shop/1",
+   "group": "workshops",
+   "file": "out/building-shop-1.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/shop/2",
+   "group": "workshops",
+   "file": "out/building-shop-2.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/coop",
+   "group": "farms",
+   "file": "out/building-coop.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/sheepfold",
+   "group": "farms",
+   "file": "out/building-sheepfold.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/pasture",
+   "group": "farms",
+   "file": "out/building-pasture.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/apiary",
+   "group": "farms",
+   "file": "out/building-apiary.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/tc/0",
+   "group": "civic",
+   "file": "out/building-tc-0.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/tc/1",
+   "group": "civic",
+   "file": "out/building-tc-1.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/tc/2",
+   "group": "civic",
+   "file": "out/building-tc-2.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/tc/3",
+   "group": "civic",
+   "file": "out/building-tc-3.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/tavern",
+   "group": "civic",
+   "file": "out/building-tavern.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/school",
+   "group": "civic",
+   "file": "out/building-school.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/studio",
+   "group": "civic",
+   "file": "out/building-studio.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/theater",
+   "group": "civic",
+   "file": "out/building-theater.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/church",
+   "group": "civic",
+   "file": "out/building-church.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/library",
+   "group": "civic",
+   "file": "out/building-library.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/playground",
+   "group": "civic",
+   "file": "out/building-playground.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/monument",
+   "group": "civic",
+   "file": "out/building-monument.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "site/1x1",
+   "group": "civic",
+   "file": "out/site-1x1.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "site/2x1",
+   "group": "civic",
+   "file": "out/site-2x1.glb",
+   "tiles": [
+    2,
+    1
+   ]
+  },
+  {
+   "slot": "site/2x2",
+   "group": "civic",
+   "file": "out/site-2x2.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/flowerbed",
+   "group": "decor",
+   "file": "out/building-flowerbed.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/bench",
+   "group": "decor",
+   "file": "out/building-bench.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/statue",
+   "group": "decor",
+   "file": "out/building-statue.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/garden",
+   "group": "decor",
+   "file": "out/building-garden.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/arbor",
+   "group": "decor",
+   "file": "out/building-arbor.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "seasons": true
+  },
+  {
+   "slot": "building/fireflylamp",
+   "group": "decor",
+   "file": "out/building-fireflylamp.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/well/0",
+   "group": "decor",
+   "file": "out/building-well-0.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/well/1",
+   "group": "decor",
+   "file": "out/building-well-1.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/well/2",
+   "group": "decor",
+   "file": "out/building-well-2.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/campfire/0",
+   "group": "decor",
+   "file": "out/building-campfire-0.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/campfire/1",
+   "group": "decor",
+   "file": "out/building-campfire-1.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/campfire/2",
+   "group": "decor",
+   "file": "out/building-campfire-2.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "node/tree",
+   "group": "resources",
+   "file": "out/node-tree-f0.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "anchor": "centre",
+   "seasons": true,
+   "random": true,
+   "frames": [
+    "out/node-tree-f0.glb",
+    "out/node-tree-f1.glb",
+    "out/node-tree-f2.glb",
+    "out/node-tree-f3.glb",
+    "out/node-tree-f4.glb"
+   ]
+  },
+  {
+   "slot": "node/sapling",
+   "group": "resources",
+   "file": "out/node-sapling.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "anchor": "centre",
+   "seasons": true
+  },
+  {
+   "slot": "node/stone/0",
+   "group": "resources",
+   "file": "out/node-stone-0.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "anchor": "centre"
+  },
+  {
+   "slot": "node/stone/1",
+   "group": "resources",
+   "file": "out/node-stone-1.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "anchor": "centre"
+  },
+  {
+   "slot": "node/stone/2",
+   "group": "resources",
+   "file": "out/node-stone-2.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "anchor": "centre"
+  },
+  {
+   "slot": "node/gold/0",
+   "group": "resources",
+   "file": "out/node-gold-0.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "anchor": "centre"
+  },
+  {
+   "slot": "node/gold/1",
+   "group": "resources",
+   "file": "out/node-gold-1.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "anchor": "centre"
+  },
+  {
+   "slot": "node/gold/2",
+   "group": "resources",
+   "file": "out/node-gold-2.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "anchor": "centre"
+  },
+  {
+   "slot": "node/clay/0",
+   "group": "resources",
+   "file": "out/node-clay-0.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "anchor": "centre"
+  },
+  {
+   "slot": "node/clay/1",
+   "group": "resources",
+   "file": "out/node-clay-1.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "anchor": "centre"
+  },
+  {
+   "slot": "node/clay/2",
+   "group": "resources",
+   "file": "out/node-clay-2.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "anchor": "centre"
+  },
+  {
+   "slot": "node/berry/0",
+   "group": "resources",
+   "file": "out/node-berry-0.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "anchor": "centre"
+  },
+  {
+   "slot": "node/berry/1",
+   "group": "resources",
+   "file": "out/node-berry-1.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "anchor": "centre"
+  },
+  {
+   "slot": "node/berry/2",
+   "group": "resources",
+   "file": "out/node-berry-2.glb",
+   "tiles": [
+    1,
+    1
+   ],
+   "anchor": "centre"
+  }
+ ]
+}

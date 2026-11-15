@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hearthvale 3D → 2D renderer</title>
+<!--
+  Renders a 3D model (.glb) into the game's 2D art: the same 2:1 isometric view as the game, light from the upper left,
+  a soft shadow on the ground, and a transparent background. tools/render3d.py drives this page in headless Chrome;
+  it can also be opened by hand (the page renders the model you drop on it).
+
+  window.render(glbBytes, opts) → { image: dataURL, anchor: [x, y], w, h }
+    opts.tiles   [w, h]  the footprint in tiles (the model's footprint is x 0..w, z 0..h, y up, front facing +z)
+    opts.turn    true: turned to face the other way (front faces +x)
+    opts.season  'spring' | 'summer' | 'autumn' | 'winter'   (winter: snow on everything facing up)
+    opts.night   true: only what glows (materials named window / glow / lamp, or with an emissive colour), with a halo
+    opts.anchor  'front' (a building: its front corner) | 'centre' (a tree or bush: the middle of its tile)
+    opts.fit     true: scale the model to fill its footprint (for models from image-to-3D tools, which come in any size)
+    opts.front   which way the model's front faces as it comes in: '+z' (default), '-z', '+x', '-x'
+    opts.ss      supersampling (default 3)
+  No libraries: WebGL2 and a small .glb reader, so it runs anywhere Chrome does.
+-->
+<style>body{margin:0;background:#9cc27e;font:14px sans-serif}#out{display:flex;gap:16px;padding:16px;flex-wrap:wrap}#out img{background:#9cc27e;image-rendering:auto}</style>
+</head>
+<body>
+<div id="out"></div>
+<script>
+'use strict';
+// ---------------------------------------------------------------- the view (the game's 2:1 isometric)
+const S = 90.51;   // pixels per world unit at art scale (a tile is 128 × 64 in the file)
+const RIGHT = [Math.SQRT1_2, 0, -Math.SQRT1_2], UP = [-0.35355, 0.86603, -0.35355], TOCAM = [0.61237, 0.5, 0.61237];
+const LIGHT = norm([-0.42, 0.86, 0.5]);   // towards the sun: upper left of the screen, a little in front
+function norm(v) { const l = Math.hypot(...v); return v.map(x => x / l); }
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+
+const SEASON = {   // leaves by season (linear colour); winter leaves fall (bare branches)
+  spring: [0.25, 0.50, 0.14], summer: [0.13, 0.30, 0.07], autumn: [0.70, 0.25, 0.04], winter: null,
+};
+
+// ---------------------------------------------------------------- .glb reader
+async function readGLB(buf) {
+  const dv = new DataView(buf);
+  if (dv.getUint32(0, true) !== 0x46546C67) throw new Error('not a .glb file');
+  let o = 12, json = null, bin = null;
+  while (o < buf.byteLength) {
+    const len = dv.getUint32(o, true), type = dv.getUint32(o + 4, true);
+    if (type === 0x4E4F534A) json = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, o + 8, len)));
+    else if (type === 0x004E4942) bin = buf.slice(o + 8, o + 8 + len);
+    o += 8 + len;
+  }
+  const g = json;
+  const view = i => { const v = g.bufferViews[i]; return { buf: bin, off: v.byteOffset || 0, len: v.byteLength, stride: v.byteStride || 0 }; };
+  const SIZE = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16 };
+  function acc(i) {
+    const a = g.accessors[i], v = view(a.bufferView), n = SIZE[a.type], C = { 5126: Float32Array, 5123: Uint16Array, 5125: Uint32Array, 5121: Uint8Array, 5122: Int16Array, 5120: Int8Array }[a.componentType];
+    const out = new Float32Array(a.count * n), bpe = C.BYTES_PER_ELEMENT, stride = v.stride || n * bpe, base = v.off + (a.byteOffset || 0);
+    const dvb = new DataView(v.buf);
+    const get = { 5126: (p) => dvb.getFloat32(p, true), 5123: p => dvb.getUint16(p, true), 5125: p => dvb.getUint32(p, true), 5121: p => dvb.getUint8(p), 5122: p => dvb.getInt16(p, true), 5120: p => dvb.getInt8(p) }[a.componentType];
+    const normd = a.normalized ? { 5121: 255, 5123: 65535, 5120: 127, 5122: 32767 }[a.componentType] || 1 : 1;
+    for (let k = 0; k < a.count; k++) for (let c = 0; c < n; c++) out[k * n + c] = get(base + k * stride + c * bpe) / normd;
+    return out;
+  }
+  // textures (images inside the .glb)
+  const images = await Promise.all((g.images || []).map(async im => {
+    if (im.bufferView == null) return null;
+    const v = view(im.bufferView);
+    return createImageBitmap(new Blob([new Uint8Array(v.buf, v.off, v.len)], { type: im.mimeType || 'image/png' }), { imageOrientation: 'none' });
+  }));
+  const mats = (g.materials || []).map(m => {
+    const p = m.pbrMetallicRoughness || {}, t = p.baseColorTexture;
+    const name = (m.name || '').toLowerCase(), emis = m.emissiveFactor && m.emissiveFactor.some(x => x > 0) ? m.emissiveFactor : null;
+    return { name, color: (p.baseColorFactor || [1, 1, 1, 1]).slice(0, 3), alpha: (p.baseColorFactor || [1, 1, 1, 1])[3], tex: t ? images[g.textures[t.index].source] : null,
+      emis: emis || (/window|glow|lamp|candle/.test(name) ? [1, 0.75, 0.38] : null), blend: m.alphaMode === 'BLEND' || m.alphaMode === 'MASK' };
+  });
+  // walk the nodes, baking their transforms
+  const prims = [];
+  const mul = (a, b) => { const r = new Array(16).fill(0); for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) for (let k = 0; k < 4; k++) r[j * 4 + i] += a[k * 4 + i] * b[j * 4 + k]; return r; };
+  function trs(n) {
+    if (n.matrix) return n.matrix;
+    const [x, y, z, w] = n.rotation || [0, 0, 0, 1], [sx, sy, sz] = n.scale || [1, 1, 1], [tx, ty, tz] = n.translation || [0, 0, 0];
+    return [(1 - 2 * (y * y + z * z)) * sx, 2 * (x * y + z * w) * sx, 2 * (x * z - y * w) * sx, 0,
+      2 * (x * y - z * w) * sy, (1 - 2 * (x * x + z * z)) * sy, 2 * (y * z + x * w) * sy, 0,
+      2 * (x * z + y * w) * sz, 2 * (y * z - x * w) * sz, (1 - 2 * (x * x + y * y)) * sz, 0, tx, ty, tz, 1];
+  }
+  function walk(ni, parent) {
+    const n = g.nodes[ni], M = mul(parent, trs(n));
+    if (n.mesh != null) for (const p of g.meshes[n.mesh].primitives) {
+      if (p.mode != null && p.mode !== 4) continue;
+      let pos = acc(p.attributes.POSITION), nor = p.attributes.NORMAL != null ? acc(p.attributes.NORMAL) : null;
+      const uv = p.attributes.TEXCOORD_0 != null ? acc(p.attributes.TEXCOORD_0) : null, col = p.attributes.COLOR_0 != null ? acc(p.attributes.COLOR_0) : null;
+      const ccount = col ? g.accessors[p.attributes.COLOR_0].type === 'VEC4' ? 4 : 3 : 0;
+      let idx = p.indices != null ? acc(p.indices) : null;
+      // un-index (flat arrays are simpler, and models here are small)
+      const N = idx ? idx.length : pos.length / 3, P = new Float32Array(N * 3), Nn = new Float32Array(N * 3), U = new Float32Array(N * 2), Cc = new Float32Array(N * 3).fill(1);
+      for (let k = 0; k < N; k++) {
+        const i = idx ? idx[k] : k;
+        const x = pos[i * 3], y = pos[i * 3 + 1], z = pos[i * 3 + 2];
+        P[k * 3] = M[0] * x + M[4] * y + M[8] * z + M[12]; P[k * 3 + 1] = M[1] * x + M[5] * y + M[9] * z + M[13]; P[k * 3 + 2] = M[2] * x + M[6] * y + M[10] * z + M[14];
+        if (nor) { const a = nor[i * 3], b = nor[i * 3 + 1], c = nor[i * 3 + 2]; Nn[k * 3] = M[0] * a + M[4] * b + M[8] * c; Nn[k * 3 + 1] = M[1] * a + M[5] * b + M[9] * c; Nn[k * 3 + 2] = M[2] * a + M[6] * b + M[10] * c; }
+        if (uv) { U[k * 2] = uv[i * 2]; U[k * 2 + 1] = uv[i * 2 + 1]; }
+        if (col) for (let c = 0; c < 3; c++) Cc[k * 3 + c] = col[i * ccount + c];
+      }
+      if (!nor) for (let k = 0; k < N; k += 3) {   // flat normals
+        const a = [P[k * 3], P[k * 3 + 1], P[k * 3 + 2]], b = [P[k * 3 + 3], P[k * 3 + 4], P[k * 3 + 5]], c = [P[k * 3 + 6], P[k * 3 + 7], P[k * 3 + 8]];
+        const nn = norm(cross([b[0] - a[0], b[1] - a[1], b[2] - a[2]], [c[0] - a[0], c[1] - a[1], c[2] - a[2]]));
+        for (let j = 0; j < 3; j++) Nn.set(nn, (k + j) * 3);
+      }
+      prims.push({ P, N: Nn, U, C: Cc, mat: mats[p.material] || { name: '', color: [0.8, 0.8, 0.8], alpha: 1, tex: null, emis: null } });
+    }
+    for (const c of n.children || []) walk(c, M);
+  }
+  const I = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  for (const ni of (g.scenes[g.scene || 0] || g.scenes[0]).nodes) walk(ni, I);
+  return prims;
+}
+
+// Turn a model so its front faces +z (or +x when turned), and scale it into its footprint when asked.
+function place(prims, o) {
+  const [tw, th] = o.tiles || [1, 1];
+  const rotFor = { '+z': 0, '+x': -Math.PI / 2, '-z': Math.PI, '-x': Math.PI / 2 };
+  const a = (rotFor[o.front || '+z'] || 0) + (o.turn ? Math.PI / 2 : 0);   // turned: front from +z to +x
+  const ca = Math.cos(a), sa = Math.sin(a);
+  let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+  for (const p of prims) for (let k = 0; k < p.P.length; k += 3) {
+    const x = p.P[k], z = p.P[k + 2];
+    p.P[k] = x * ca + z * sa; p.P[k + 2] = -x * sa + z * ca;
+    const nx = p.N[k], nz = p.N[k + 2]; p.N[k] = nx * ca + nz * sa; p.N[k + 2] = -nx * sa + nz * ca;
+    for (let c = 0; c < 3; c++) { lo[c] = Math.min(lo[c], p.P[k + c]); hi[c] = Math.max(hi[c], p.P[k + c]); }
+  }
+  // the footprint swaps when a non-square building turns
+  const [fw, fh] = o.turn ? [th, tw] : [tw, th];
+  let s = 1, tx, ty, tz;
+  if (o.fit) s = 0.92 * Math.min(fw / (hi[0] - lo[0]), fh / (hi[2] - lo[2]));
+  if (o.fit || !o.keepPlace) { tx = fw / 2 - s * (lo[0] + hi[0]) / 2; tz = fh / 2 - s * (lo[2] + hi[2]) / 2; ty = -s * lo[1]; }
+  for (const p of prims) for (let k = 0; k < p.P.length; k += 3) { p.P[k] = p.P[k] * s + tx; p.P[k + 1] = p.P[k + 1] * s + ty; p.P[k + 2] = p.P[k + 2] * s + tz; }
+  return [fw, fh];
+}
+
+// ---------------------------------------------------------------- WebGL
+const VS = `#version 300 es
+in vec3 aP; in vec3 aN; in vec2 aU; in vec3 aC;
+uniform mat4 uView; uniform mat4 uLight;
+out vec3 vN; out vec2 vU; out vec3 vC; out vec4 vL; out vec3 vW;
+void main(){ vN = aN; vU = aU; vC = aC; vW = aP; vL = uLight * vec4(aP, 1.0); gl_Position = uView * vec4(aP, 1.0); }`;
+const FS = `#version 300 es
+precision highp float;
+in vec3 vN; in vec2 vU; in vec3 vC; in vec4 vL; in vec3 vW;
+uniform vec3 uColor; uniform vec3 uEmis; uniform float uAlpha; uniform sampler2D uTex; uniform bool uHasTex; uniform sampler2D uShadow;
+uniform vec3 uLightDir; uniform float uSnow; uniform int uMode;   // 0 lit, 1 ground shadow, 2 depth only (black), 3 glow
+out vec4 o;
+float lit(){
+  vec3 p = vL.xyz / vL.w * 0.5 + 0.5; float s = 0.0;
+  if (p.x < 0.0 || p.x > 1.0 || p.y < 0.0 || p.y > 1.0) return 1.0;
+  vec2 t = 1.0 / vec2(textureSize(uShadow, 0));
+  for (int i = -1; i <= 1; i++) for (int j = -1; j <= 1; j++) s += (p.z - 0.004 > texture(uShadow, p.xy + vec2(i, j) * t).r) ? 0.0 : 1.0;
+  return s / 9.0;
+}
+float hash(vec3 p){ return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
+vec3 toSRGB(vec3 c){ return pow(clamp(c, 0.0, 1.0), vec3(1.0 / 2.2)); }
+void main(){
+  if (uMode == 2) { o = vec4(0.0); return; }
+  if (uMode == 3) { o = vec4(toSRGB(uEmis * 1.2), 1.0); return; }
+  float sh = lit();
+  if (uMode == 1) { o = vec4(0.16, 0.2, 0.12, (1.0 - sh) * 0.32); return; }   // ground: only the shadow shows
+  vec3 n = normalize(vN); if (!gl_FrontFacing) n = -n;
+  vec3 base = uColor * vC; if (uHasTex) base *= pow(texture(uTex, vU).rgb, vec3(2.2));
+  float snow = uSnow * smoothstep(0.3, 0.6, n.y) * (0.85 + 0.15 * hash(floor(vW * 24.0)));
+  base = mix(base, vec3(0.86, 0.90, 0.97), snow);
+  float ndl = max(dot(n, uLightDir), 0.0);
+  vec3 sky = vec3(0.62, 0.66, 0.74), ground = vec3(0.42, 0.40, 0.33);
+  vec3 amb = mix(ground, sky, n.y * 0.5 + 0.5) * 0.62;
+  vec3 c = base * (amb + vec3(1.0, 0.93, 0.80) * 1.05 * ndl * mix(0.35, 1.0, sh));
+  o = vec4(toSRGB(c), uAlpha);
+}`;
+const SVS = `#version 300 es
+in vec3 aP; uniform mat4 uLight; void main(){ gl_Position = uLight * vec4(aP, 1.0); }`;
+const SFS = `#version 300 es
+precision highp float; out vec4 o; void main(){ o = vec4(gl_FragCoord.z); }`;
+
+function prog(gl, vs, fs) {
+  const p = gl.createProgram();
+  for (const [t, src] of [[gl.VERTEX_SHADER, vs], [gl.FRAGMENT_SHADER, fs]]) { const s = gl.createShader(t); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); gl.attachShader(p, s); }
+  gl.linkProgram(p); if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  return p;
+}
+// An orthographic view as a column-major mat4: world → clip, given screen axes (right, up, towards camera) and a box.
+function ortho(right, up, back, x0, x1, y0, y1, z0, z1) {
+  // depth: z0 (farthest from the camera along `back`) → +1, z1 (nearest) → -1
+  const sx = 2 / (x1 - x0), sy = 2 / (y1 - y0), sz = -2 / (z1 - z0);
+  return [right[0] * sx, up[0] * sy, back[0] * sz, 0,
+    right[1] * sx, up[1] * sy, back[1] * sz, 0,
+    right[2] * sx, up[2] * sy, back[2] * sz, 0,
+    -(x1 + x0) / (x1 - x0), -(y1 + y0) / (y1 - y0), (z1 + z0) / (z1 - z0), 1];
+}
+
+async function render(bytes, o = {}) {
+  const prims = await readGLB(bytes instanceof ArrayBuffer ? bytes : bytes.buffer);
+  const [fw, fh] = place(prims, o);
+  const season = o.season || 'summer', SS = o.ss || 3;
+  // hide or recolour leaves by season
+  const draw = prims.filter(p => !(/leaves|leaf|foliage/.test(p.mat.name) && SEASON[season] === null && !o.evergreen));
+  for (const p of draw) if (/leaves|leaf|foliage/.test(p.mat.name) && SEASON[season] && !o.evergreen) p.mat = { ...p.mat, color: SEASON[season] };
+  // the ground the shadow falls on: the footprint and a margin around it
+  const G = 1.6, ground = new Float32Array([-G, -0.002, -G, fw + G, -0.002, fh + G, fw + G, -0.002, -G, -G, -0.002, -G, -G, -0.002, fh + G, fw + G, -0.002, fh + G]);
+  // screen extents (in art pixels) of the model and its footprint
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, d0 = 1e9, d1 = -1e9;
+  const see = (x, y, z) => { const px = S * dot([x, y, z], RIGHT), py = S * dot([x, y, z], UP), d = dot([x, y, z], TOCAM); x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py); d0 = Math.min(d0, d); d1 = Math.max(d1, d); };
+  for (const p of draw) for (let k = 0; k < p.P.length; k += 3) see(p.P[k], p.P[k + 1], p.P[k + 2]);
+  see(0, 0, 0); see(fw, 0, 0); see(0, 0, fh); see(fw, 0, fh);
+  // the anchor (ground point): a building's front corner; a tree's tile centre
+  const A = o.anchor === 'centre' ? [fw / 2, 0, fh / 2] : [fw, 0, fh], ax = S * dot(A, RIGHT), ay = S * dot(A, UP);
+  // canvas: centred on the anchor horizontally (art is drawn centred), a little room for the shadow
+  const half = Math.ceil(Math.max(ax - x0, x1 - ax) + 6), top = Math.ceil(y1 - ay + 6), below = Math.ceil(ay - y0 + 4);
+  const W = 2 * half, H = top + below;
+  const cv = document.createElement('canvas'); cv.width = W * SS; cv.height = H * SS;
+  const gl = cv.getContext('webgl2', { antialias: true, premultipliedAlpha: false, preserveDrawingBuffer: true, alpha: true });
+  const VIEW = ortho(RIGHT, UP, TOCAM, (ax - half) / S, (ax + half) / S, (ay - below) / S, (ay + top) / S, d0 - 4, d1 + 4);
+  // the light's view, for shadows
+  const LR = norm(cross([0, 1, 0], LIGHT)), LU = cross(LIGHT, LR);
+  let lx0 = 1e9, lx1 = -1e9, ly0 = 1e9, ly1 = -1e9, lz0 = 1e9, lz1 = -1e9;
+  const lsee = (x, y, z) => { const a = dot([x, y, z], LR), b = dot([x, y, z], LU), c = dot([x, y, z], LIGHT); lx0 = Math.min(lx0, a); lx1 = Math.max(lx1, a); ly0 = Math.min(ly0, b); ly1 = Math.max(ly1, b); lz0 = Math.min(lz0, c); lz1 = Math.max(lz1, c); };
+  for (const p of draw) for (let k = 0; k < p.P.length; k += 3) lsee(p.P[k], p.P[k + 1], p.P[k + 2]);
+  for (let k = 0; k < ground.length; k += 3) lsee(ground[k], ground[k + 1], ground[k + 2]);
+  const LIGHTM = ortho(LR, LU, LIGHT, lx0 - 0.1, lx1 + 0.1, ly0 - 0.1, ly1 + 0.1, lz0 - 1, lz1 + 1);
+
+  const P = prog(gl, VS, FS), SP = prog(gl, SVS, SFS);
+  const buffers = draw.map(p => {
+    const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+    for (const [name, data, n] of [['aP', p.P, 3], ['aN', p.N, 3], ['aU', p.U, 2], ['aC', p.C, 3]]) {
+      const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+      for (const pr of [P, SP]) { const l = gl.getAttribLocation(pr, name); if (l >= 0) { gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, n, gl.FLOAT, false, 0, 0); } }
+    }
+    let tex = null;
+    if (p.mat.tex) { tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, p.mat.tex); gl.generateMipmap(gl.TEXTURE_2D); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); }
+    return { vao, n: p.P.length / 3, mat: p.mat, tex };
+  });
+  const gvao = gl.createVertexArray(); gl.bindVertexArray(gvao);
+  { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, ground, gl.STATIC_DRAW); const l = gl.getAttribLocation(P, 'aP'); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, 3, gl.FLOAT, false, 0, 0);
+    for (const [nm, v] of [['aN', [0, 1, 0]], ['aC', [1, 1, 1]], ['aU', [0, 0]]]) { const q = gl.getAttribLocation(P, nm); if (q >= 0) { gl.disableVertexAttribArray(q); gl['vertexAttrib' + v.length + 'f'](q, ...v); } } }
+
+  // 1. shadow map (depth seen from the sun)
+  const SM = 2048, stex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, stex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT32F, SM, SM, 0, gl.DEPTH_COMPONENT, gl.FLOAT, null);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, stex, 0);
+  gl.drawBuffers([gl.NONE]); gl.viewport(0, 0, SM, SM); gl.enable(gl.DEPTH_TEST); gl.clear(gl.DEPTH_BUFFER_BIT);
+  gl.useProgram(SP); gl.uniformMatrix4fv(gl.getUniformLocation(SP, 'uLight'), false, LIGHTM);
+  for (const b of buffers) { gl.bindVertexArray(b.vao); gl.drawArrays(gl.TRIANGLES, 0, b.n); }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+  // 2. the picture
+  gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  gl.useProgram(P);
+  const U = n => gl.getUniformLocation(P, n);
+  gl.uniformMatrix4fv(U('uView'), false, VIEW); gl.uniformMatrix4fv(U('uLight'), false, LIGHTM); gl.uniform3fv(U('uLightDir'), LIGHT);
+  gl.uniform1f(U('uSnow'), season === 'winter' ? 1 : 0);
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, stex); gl.uniform1i(U('uShadow'), 1); gl.uniform1i(U('uTex'), 0);
+  gl.enable(gl.BLEND); gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+  for (const b of buffers) {
+    const glow = !!b.mat.emis;
+    gl.uniform1i(U('uMode'), o.night ? (glow ? 3 : 2) : 0);
+    if (o.night && !glow) gl.colorMask(false, false, false, false); else gl.colorMask(true, true, true, true);
+    gl.uniform3fv(U('uColor'), b.mat.color); gl.uniform3fv(U('uEmis'), b.mat.emis || [0, 0, 0]); gl.uniform1f(U('uAlpha'), b.mat.alpha ?? 1);
+    gl.uniform1i(U('uHasTex'), b.tex ? 1 : 0); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, b.tex);
+    gl.bindVertexArray(b.vao); gl.drawArrays(gl.TRIANGLES, 0, b.n);
+  }
+  gl.colorMask(true, true, true, true);
+  if (!o.night) { gl.uniform1i(U('uMode'), 1); gl.depthMask(false); gl.bindVertexArray(gvao); gl.drawArrays(gl.TRIANGLES, 0, 6); gl.depthMask(true); }
+
+  // 3. down to art size (and at night, a soft halo around what glows)
+  const out = document.createElement('canvas'); out.width = W; out.height = H;
+  const c2 = out.getContext('2d'); c2.imageSmoothingQuality = 'high';
+  let src = cv;
+  while (src.width > W * 2) { const h = document.createElement('canvas'); h.width = Math.ceil(src.width / 2); h.height = Math.ceil(src.height / 2); const hc = h.getContext('2d'); hc.imageSmoothingQuality = 'high'; hc.drawImage(src, 0, 0, h.width, h.height); src = h; }
+  if (o.night) { c2.filter = `blur(${5}px)`; c2.globalAlpha = 0.85; c2.drawImage(src, 0, 0, W, H); c2.filter = 'none'; c2.globalAlpha = 1; c2.globalCompositeOperation = 'lighter'; }
+  c2.drawImage(src, 0, 0, W, H);
+  return { image: out.toDataURL('image/png'), anchor: [half, top], w: W, h: H, empty: !!o.night && !draw.some(p => p.mat.emis) };
+}
+window.render = render;
+
+// By hand: drop a .glb on the page to see it in every season, turned, and at night.
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', async e => {
+  e.preventDefault(); const f = e.dataTransfer.files[0]; if (!f) return; const buf = await f.arrayBuffer(), out = document.getElementById('out'); out.innerHTML = '';
+  for (const opts of [{ season: 'spring' }, { season: 'summer' }, { season: 'autumn' }, { season: 'winter' }, { turn: true }, { night: true }]) { const r = await render(buf.slice(0), { fit: true, ...opts }); const im = new Image(); im.src = r.image; im.title = JSON.stringify(opts); out.append(im); }
+});
+</script>
+</body>
+</html>

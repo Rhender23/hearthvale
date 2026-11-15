@@ -1,0 +1,2043 @@
+{
+ "scale": 0.5,
+ "slots": {
+  "building/house/0": {
+   "file": "building-house-0.png",
+   "anchor": [
+    71,
+    111
+   ],
+   "from": "3d"
+  },
+  "building/house/0/winter": {
+   "file": "building-house-0-winter.png",
+   "anchor": [
+    71,
+    111
+   ],
+   "from": "3d"
+  },
+  "building/house/0-night": {
+   "file": "building-house-0-night.png",
+   "anchor": [
+    71,
+    111
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/0": {
+   "file": "building-house-turned-0.png",
+   "anchor": [
+    71,
+    113
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/0/winter": {
+   "file": "building-house-turned-0-winter.png",
+   "anchor": [
+    71,
+    113
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/0-night": {
+   "file": "building-house-turned-0-night.png",
+   "anchor": [
+    71,
+    113
+   ],
+   "from": "3d"
+  },
+  "building/house/1": {
+   "file": "building-house-1.png",
+   "anchor": [
+    71,
+    124
+   ],
+   "from": "3d"
+  },
+  "building/house/1/winter": {
+   "file": "building-house-1-winter.png",
+   "anchor": [
+    71,
+    124
+   ],
+   "from": "3d"
+  },
+  "building/house/1-night": {
+   "file": "building-house-1-night.png",
+   "anchor": [
+    71,
+    124
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/1": {
+   "file": "building-house-turned-1.png",
+   "anchor": [
+    71,
+    130
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/1/winter": {
+   "file": "building-house-turned-1-winter.png",
+   "anchor": [
+    71,
+    130
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/1-night": {
+   "file": "building-house-turned-1-night.png",
+   "anchor": [
+    71,
+    130
+   ],
+   "from": "3d"
+  },
+  "building/house/2": {
+   "file": "building-house-2.png",
+   "anchor": [
+    71,
+    152
+   ],
+   "from": "3d"
+  },
+  "building/house/2/winter": {
+   "file": "building-house-2-winter.png",
+   "anchor": [
+    71,
+    152
+   ],
+   "from": "3d"
+  },
+  "building/house/2-night": {
+   "file": "building-house-2-night.png",
+   "anchor": [
+    71,
+    152
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/2": {
+   "file": "building-house-turned-2.png",
+   "anchor": [
+    71,
+    139
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/2/winter": {
+   "file": "building-house-turned-2-winter.png",
+   "anchor": [
+    71,
+    139
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/2-night": {
+   "file": "building-house-turned-2-night.png",
+   "anchor": [
+    71,
+    139
+   ],
+   "from": "3d"
+  },
+  "building/house/3": {
+   "file": "building-house-3.png",
+   "anchor": [
+    71,
+    157
+   ],
+   "from": "3d"
+  },
+  "building/house/3/winter": {
+   "file": "building-house-3-winter.png",
+   "anchor": [
+    71,
+    157
+   ],
+   "from": "3d"
+  },
+  "building/house/3-night": {
+   "file": "building-house-3-night.png",
+   "anchor": [
+    71,
+    157
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/3": {
+   "file": "building-house-turned-3.png",
+   "anchor": [
+    71,
+    170
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/3/winter": {
+   "file": "building-house-turned-3-winter.png",
+   "anchor": [
+    71,
+    170
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/3-night": {
+   "file": "building-house-turned-3-night.png",
+   "anchor": [
+    71,
+    170
+   ],
+   "from": "3d"
+  },
+  "building/house/4": {
+   "file": "building-house-4.png",
+   "anchor": [
+    71,
+    176
+   ],
+   "from": "3d"
+  },
+  "building/house/4/winter": {
+   "file": "building-house-4-winter.png",
+   "anchor": [
+    71,
+    176
+   ],
+   "from": "3d"
+  },
+  "building/house/4-night": {
+   "file": "building-house-4-night.png",
+   "anchor": [
+    71,
+    176
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/4": {
+   "file": "building-house-turned-4.png",
+   "anchor": [
+    71,
+    170
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/4/winter": {
+   "file": "building-house-turned-4-winter.png",
+   "anchor": [
+    71,
+    170
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/4-night": {
+   "file": "building-house-turned-4-night.png",
+   "anchor": [
+    71,
+    170
+   ],
+   "from": "3d"
+  },
+  "building/house/5": {
+   "file": "building-house-5.png",
+   "anchor": [
+    71,
+    170
+   ],
+   "from": "3d"
+  },
+  "building/house/5/winter": {
+   "file": "building-house-5-winter.png",
+   "anchor": [
+    71,
+    170
+   ],
+   "from": "3d"
+  },
+  "building/house/5-night": {
+   "file": "building-house-5-night.png",
+   "anchor": [
+    71,
+    170
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/5": {
+   "file": "building-house-turned-5.png",
+   "anchor": [
+    71,
+    169
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/5/winter": {
+   "file": "building-house-turned-5-winter.png",
+   "anchor": [
+    71,
+    169
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/5-night": {
+   "file": "building-house-turned-5-night.png",
+   "anchor": [
+    71,
+    169
+   ],
+   "from": "3d"
+  },
+  "building/house/6": {
+   "file": "building-house-6.png",
+   "anchor": [
+    71,
+    170
+   ],
+   "from": "3d"
+  },
+  "building/house/6/winter": {
+   "file": "building-house-6-winter.png",
+   "anchor": [
+    71,
+    170
+   ],
+   "from": "3d"
+  },
+  "building/house/6-night": {
+   "file": "building-house-6-night.png",
+   "anchor": [
+    71,
+    170
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/6": {
+   "file": "building-house-turned-6.png",
+   "anchor": [
+    71,
+    169
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/6/winter": {
+   "file": "building-house-turned-6-winter.png",
+   "anchor": [
+    71,
+    169
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/6-night": {
+   "file": "building-house-turned-6-night.png",
+   "anchor": [
+    71,
+    169
+   ],
+   "from": "3d"
+  },
+  "building/house/7": {
+   "file": "building-house-7.png",
+   "anchor": [
+    71,
+    172
+   ],
+   "from": "3d"
+  },
+  "building/house/7/winter": {
+   "file": "building-house-7-winter.png",
+   "anchor": [
+    71,
+    172
+   ],
+   "from": "3d"
+  },
+  "building/house/7-night": {
+   "file": "building-house-7-night.png",
+   "anchor": [
+    71,
+    172
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/7": {
+   "file": "building-house-turned-7.png",
+   "anchor": [
+    71,
+    172
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/7/winter": {
+   "file": "building-house-turned-7-winter.png",
+   "anchor": [
+    71,
+    172
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/7-night": {
+   "file": "building-house-turned-7-night.png",
+   "anchor": [
+    71,
+    172
+   ],
+   "from": "3d"
+  },
+  "building/house/8": {
+   "file": "building-house-8.png",
+   "anchor": [
+    71,
+    179
+   ],
+   "from": "3d"
+  },
+  "building/house/8/winter": {
+   "file": "building-house-8-winter.png",
+   "anchor": [
+    71,
+    179
+   ],
+   "from": "3d"
+  },
+  "building/house/8-night": {
+   "file": "building-house-8-night.png",
+   "anchor": [
+    71,
+    179
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/8": {
+   "file": "building-house-turned-8.png",
+   "anchor": [
+    71,
+    179
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/8/winter": {
+   "file": "building-house-turned-8-winter.png",
+   "anchor": [
+    71,
+    179
+   ],
+   "from": "3d"
+  },
+  "building/house/turned/8-night": {
+   "file": "building-house-turned-8-night.png",
+   "anchor": [
+    71,
+    179
+   ],
+   "from": "3d"
+  },
+  "building/farmhouse/0": {
+   "file": "building-farmhouse-0.png",
+   "anchor": [
+    135,
+    174
+   ],
+   "from": "3d"
+  },
+  "building/farmhouse/0/winter": {
+   "file": "building-farmhouse-0-winter.png",
+   "anchor": [
+    135,
+    174
+   ],
+   "from": "3d"
+  },
+  "building/farmhouse/0-night": {
+   "file": "building-farmhouse-0-night.png",
+   "anchor": [
+    135,
+    174
+   ],
+   "from": "3d"
+  },
+  "building/farmhouse/1": {
+   "file": "building-farmhouse-1.png",
+   "anchor": [
+    135,
+    189
+   ],
+   "from": "3d"
+  },
+  "building/farmhouse/1/winter": {
+   "file": "building-farmhouse-1-winter.png",
+   "anchor": [
+    135,
+    189
+   ],
+   "from": "3d"
+  },
+  "building/farmhouse/1-night": {
+   "file": "building-farmhouse-1-night.png",
+   "anchor": [
+    135,
+    189
+   ],
+   "from": "3d"
+  },
+  "building/farmhouse/2": {
+   "file": "building-farmhouse-2.png",
+   "anchor": [
+    135,
+    200
+   ],
+   "from": "3d"
+  },
+  "building/farmhouse/2/winter": {
+   "file": "building-farmhouse-2-winter.png",
+   "anchor": [
+    135,
+    200
+   ],
+   "from": "3d"
+  },
+  "building/farmhouse/2-night": {
+   "file": "building-farmhouse-2-night.png",
+   "anchor": [
+    135,
+    200
+   ],
+   "from": "3d"
+  },
+  "building/lodge": {
+   "file": "building-lodge.png",
+   "anchor": [
+    135,
+    202
+   ],
+   "from": "3d"
+  },
+  "building/lodge/winter": {
+   "file": "building-lodge-winter.png",
+   "anchor": [
+    135,
+    202
+   ],
+   "from": "3d"
+  },
+  "building/lodge-night": {
+   "file": "building-lodge-night.png",
+   "anchor": [
+    135,
+    202
+   ],
+   "from": "3d"
+  },
+  "building/store/0": {
+   "file": "building-store-0.png",
+   "anchor": [
+    135,
+    147
+   ],
+   "from": "3d"
+  },
+  "building/store/0/winter": {
+   "file": "building-store-0-winter.png",
+   "anchor": [
+    135,
+    147
+   ],
+   "from": "3d"
+  },
+  "building/store/turned/0": {
+   "file": "building-store-turned-0.png",
+   "anchor": [
+    135,
+    147
+   ],
+   "from": "3d"
+  },
+  "building/store/turned/0/winter": {
+   "file": "building-store-turned-0-winter.png",
+   "anchor": [
+    135,
+    147
+   ],
+   "from": "3d"
+  },
+  "building/store/1": {
+   "file": "building-store-1.png",
+   "anchor": [
+    135,
+    158
+   ],
+   "from": "3d"
+  },
+  "building/store/1/winter": {
+   "file": "building-store-1-winter.png",
+   "anchor": [
+    135,
+    158
+   ],
+   "from": "3d"
+  },
+  "building/store/turned/1": {
+   "file": "building-store-turned-1.png",
+   "anchor": [
+    135,
+    157
+   ],
+   "from": "3d"
+  },
+  "building/store/turned/1/winter": {
+   "file": "building-store-turned-1-winter.png",
+   "anchor": [
+    135,
+    157
+   ],
+   "from": "3d"
+  },
+  "building/store/2": {
+   "file": "building-store-2.png",
+   "anchor": [
+    135,
+    169
+   ],
+   "from": "3d"
+  },
+  "building/store/2/winter": {
+   "file": "building-store-2-winter.png",
+   "anchor": [
+    135,
+    169
+   ],
+   "from": "3d"
+  },
+  "building/store/2-night": {
+   "file": "building-store-2-night.png",
+   "anchor": [
+    135,
+    169
+   ],
+   "from": "3d"
+  },
+  "building/store/turned/2": {
+   "file": "building-store-turned-2.png",
+   "anchor": [
+    135,
+    168
+   ],
+   "from": "3d"
+  },
+  "building/store/turned/2/winter": {
+   "file": "building-store-turned-2-winter.png",
+   "anchor": [
+    135,
+    168
+   ],
+   "from": "3d"
+  },
+  "building/store/turned/2-night": {
+   "file": "building-store-turned-2-night.png",
+   "anchor": [
+    135,
+    168
+   ],
+   "from": "3d"
+  },
+  "building/granary": {
+   "file": "building-granary.png",
+   "anchor": [
+    135,
+    190
+   ],
+   "from": "3d"
+  },
+  "building/granary/winter": {
+   "file": "building-granary-winter.png",
+   "anchor": [
+    135,
+    190
+   ],
+   "from": "3d"
+  },
+  "building/grange/0": {
+   "file": "building-grange-0.png",
+   "anchor": [
+    135,
+    183
+   ],
+   "from": "3d"
+  },
+  "building/grange/0/winter": {
+   "file": "building-grange-0-winter.png",
+   "anchor": [
+    135,
+    183
+   ],
+   "from": "3d"
+  },
+  "building/grange/1": {
+   "file": "building-grange-1.png",
+   "anchor": [
+    135,
+    193
+   ],
+   "from": "3d"
+  },
+  "building/grange/1/winter": {
+   "file": "building-grange-1-winter.png",
+   "anchor": [
+    135,
+    193
+   ],
+   "from": "3d"
+  },
+  "building/grange/2": {
+   "file": "building-grange-2.png",
+   "anchor": [
+    135,
+    201
+   ],
+   "from": "3d"
+  },
+  "building/grange/2/winter": {
+   "file": "building-grange-2-winter.png",
+   "anchor": [
+    135,
+    201
+   ],
+   "from": "3d"
+  },
+  "building/lumbermill": {
+   "file": "building-lumbermill.png",
+   "anchor": [
+    135,
+    179
+   ],
+   "from": "3d"
+  },
+  "building/lumbermill/winter": {
+   "file": "building-lumbermill-winter.png",
+   "anchor": [
+    135,
+    179
+   ],
+   "from": "3d"
+  },
+  "building/mill": {
+   "file": "building-mill.png",
+   "anchor": [
+    71,
+    149
+   ],
+   "frames": 4,
+   "fps": 4,
+   "from": "3d"
+  },
+  "building/mill/winter": {
+   "file": "building-mill-winter.png",
+   "anchor": [
+    71,
+    149
+   ],
+   "frames": 4,
+   "fps": 4,
+   "from": "3d"
+  },
+  "building/mill-night": {
+   "file": "building-mill-night.png",
+   "anchor": [
+    71,
+    149
+   ],
+   "frames": 4,
+   "fps": 4,
+   "from": "3d"
+  },
+  "building/bakery": {
+   "file": "building-bakery.png",
+   "anchor": [
+    71,
+    128
+   ],
+   "from": "3d"
+  },
+  "building/bakery/winter": {
+   "file": "building-bakery-winter.png",
+   "anchor": [
+    71,
+    128
+   ],
+   "from": "3d"
+  },
+  "building/bakery-night": {
+   "file": "building-bakery-night.png",
+   "anchor": [
+    71,
+    128
+   ],
+   "from": "3d"
+  },
+  "building/brewery": {
+   "file": "building-brewery.png",
+   "anchor": [
+    71,
+    133
+   ],
+   "from": "3d"
+  },
+  "building/brewery/winter": {
+   "file": "building-brewery-winter.png",
+   "anchor": [
+    71,
+    133
+   ],
+   "from": "3d"
+  },
+  "building/brewery-night": {
+   "file": "building-brewery-night.png",
+   "anchor": [
+    71,
+    133
+   ],
+   "from": "3d"
+  },
+  "building/potter": {
+   "file": "building-potter.png",
+   "anchor": [
+    71,
+    135
+   ],
+   "from": "3d"
+  },
+  "building/potter/winter": {
+   "file": "building-potter-winter.png",
+   "anchor": [
+    71,
+    135
+   ],
+   "from": "3d"
+  },
+  "building/potter-night": {
+   "file": "building-potter-night.png",
+   "anchor": [
+    71,
+    135
+   ],
+   "from": "3d"
+  },
+  "building/carpenter/0": {
+   "file": "building-carpenter-0.png",
+   "anchor": [
+    71,
+    122
+   ],
+   "from": "3d"
+  },
+  "building/carpenter/0/winter": {
+   "file": "building-carpenter-0-winter.png",
+   "anchor": [
+    71,
+    122
+   ],
+   "from": "3d"
+  },
+  "building/carpenter/0-night": {
+   "file": "building-carpenter-0-night.png",
+   "anchor": [
+    71,
+    122
+   ],
+   "from": "3d"
+  },
+  "building/carpenter/1": {
+   "file": "building-carpenter-1.png",
+   "anchor": [
+    71,
+    122
+   ],
+   "from": "3d"
+  },
+  "building/carpenter/1/winter": {
+   "file": "building-carpenter-1-winter.png",
+   "anchor": [
+    71,
+    122
+   ],
+   "from": "3d"
+  },
+  "building/carpenter/1-night": {
+   "file": "building-carpenter-1-night.png",
+   "anchor": [
+    71,
+    122
+   ],
+   "from": "3d"
+  },
+  "building/carpenter/2": {
+   "file": "building-carpenter-2.png",
+   "anchor": [
+    71,
+    122
+   ],
+   "from": "3d"
+  },
+  "building/carpenter/2/winter": {
+   "file": "building-carpenter-2-winter.png",
+   "anchor": [
+    71,
+    122
+   ],
+   "from": "3d"
+  },
+  "building/carpenter/2-night": {
+   "file": "building-carpenter-2-night.png",
+   "anchor": [
+    71,
+    122
+   ],
+   "from": "3d"
+  },
+  "building/weaver": {
+   "file": "building-weaver.png",
+   "anchor": [
+    71,
+    120
+   ],
+   "from": "3d"
+  },
+  "building/weaver/winter": {
+   "file": "building-weaver-winter.png",
+   "anchor": [
+    71,
+    120
+   ],
+   "from": "3d"
+  },
+  "building/weaver-night": {
+   "file": "building-weaver-night.png",
+   "anchor": [
+    71,
+    120
+   ],
+   "from": "3d"
+  },
+  "building/jeweler": {
+   "file": "building-jeweler.png",
+   "anchor": [
+    71,
+    120
+   ],
+   "from": "3d"
+  },
+  "building/jeweler/winter": {
+   "file": "building-jeweler-winter.png",
+   "anchor": [
+    71,
+    120
+   ],
+   "from": "3d"
+  },
+  "building/jeweler-night": {
+   "file": "building-jeweler-night.png",
+   "anchor": [
+    71,
+    120
+   ],
+   "from": "3d"
+  },
+  "building/chandler": {
+   "file": "building-chandler.png",
+   "anchor": [
+    71,
+    120
+   ],
+   "from": "3d"
+  },
+  "building/chandler/winter": {
+   "file": "building-chandler-winter.png",
+   "anchor": [
+    71,
+    120
+   ],
+   "from": "3d"
+  },
+  "building/chandler-night": {
+   "file": "building-chandler-night.png",
+   "anchor": [
+    71,
+    120
+   ],
+   "from": "3d"
+  },
+  "building/dairy": {
+   "file": "building-dairy.png",
+   "anchor": [
+    71,
+    122
+   ],
+   "from": "3d"
+  },
+  "building/dairy/winter": {
+   "file": "building-dairy-winter.png",
+   "anchor": [
+    71,
+    122
+   ],
+   "from": "3d"
+  },
+  "building/dairy-night": {
+   "file": "building-dairy-night.png",
+   "anchor": [
+    71,
+    122
+   ],
+   "from": "3d"
+  },
+  "building/quarry": {
+   "file": "building-quarry.png",
+   "anchor": [
+    135,
+    163
+   ],
+   "from": "3d"
+  },
+  "building/quarry/winter": {
+   "file": "building-quarry-winter.png",
+   "anchor": [
+    135,
+    163
+   ],
+   "from": "3d"
+  },
+  "building/claypit": {
+   "file": "building-claypit.png",
+   "anchor": [
+    135,
+    134
+   ],
+   "from": "3d"
+  },
+  "building/claypit/winter": {
+   "file": "building-claypit-winter.png",
+   "anchor": [
+    135,
+    134
+   ],
+   "from": "3d"
+  },
+  "building/goldmine": {
+   "file": "building-goldmine.png",
+   "anchor": [
+    135,
+    185
+   ],
+   "from": "3d"
+  },
+  "building/goldmine/winter": {
+   "file": "building-goldmine-winter.png",
+   "anchor": [
+    135,
+    185
+   ],
+   "from": "3d"
+  },
+  "building/goldmine-night": {
+   "file": "building-goldmine-night.png",
+   "anchor": [
+    135,
+    185
+   ],
+   "from": "3d"
+  },
+  "building/market/0": {
+   "file": "building-market-0.png",
+   "anchor": [
+    135,
+    170
+   ],
+   "from": "3d"
+  },
+  "building/market/0/winter": {
+   "file": "building-market-0-winter.png",
+   "anchor": [
+    135,
+    170
+   ],
+   "from": "3d"
+  },
+  "building/market/1": {
+   "file": "building-market-1.png",
+   "anchor": [
+    135,
+    134
+   ],
+   "from": "3d"
+  },
+  "building/market/1/winter": {
+   "file": "building-market-1-winter.png",
+   "anchor": [
+    135,
+    134
+   ],
+   "from": "3d"
+  },
+  "building/market/2": {
+   "file": "building-market-2.png",
+   "anchor": [
+    135,
+    187
+   ],
+   "from": "3d"
+  },
+  "building/market/2/winter": {
+   "file": "building-market-2-winter.png",
+   "anchor": [
+    135,
+    187
+   ],
+   "from": "3d"
+  },
+  "building/market/2-night": {
+   "file": "building-market-2-night.png",
+   "anchor": [
+    135,
+    187
+   ],
+   "from": "3d"
+  },
+  "building/shop/0": {
+   "file": "building-shop-0.png",
+   "anchor": [
+    71,
+    102
+   ],
+   "from": "3d"
+  },
+  "building/shop/0/winter": {
+   "file": "building-shop-0-winter.png",
+   "anchor": [
+    71,
+    102
+   ],
+   "from": "3d"
+  },
+  "building/shop/1": {
+   "file": "building-shop-1.png",
+   "anchor": [
+    71,
+    121
+   ],
+   "from": "3d"
+  },
+  "building/shop/1/winter": {
+   "file": "building-shop-1-winter.png",
+   "anchor": [
+    71,
+    121
+   ],
+   "from": "3d"
+  },
+  "building/shop/1-night": {
+   "file": "building-shop-1-night.png",
+   "anchor": [
+    71,
+    121
+   ],
+   "from": "3d"
+  },
+  "building/shop/2": {
+   "file": "building-shop-2.png",
+   "anchor": [
+    71,
+    121
+   ],
+   "from": "3d"
+  },
+  "building/shop/2/winter": {
+   "file": "building-shop-2-winter.png",
+   "anchor": [
+    71,
+    121
+   ],
+   "from": "3d"
+  },
+  "building/shop/2-night": {
+   "file": "building-shop-2-night.png",
+   "anchor": [
+    71,
+    121
+   ],
+   "from": "3d"
+  },
+  "building/coop": {
+   "file": "building-coop.png",
+   "anchor": [
+    71,
+    93
+   ],
+   "from": "3d"
+  },
+  "building/coop/winter": {
+   "file": "building-coop-winter.png",
+   "anchor": [
+    71,
+    93
+   ],
+   "from": "3d"
+  },
+  "building/sheepfold": {
+   "file": "building-sheepfold.png",
+   "anchor": [
+    135,
+    153
+   ],
+   "from": "3d"
+  },
+  "building/sheepfold/winter": {
+   "file": "building-sheepfold-winter.png",
+   "anchor": [
+    135,
+    153
+   ],
+   "from": "3d"
+  },
+  "building/pasture": {
+   "file": "building-pasture.png",
+   "anchor": [
+    135,
+    161
+   ],
+   "from": "3d"
+  },
+  "building/pasture/winter": {
+   "file": "building-pasture-winter.png",
+   "anchor": [
+    135,
+    161
+   ],
+   "from": "3d"
+  },
+  "building/apiary": {
+   "file": "building-apiary.png",
+   "anchor": [
+    71,
+    83
+   ],
+   "from": "3d"
+  },
+  "building/apiary/winter": {
+   "file": "building-apiary-winter.png",
+   "anchor": [
+    71,
+    83
+   ],
+   "from": "3d"
+  },
+  "building/tc/0": {
+   "file": "building-tc-0.png",
+   "anchor": [
+    135,
+    200
+   ],
+   "from": "3d"
+  },
+  "building/tc/0/winter": {
+   "file": "building-tc-0-winter.png",
+   "anchor": [
+    135,
+    200
+   ],
+   "from": "3d"
+  },
+  "building/tc/0-night": {
+   "file": "building-tc-0-night.png",
+   "anchor": [
+    135,
+    200
+   ],
+   "from": "3d"
+  },
+  "building/tc/1": {
+   "file": "building-tc-1.png",
+   "anchor": [
+    135,
+    210
+   ],
+   "from": "3d"
+  },
+  "building/tc/1/winter": {
+   "file": "building-tc-1-winter.png",
+   "anchor": [
+    135,
+    210
+   ],
+   "from": "3d"
+  },
+  "building/tc/1-night": {
+   "file": "building-tc-1-night.png",
+   "anchor": [
+    135,
+    210
+   ],
+   "from": "3d"
+  },
+  "building/tc/2": {
+   "file": "building-tc-2.png",
+   "anchor": [
+    135,
+    239
+   ],
+   "from": "3d"
+  },
+  "building/tc/2/winter": {
+   "file": "building-tc-2-winter.png",
+   "anchor": [
+    135,
+    239
+   ],
+   "from": "3d"
+  },
+  "building/tc/2-night": {
+   "file": "building-tc-2-night.png",
+   "anchor": [
+    135,
+    239
+   ],
+   "from": "3d"
+  },
+  "building/tc/3": {
+   "file": "building-tc-3.png",
+   "anchor": [
+    135,
+    249
+   ],
+   "from": "3d"
+  },
+  "building/tc/3/winter": {
+   "file": "building-tc-3-winter.png",
+   "anchor": [
+    135,
+    249
+   ],
+   "from": "3d"
+  },
+  "building/tc/3-night": {
+   "file": "building-tc-3-night.png",
+   "anchor": [
+    135,
+    249
+   ],
+   "from": "3d"
+  },
+  "building/tavern": {
+   "file": "building-tavern.png",
+   "anchor": [
+    135,
+    212
+   ],
+   "from": "3d"
+  },
+  "building/tavern/winter": {
+   "file": "building-tavern-winter.png",
+   "anchor": [
+    135,
+    212
+   ],
+   "from": "3d"
+  },
+  "building/tavern-night": {
+   "file": "building-tavern-night.png",
+   "anchor": [
+    135,
+    212
+   ],
+   "from": "3d"
+  },
+  "building/school": {
+   "file": "building-school.png",
+   "anchor": [
+    71,
+    126
+   ],
+   "from": "3d"
+  },
+  "building/school/winter": {
+   "file": "building-school-winter.png",
+   "anchor": [
+    71,
+    126
+   ],
+   "from": "3d"
+  },
+  "building/school-night": {
+   "file": "building-school-night.png",
+   "anchor": [
+    71,
+    126
+   ],
+   "from": "3d"
+  },
+  "building/studio": {
+   "file": "building-studio.png",
+   "anchor": [
+    71,
+    124
+   ],
+   "from": "3d"
+  },
+  "building/studio/winter": {
+   "file": "building-studio-winter.png",
+   "anchor": [
+    71,
+    124
+   ],
+   "from": "3d"
+  },
+  "building/studio-night": {
+   "file": "building-studio-night.png",
+   "anchor": [
+    71,
+    124
+   ],
+   "from": "3d"
+  },
+  "building/theater": {
+   "file": "building-theater.png",
+   "anchor": [
+    135,
+    204
+   ],
+   "from": "3d"
+  },
+  "building/theater/winter": {
+   "file": "building-theater-winter.png",
+   "anchor": [
+    135,
+    204
+   ],
+   "from": "3d"
+  },
+  "building/theater-night": {
+   "file": "building-theater-night.png",
+   "anchor": [
+    135,
+    204
+   ],
+   "from": "3d"
+  },
+  "building/church": {
+   "file": "building-church.png",
+   "anchor": [
+    135,
+    218
+   ],
+   "from": "3d"
+  },
+  "building/church/winter": {
+   "file": "building-church-winter.png",
+   "anchor": [
+    135,
+    218
+   ],
+   "from": "3d"
+  },
+  "building/church-night": {
+   "file": "building-church-night.png",
+   "anchor": [
+    135,
+    218
+   ],
+   "from": "3d"
+  },
+  "building/library": {
+   "file": "building-library.png",
+   "anchor": [
+    135,
+    185
+   ],
+   "from": "3d"
+  },
+  "building/library/winter": {
+   "file": "building-library-winter.png",
+   "anchor": [
+    135,
+    185
+   ],
+   "from": "3d"
+  },
+  "building/library-night": {
+   "file": "building-library-night.png",
+   "anchor": [
+    135,
+    185
+   ],
+   "from": "3d"
+  },
+  "building/playground": {
+   "file": "building-playground.png",
+   "anchor": [
+    135,
+    136
+   ],
+   "from": "3d"
+  },
+  "building/playground/winter": {
+   "file": "building-playground-winter.png",
+   "anchor": [
+    135,
+    136
+   ],
+   "from": "3d"
+  },
+  "building/monument": {
+   "file": "building-monument.png",
+   "anchor": [
+    135,
+    213
+   ],
+   "from": "3d"
+  },
+  "building/monument/winter": {
+   "file": "building-monument-winter.png",
+   "anchor": [
+    135,
+    213
+   ],
+   "from": "3d"
+  },
+  "site/1x1": {
+   "file": "site-1x1.png",
+   "anchor": [
+    71,
+    105
+   ],
+   "from": "3d"
+  },
+  "site/1x1/winter": {
+   "file": "site-1x1-winter.png",
+   "anchor": [
+    71,
+    105
+   ],
+   "from": "3d"
+  },
+  "site/2x1": {
+   "file": "site-2x1.png",
+   "anchor": [
+    135,
+    137
+   ],
+   "from": "3d"
+  },
+  "site/2x1/winter": {
+   "file": "site-2x1-winter.png",
+   "anchor": [
+    135,
+    137
+   ],
+   "from": "3d"
+  },
+  "site/2x2": {
+   "file": "site-2x2.png",
+   "anchor": [
+    135,
+    169
+   ],
+   "from": "3d"
+  },
+  "site/2x2/winter": {
+   "file": "site-2x2-winter.png",
+   "anchor": [
+    135,
+    169
+   ],
+   "from": "3d"
+  },
+  "building/flowerbed": {
+   "file": "building-flowerbed.png",
+   "anchor": [
+    71,
+    70
+   ],
+   "from": "3d"
+  },
+  "building/flowerbed/winter": {
+   "file": "building-flowerbed-winter.png",
+   "anchor": [
+    71,
+    70
+   ],
+   "from": "3d"
+  },
+  "building/bench": {
+   "file": "building-bench.png",
+   "anchor": [
+    71,
+    70
+   ],
+   "from": "3d"
+  },
+  "building/bench/winter": {
+   "file": "building-bench-winter.png",
+   "anchor": [
+    71,
+    70
+   ],
+   "from": "3d"
+  },
+  "building/statue": {
+   "file": "building-statue.png",
+   "anchor": [
+    71,
+    91
+   ],
+   "from": "3d"
+  },
+  "building/statue/winter": {
+   "file": "building-statue-winter.png",
+   "anchor": [
+    71,
+    91
+   ],
+   "from": "3d"
+  },
+  "building/garden": {
+   "file": "building-garden.png",
+   "anchor": [
+    71,
+    70
+   ],
+   "from": "3d"
+  },
+  "building/garden/winter": {
+   "file": "building-garden-winter.png",
+   "anchor": [
+    71,
+    70
+   ],
+   "from": "3d"
+  },
+  "building/arbor/spring": {
+   "file": "building-arbor-spring.png",
+   "anchor": [
+    71,
+    94
+   ],
+   "from": "3d"
+  },
+  "building/arbor/summer": {
+   "file": "building-arbor-summer.png",
+   "anchor": [
+    71,
+    94
+   ],
+   "from": "3d"
+  },
+  "building/arbor/autumn": {
+   "file": "building-arbor-autumn.png",
+   "anchor": [
+    71,
+    94
+   ],
+   "from": "3d"
+  },
+  "building/arbor/winter": {
+   "file": "building-arbor-winter.png",
+   "anchor": [
+    71,
+    93
+   ],
+   "from": "3d"
+  },
+  "building/fireflylamp": {
+   "file": "building-fireflylamp.png",
+   "anchor": [
+    71,
+    73
+   ],
+   "from": "3d"
+  },
+  "building/fireflylamp/winter": {
+   "file": "building-fireflylamp-winter.png",
+   "anchor": [
+    71,
+    73
+   ],
+   "from": "3d"
+  },
+  "building/fireflylamp-night": {
+   "file": "building-fireflylamp-night.png",
+   "anchor": [
+    71,
+    73
+   ],
+   "from": "3d"
+  },
+  "building/well/0": {
+   "file": "building-well-0.png",
+   "anchor": [
+    71,
+    93
+   ],
+   "from": "3d"
+  },
+  "building/well/0/winter": {
+   "file": "building-well-0-winter.png",
+   "anchor": [
+    71,
+    93
+   ],
+   "from": "3d"
+  },
+  "building/well/1": {
+   "file": "building-well-1.png",
+   "anchor": [
+    71,
+    75
+   ],
+   "from": "3d"
+  },
+  "building/well/1/winter": {
+   "file": "building-well-1-winter.png",
+   "anchor": [
+    71,
+    75
+   ],
+   "from": "3d"
+  },
+  "building/well/2": {
+   "file": "building-well-2.png",
+   "anchor": [
+    71,
+    137
+   ],
+   "from": "3d"
+  },
+  "building/well/2/winter": {
+   "file": "building-well-2-winter.png",
+   "anchor": [
+    71,
+    137
+   ],
+   "from": "3d"
+  },
+  "building/campfire/0": {
+   "file": "building-campfire-0.png",
+   "anchor": [
+    71,
+    70
+   ],
+   "from": "3d"
+  },
+  "building/campfire/0/winter": {
+   "file": "building-campfire-0-winter.png",
+   "anchor": [
+    71,
+    70
+   ],
+   "from": "3d"
+  },
+  "building/campfire/1": {
+   "file": "building-campfire-1.png",
+   "anchor": [
+    71,
+    70
+   ],
+   "from": "3d"
+  },
+  "building/campfire/1/winter": {
+   "file": "building-campfire-1-winter.png",
+   "anchor": [
+    71,
+    70
+   ],
+   "from": "3d"
+  },
+  "building/campfire/2": {
+   "file": "building-campfire-2.png",
+   "anchor": [
+    71,
+    99
+   ],
+   "from": "3d"
+  },
+  "building/campfire/2/winter": {
+   "file": "building-campfire-2-winter.png",
+   "anchor": [
+    71,
+    99
+   ],
+   "from": "3d"
+  },
+  "building/campfire/2-night": {
+   "file": "building-campfire-2-night.png",
+   "anchor": [
+    71,
+    99
+   ],
+   "from": "3d"
+  },
+  "node/tree/spring": {
+   "file": "node-tree-spring.png",
+   "anchor": [
+    71,
+    110
+   ],
+   "frames": 5,
+   "random": true,
+   "from": "3d"
+  },
+  "node/tree/summer": {
+   "file": "node-tree-summer.png",
+   "anchor": [
+    71,
+    110
+   ],
+   "frames": 5,
+   "random": true,
+   "from": "3d"
+  },
+  "node/tree/autumn": {
+   "file": "node-tree-autumn.png",
+   "anchor": [
+    71,
+    110
+   ],
+   "frames": 5,
+   "random": true,
+   "from": "3d"
+  },
+  "node/tree/winter": {
+   "file": "node-tree-winter.png",
+   "anchor": [
+    71,
+    110
+   ],
+   "frames": 5,
+   "random": true,
+   "from": "3d"
+  },
+  "node/sapling/spring": {
+   "file": "node-sapling-spring.png",
+   "anchor": [
+    71,
+    42
+   ],
+   "from": "3d"
+  },
+  "node/sapling/summer": {
+   "file": "node-sapling-summer.png",
+   "anchor": [
+    71,
+    42
+   ],
+   "from": "3d"
+  },
+  "node/sapling/autumn": {
+   "file": "node-sapling-autumn.png",
+   "anchor": [
+    71,
+    42
+   ],
+   "from": "3d"
+  },
+  "node/sapling/winter": {
+   "file": "node-sapling-winter.png",
+   "anchor": [
+    71,
+    38
+   ],
+   "from": "3d"
+  },
+  "node/stone/0": {
+   "file": "node-stone-0.png",
+   "anchor": [
+    71,
+    41
+   ],
+   "from": "3d"
+  },
+  "node/stone/0/winter": {
+   "file": "node-stone-0-winter.png",
+   "anchor": [
+    71,
+    41
+   ],
+   "from": "3d"
+  },
+  "node/stone/1": {
+   "file": "node-stone-1.png",
+   "anchor": [
+    71,
+    38
+   ],
+   "from": "3d"
+  },
+  "node/stone/1/winter": {
+   "file": "node-stone-1-winter.png",
+   "anchor": [
+    71,
+    38
+   ],
+   "from": "3d"
+  },
+  "node/stone/2": {
+   "file": "node-stone-2.png",
+   "anchor": [
+    71,
+    38
+   ],
+   "from": "3d"
+  },
+  "node/stone/2/winter": {
+   "file": "node-stone-2-winter.png",
+   "anchor": [
+    71,
+    38
+   ],
+   "from": "3d"
+  },
+  "node/gold/0": {
+   "file": "node-gold-0.png",
+   "anchor": [
+    71,
+    41
+   ],
+   "from": "3d"
+  },
+  "node/gold/0/winter": {
+   "file": "node-gold-0-winter.png",
+   "anchor": [
+    71,
+    41
+   ],
+   "from": "3d"
+  },
+  "node/gold/1": {
+   "file": "node-gold-1.png",
+   "anchor": [
+    71,
+    38
+   ],
+   "from": "3d"
+  },
+  "node/gold/1/winter": {
+   "file": "node-gold-1-winter.png",
+   "anchor": [
+    71,
+    38
+   ],
+   "from": "3d"
+  },
+  "node/gold/2": {
+   "file": "node-gold-2.png",
+   "anchor": [
+    71,
+    38
+   ],
+   "from": "3d"
+  },
+  "node/gold/2/winter": {
+   "file": "node-gold-2-winter.png",
+   "anchor": [
+    71,
+    38
+   ],
+   "from": "3d"
+  },
+  "node/clay/0": {
+   "file": "node-clay-0.png",
+   "anchor": [
+    71,
+    38
+   ],
+   "from": "3d"
+  },
+  "node/clay/0/winter": {
+   "file": "node-clay-0-winter.png",
+   "anchor": [
+    71,
+    38
+   ],
+   "from": "3d"
+  },
+  "node/clay/1": {
+   "file": "node-clay-1.png",
+   "anchor": [
+    71,
+    38
+   ],
+   "from": "3d"
+  },
+  "node/clay/1/winter": {
+   "file": "node-clay-1-winter.png",
+   "anchor": [
+    71,
+    38
+   ],
+   "from": "3d"
+  },
+  "node/clay/2": {
+   "file": "node-clay-2.png",
+   "anchor": [
+    71,
+    38
+   ],
+   "from": "3d"
+  },
+  "node/clay/2/winter": {
+   "file": "node-clay-2-winter.png",
+   "anchor": [
+    71,
+    38
+   ],
+   "from": "3d"
+  },
+  "node/berry/0": {
+   "file": "node-berry-0.png",
+   "anchor": [
+    71,
+    43
+   ],
+   "from": "3d"
+  },
+  "node/berry/0/winter": {
+   "file": "node-berry-0-winter.png",
+   "anchor": [
+    71,
+    43
+   ],
+   "from": "3d"
+  },
+  "node/berry/1": {
+   "file": "node-berry-1.png",
+   "anchor": [
+    71,
+    43
+   ],
+   "from": "3d"
+  },
+  "node/berry/1/winter": {
+   "file": "node-berry-1-winter.png",
+   "anchor": [
+    71,
+    43
+   ],
+   "from": "3d"
+  },
+  "node/berry/2": {
+   "file": "node-berry-2.png",
+   "anchor": [
+    71,
+    42
+   ],
+   "from": "3d"
+  },
+  "node/berry/2/winter": {
+   "file": "node-berry-2-winter.png",
+   "anchor": [
+    71,
+    42
+   ],
+   "from": "3d"
+  }
+ }
+}
