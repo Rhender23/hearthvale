@@ -132,4 +132,4 @@ if __name__ == '__main__':
     if o.only: models = [m for m in models if m.get('group') in o.only or m['slot'] in o.only]
     if not models: sys.exit('no models to render')
     res = asyncio.run(run(models, o.preview_only))
-    sheet = os.path.join(HERE, 'previews', '3d-sheet-' + ('-'.join(o.only) if o.only else 'all').replace('/', '_') + '.png'); contact_sheet(res, sheet); print('contact sheet:', sheet)
+    sheet = os.path.join(HERE, 'previews', '3d-sheet-' + (('-'.join(o.only) if len(o.only) < 4 else f'{len(o.only)}-slots') if o.only else 'all').replace('/', '_') + '.png'); contact_sheet(res, sheet); print('contact sheet:', sheet)

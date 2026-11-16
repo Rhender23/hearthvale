@@ -3,7 +3,7 @@ church, library, playground, monument, and the construction sites every building
 import numpy as np
 from kit import Mesh, window, door
 from homes import chimney, frame, windows_z, windows_x
-from workshops import barrel, crate, sign
+from workshops import barrel, crate, sign, logs
 
 
 def tc(age):
@@ -145,6 +145,84 @@ def site(w, h):
     return M
 
 
+
+# ---------------------------------------------------------------- v45: bathhouse, bandstand, bell tower, grand projects
+def bathhouse():
+    M = Mesh()
+    M.box('wall-stone', 0.2, 0, 0.35, 1.8, 0.5, 1.45)
+    M.hip('roof-tile', 0.2, 1.8, 0.35, 1.45, 0.5, 0.86, ridge=0.5, over=0.06)
+    chimney(M, 1.5, 0.7, 0.6, 1.05, w=0.12, mat='wall-brick')
+    door(M, 1.0, 1.45, w=0.2, h=0.32); windows_z(M, (0.45, 0.7, 1.3, 1.55), 0.2, 1.45, w=0.12, h=0.16)
+    M.box('wall-stone', 0.3, 0, 1.55, 0.8, 0.08, 1.88); M.box('water', 0.34, 0.06, 1.59, 0.76, 0.075, 1.84)   # the outdoor pool
+    for k in range(3): M.blob('cloth-cream', 0.45 + k * 0.15, 0.2 + 0.04 * k, 1.7, 0.05, seed=k, squash=1.2)  # steam
+    M.box('step', 0.9, 0, 1.45, 1.1, 0.04, 1.55)
+    return M
+
+
+def bandstand():
+    M = Mesh()
+    pts = [(1.0 + 0.62 * np.cos(a), 1.0 + 0.62 * np.sin(a)) for a in np.linspace(0, 2 * np.pi, 9)[:-1]]
+    M.cylinder('wall-stone', 1.0, 1.0, 0.68, 0, 0.14, n=8)
+    M.cylinder('plank', 1.0, 1.0, 0.66, 0.14, 0.16, n=8)
+    for x, z in pts: M.box('white', x - 0.02, 0.16, z - 0.02, x + 0.02, 0.62, z + 0.02)
+    M.fence('white', [(x, z) for x, z in pts], h=0.1)
+    M.cone('roof-tile', 1.0, 1.0, 0.78, 0.62, 0.98, n=8)
+    M.rod('white', (1.0, 0.98, 1.0), (1.0, 1.12, 1.0), 0.012, n=4)
+    for x, z in ((0.85, 0.9), (1.15, 1.05)): M.box('dark-wood', x - 0.04, 0.16, z - 0.04, x + 0.04, 0.3, z + 0.04)   # music stands
+    M.cylinder('gold', 1.0, 1.1, 0.06, 0.2, 0.3, n=8)   # a brass drum
+    M.box('step', 0.9, 0, 1.62, 1.1, 0.08, 1.78)
+    return M
+
+
+def church_tower():
+    """The church with its bell tower raised: a tall stone tower with a spire and a great bell."""
+    M = church()
+    M.box('wall-stone', 1.42, 1.3, 0.77, 1.8, 1.9, 1.15)
+    for y in (1.55,): window(M, 1.61, y, 1.15, w=0.14, h=0.2); window(M, 1.8, y, 0.96, w=0.14, h=0.2, face='+x')
+    M.box('white', 1.4, 1.88, 0.75, 1.82, 1.94, 1.17)
+    M.cone('roof-slate', 1.61, 0.96, 0.3, 1.94, 2.7, n=4)
+    M.cylinder('bell', 1.61, 0.96, 0.08, 1.62, 1.76, n=10)
+    M.rod('gold', (1.61, 2.7, 0.96), (1.61, 2.85, 0.96), 0.012, n=4)
+    return M
+
+
+def greathall():
+    M = Mesh()
+    M.box('wall-stone', 0.25, 0, 0.5, 2.75, 0.22, 2.4)
+    M.box('wall-plaster', 0.25, 0.22, 0.5, 2.75, 0.9, 2.4); frame(M, 0.25, 2.75, 0.5, 2.4, 0.22, 0.9, n=7)
+    M.gable('roof-tile', 'gable', 0.25, 2.75, 0.5, 2.4, 0.9, 1.65)
+    chimney(M, 0.6, 1.45, 1.2, 1.9, w=0.2, mat='wall-stone'); chimney(M, 2.4, 1.45, 1.2, 1.9, w=0.2, mat='wall-stone')
+    M.box('wall-stone', 1.25, 0, 2.4, 1.75, 0.95, 2.62); M.gable('roof-tile', 'wall-stone', 1.25, 1.75, 2.4, 2.62, 0.95, 1.2)   # the porch
+    door(M, 1.5, 2.62, w=0.28, h=0.5)
+    windows_z(M, (0.5, 0.8, 1.1, 1.9, 2.2, 2.5), 0.45, 2.4, w=0.14, h=0.3); windows_x(M, (0.8, 1.2, 1.6, 2.0), 0.45, 2.75, w=0.14, h=0.3)
+    for x in (0.35, 2.65): M.rod('dark-wood', (x, 0, 2.75), (x, 0.9, 2.75), 0.015, n=4); M.box('cloth-red', x, 0.6, 2.75, x + 0.01, 0.88, 2.95)
+    M.box('step', 1.2, 0, 2.62, 1.8, 0.05, 2.8)
+    return M
+
+
+def observatory():
+    M = Mesh()
+    M.cylinder('wall-stone', 1.0, 1.0, 0.6, 0, 0.9, n=16)
+    M.cylinder('white', 1.0, 1.0, 0.62, 0.88, 0.94, n=16)
+    M.blob('copper', 1.0, 0.94, 1.0, 0.58, seed=1, squash=0.9)
+    M.box('dark-wood', 0.95, 1.0, 0.45, 1.05, 1.45, 1.0)   # the slit
+    M.rod('gold', (1.0, 1.05, 1.1), (1.0, 1.6, 1.55), 0.05, n=8)   # the telescope
+    door(M, 1.0, 1.6, w=0.2, h=0.36); window(M, 1.6, 0.5, 1.0, w=0.12, h=0.16, face='+x')
+    M.box('step', 0.85, 0, 1.6, 1.15, 0.05, 1.75)
+    return M
+
+
+def site3():
+    """A big building site: footings, timber stacked, scaffolding."""
+    M = Mesh()
+    M.box('wall-stone', 0.3, 0, 0.3, 2.7, 0.12, 2.7)
+    for x in (0.3, 1.5, 2.7):
+        for z in (0.3, 2.7): M.box('wood', x - 0.03, 0.12, z - 0.03, x + 0.03, 1.0, z + 0.03)
+    for y in (0.5, 0.9): M.box('plank', 0.3, y, 2.66, 2.7, y + 0.03, 2.74); M.box('plank', 2.66, y, 0.3, 2.74, y + 0.03, 2.7)
+    logs(M, 0.5, 1.2, 2.88, rows=2, r=0.05)
+    for x in (1.8, 2.0): crate(M, x, 2.9)
+    return M
+
 MODELS = [
     *[(f'building/tc/{a}', (lambda a=a: tc(a)), {'tiles': [2, 2]}) for a in range(4)],
     ('building/tavern', tavern, {'tiles': [2, 2]}),
@@ -152,6 +230,12 @@ MODELS = [
     ('building/studio', studio, {'tiles': [1, 1]}),
     ('building/theater', theater, {'tiles': [2, 2]}),
     ('building/church', church, {'tiles': [2, 2]}),
+    ('building/church/1', church_tower, {'tiles': [2, 2]}),
+    ('building/bathhouse', bathhouse, {'tiles': [2, 2]}),
+    ('building/bandstand', bandstand, {'tiles': [2, 2]}),
+    ('building/greathall', greathall, {'tiles': [3, 3]}),
+    ('building/observatory', observatory, {'tiles': [2, 2]}),
+    ('site/3x3', site3, {'tiles': [3, 3]}),
     ('building/library', library, {'tiles': [2, 2]}),
     ('building/playground', playground, {'tiles': [2, 2]}),
     ('building/monument', monument, {'tiles': [2, 2]}),

@@ -2,6 +2,8 @@
 //   score = 100 x wish weight (from the Manager) + quality - distance penalty + a little noise
 // then picks among the top few so the village never looks robotic.
 // Autonomy only ever fills an empty slot or replaces another autonomous choice.
+import { LEISURE, LEISURE_KEY } from './leisure.js';
+import { canWork } from './grand.js';
 import { NODE_INFO, KEY_NODE, BUILD, FARM_MAX_WORKERS } from './config.js';
 import { scan, bfs } from './path.js';
 import { inMap, idx, DIRS8, nodeKind, isOpen, buildingNear, WATER } from './world.js';
@@ -26,8 +28,8 @@ function probeFor(g) {
       if (id > 0) {
         const bl = g.bmap.get(id);
         if (!bl) continue;
-        if (bl.done && BUILD[bl.k].crop && farmers(g, bl) < FARM_MAX_WORKERS) (out = out || []).push([bl.k, id]);   // farm, wheatfield, fiberfield
-        else if (!bl.done) (out = out || []).push(['build', id]);
+        if (bl.done && BUILD[bl.k].crop && farmers(g, bl) < FARM_MAX_WORKERS) { if (!BUILD[bl.k].orchard) (out = out || []).push([bl.k, id]); else if (bl.food >= 1) (out = out || []).push(['farm', id]); }   // farm, wheatfield, fiberfield; orchards in season count as food fields
+        else if (!bl.done && canWork(g, bl)) (out = out || []).push(['build', id]);
         if (bl.done && bl.pending > bl.lvl && !g.villagers.some(u => u.act && u.act.type === 'upgrade' && u.act.b === id)) (out = out || []).push(['upgrade', id]);
         if (bl.k === 'well' && bl.done && bl.water >= 1) (out = out || []).push(['well', id]);
         if (bl.k === 'tavern' && bl.done) (out = out || []).push(['tavern', id]);
@@ -37,6 +39,7 @@ function probeFor(g) {
         if (bl.k === 'library' && bl.done) (out = out || []).push(['read', id]);
         if (bl.k === 'playground' && bl.done) (out = out || []).push(['play', id]);
         if (bl.k === 'bench' && bl.done) (out = out || []).push(['bench', id]);
+        if (bl.done && LEISURE[bl.k]) (out = out || []).push([LEISURE[bl.k].key, id]);
       }
       if (f && a === f.x && b === f.y) (out = out || []).push(['fire', null]);
     }
@@ -84,6 +87,7 @@ export function options(g, v) {
   if (found.learn) add('learn', found.learn.d, 0, found.learn.target);
   if (found.theater) add('theater', found.theater.d, 0, found.theater.target);
   for (const k of ['church', 'read', 'play']) if (found[k]) add(k, found[k].d, 0, found[k].target);
+  for (const k of Object.keys(LEISURE_KEY)) if (found[k]) add(k, found[k].d, 0, found[k].target);
   if (found.build) add('build', found.build.d, 0, found.build.target);
   if (found.fire) add('fire', found.fire.d, 0, null);
   if (W.plant) add('plant', 5, 0, null);
@@ -114,6 +118,7 @@ function makeAction(g, v, o) {
   if (o.key === 'theater') return action('sit', { tavern: o.target, dur: 25 + g.rng() * 15, key: 'theater', why });
   if (o.key === 'church') return action('sit', { tavern: o.target, dur: 30 + g.rng() * 20, key: 'church', why });
   if (o.key === 'read') return action('sit', { tavern: o.target, dur: 25 + g.rng() * 15, key: 'read', why });
+  if (LEISURE_KEY[o.key]) { const L = LEISURE_KEY[o.key]; return action('sit', { tavern: o.target, dur: L.dur[0] + g.rng() * L.dur[1], key: o.key, why }); }
   if (o.key === 'play') return action('sit', { tavern: o.target, dur: 15 + g.rng() * 10, key: 'play', why });
   if (o.key === 'build') return action('build', { b: o.target, key: 'build', why });
   if (o.key === 'fire') return action('sit', { dur: 14 + g.rng() * 10, key: 'fire', why });

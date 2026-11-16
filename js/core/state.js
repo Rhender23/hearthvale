@@ -1,5 +1,7 @@
 // Shared state helpers used by every core module: resources, buildings, time, events.
-import { FARM_SLOT, FARM_REACH, dims, BUILD, TIERS, DAY, SEASON, BEDTIME, WAKE, AGES, RES, STORE_MULT_SANDBOX } from './config.js';
+import { plantOrchard } from './orchards.js';
+import { paidSoFar } from './grand.js';
+import { FARM_SLOT, FARM_REACH, dims, BUILD, TIERS, DAY, SEASON, BEDTIME, WAKE, AGES, RES, STORE_MULT_SANDBOX, MAX_VILLAGERS } from './config.js';
 import { idx, walkable, inMap, DIRS8, isShore } from './world.js';
 
 export function makeBus() {
@@ -75,12 +77,13 @@ export function completeBuilding(g, b) {
   if (b.done) return;
   b.done = true; b.prog = b.time; g.beautyDirty = true;
   if (BUILD[b.k].crop) b.food = b.k === 'farm' ? g.mods.farmFood : BUILD[b.k].food;
+  if (BUILD[b.k].orchard) plantOrchard(g, b);
   g.events.emit('built', b);
   if (b.k === 'monument') { g.culture = (g.culture || 0) + 50; notice(g, 'The monument stands complete. Hearthvale thrives!'); }
   else if (!BUILD[b.k].decor) notice(g, `The ${BUILD[b.k].name.toLowerCase()} is finished.`);
 }
 export const beds = b => { if (!b.done) return 0; const t = tierOf(b); return (t && t.beds) || BUILD[b.k].beds || 0; };
-export const popCap = g => { const tc = g.buildings.some(o => o.k === 'tc' && o.done); return g.buildings.reduce((n, b) => n + (b.done && !(b.k === 'campfire' && tc) ? (BUILD[b.k].pop || 0) + (BUILD[b.k].home && !BUILD[b.k].pop ? beds(b) : 0) : 0), 0); };
+export const popCap = g => { const tc = g.buildings.some(o => o.k === 'tc' && o.done); return Math.min(MAX_VILLAGERS, g.buildings.reduce((n, b) => n + (b.done && !(b.k === 'campfire' && tc) ? (BUILD[b.k].pop || 0) + (BUILD[b.k].home && !BUILD[b.k].pop ? beds(b) : 0) : 0), 0)); };
 export const bedTotal = g => g.buildings.reduce((n, b) => n + beds(b), 0);
 export const sites = g => g.buildings.filter(b => !b.done);
 export const nextAgeCost = g => (AGES[g.age + 1] ? AGES[g.age + 1].cost : null);
@@ -92,7 +95,7 @@ export const canTakeDown = b => !!b && !BUILD[b.k].fixed && !(b.k === 'tc' && b.
 export function takeDown(g, b) {
   if (!canTakeDown(b) || !g.bmap.has(b.id)) return false;
   for (const v of g.villagers) if (v.job === b.id) { v.job = null; v.role = null; }
-  for (const r of RES) if (BUILD[b.k].cost[r]) addRes(g, r, BUILD[b.k].cost[r]);
+  { const c = paidSoFar(b); for (const r of RES) if (c[r]) addRes(g, r, c[r]); }   // a grand project returns every stage paid
   for (const v of g.villagers) if (v.act && v.act.bed === b.id) { v.inside = false; v.act.bed = null; v.act.phase = 'start'; }
   if (g.rally && g.rally.type === 'farm' && g.rally.id === b.id) g.rally = null;
   removeBuilding(g, b);
@@ -102,7 +105,8 @@ export function takeDown(g, b) {
 }
 
 // Extra placement rules beyond "the ground is open": e.g. a quarry must be near water.
-// Farm slots: a field or pen must sit within FARM_REACH tiles of a finished farmhouse that still has a free slot of its kind.
+// Farm slots: a field must touch a finished farmhouse, or a field already joined to it (a chain); a pen must sit within
+// FARM_REACH tiles of one. Either way the farmhouse needs a free slot of its kind.
 export const slotKind = k => FARM_SLOT[k] || null;
 export const farmSlots = fh => (tierOf(fh) || {}).slots || { fields: 0, animals: 0 };
 export const slotsUsed = (g, fh, kind, except) => g.buildings.filter(b => b !== except && b.farmId === fh.id && slotKind(b.k) === kind).length;
@@ -113,8 +117,10 @@ export function farmFor(g, k, x, y, rot = 0, except = null) {
   let best = null, bd = 1e9;
   for (const fh of g.buildings) {
     if (fh.k !== 'farmhouse' || !fh.done) continue;
+    if (slotsUsed(g, fh, kind, except) >= farmSlots(fh)[kind]) continue;
     const d = rectGap(x, y, w, h, fh);
-    if (d <= FARM_REACH && slotsUsed(g, fh, kind, except) < farmSlots(fh)[kind] && d < bd) { bd = d; best = fh; }
+    const ok = kind === 'fields' ? d <= 1 || g.buildings.some(f => f !== except && f.farmId === fh.id && slotKind(f.k) === 'fields' && rectGap(x, y, w, h, f) <= 1) : d <= FARM_REACH;
+    if (ok && d < bd) { bd = d; best = fh; }
   }
   return best;
 }

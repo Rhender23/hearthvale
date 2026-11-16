@@ -3,7 +3,7 @@
 // up the road line the route and cheer. Then a feast by the fire until bedtime.
 //
 // g.festival: null, or { id, name, day, phase: 'planned' | 'gather' | 'parade' | 'feast', route, s, marchers, cheer, visitors, floats }
-import { FESTIVAL, FESTIVALS, SOCIAL, DAY, PRI, BEDTIME, RATION_DAY } from './config.js';
+import { TIERS, FESTIVAL, FESTIVALS, SOCIAL, DAY, PRI, BEDTIME, RATION_DAY } from './config.js';
 import { have, pay, notice, townCenter, campfire, hour, bedTotal, popCap, clock12 } from './state.js';
 import { bfs, besideTile, bfsVisitor } from './path.js';
 import { walkable, besideRect, DIRS8, inMap } from './world.js';
@@ -34,9 +34,21 @@ export function planFestival(g, who = 'player') {
 }
 
 function stations(g) {
-  const tc = townCenter(g), mk = g.buildings.find(b => b.k === 'market' && b.done), cf = campfire(g);
-  return [tc, mk, cf, tc].filter(Boolean).filter((b, i, a) => i === 0 || b !== a[i - 1]);
+  const tc = townCenter(g), mk = g.buildings.find(b => b.k === 'market' && b.done), cf = campfire(g), hall = greatHall(g);
+  const home = hall || tc;   // with a great hall, the village gathers there, and comes back to it for the feast
+  return [home, ...(hall ? [tc] : []), mk, cf, home].filter(Boolean).filter((b, i, a) => i === 0 || b !== a[i - 1]);
 }
+// What the village's buildings add to a festival: the great hall's feast doubles its culture, music from the bandstand
+// adds a fifth, and the church bell rings everyone in so they gather in less time.
+const greatHall = g => g.buildings.find(b => b.k === 'greathall' && b.done) || null;
+const bell = g => g.buildings.some(b => b.k === 'church' && b.done && TIERS.church[b.lvl || 0].bell);
+export const FEST_BONUS = { hall: 2, bandstand: 1.2, gather: 25, bellGather: 12 };
+export function festivalCulture(g, base) {
+  return Math.round(base * (greatHall(g) ? FEST_BONUS.hall : 1) * (g.buildings.some(b => b.k === 'bandstand' && b.done) ? FEST_BONUS.bandstand : 1));
+}
+export const gatherTime = g => (bell(g) ? FEST_BONUS.bellGather : FEST_BONUS.gather);
+// The church's own culture, by its level (the grand steeple adds half again).
+export const churchCulture = (g, id) => { const b = id && g.bmap.get(id); return b && TIERS.church ? TIERS.church[b.lvl || 0].culture || 1 : 1; };
 // The parade route: a walkable tile path visiting each station in turn.
 export function buildRoute(g) {
   const st = stations(g), cf = campfire(g);
@@ -110,7 +122,7 @@ export function createFestivals(g) {
     F.route = buildRoute(g);
     if (!F.route || !pay(g, cost)) { g.festival = null; return; } // quietly try another day
     for (const r in cost) g.today.out[r] = (g.today.out[r] || 0) + cost[r];
-    F.phase = 'gather'; F.t = 0; F.s = 0; F.floats = f.floats; F.lanterns = !!f.lanterns; F.culture = f.culture;
+    F.phase = 'gather'; F.t = 0; F.s = 0; F.floats = f.floats; F.lanterns = !!f.lanterns; F.culture = festivalCulture(g, f.culture); F.hall = !!greatHall(g);
     const vs = [...g.villagers].filter(v => !(v.act && v.act.type === 'leave')), marchers = vs.filter((_, i) => i % 2 === 0), cheer = vs.filter((_, i) => i % 2 === 1);
     F.rows = Math.ceil(marchers.length / 2);
     const spots = cheerSpots(g, F.route, cheer.length + f.visitors);
@@ -130,7 +142,7 @@ export function createFestivals(g) {
     for (const v of g.villagers) v.socialLock = g.clock + SOCIAL.eventDays * DAY;
     g.culture = (g.culture || 0) + F.culture;
     g.lastFestival = g.dawns; g.lastCelebration = g.clock;
-    notice(g, `What a night! The ${F.name.toLowerCase()} filled Hearthvale with joy.`);
+    notice(g, F.hall ? `What a night! The ${F.name.toLowerCase()} ended with a feast in the great hall.` : `What a night! The ${F.name.toLowerCase()} filled Hearthvale with joy.`);
     g.festival = null;
     g.events.emit('festivalEnd', F);
   }
@@ -153,7 +165,7 @@ export function createFestivals(g) {
       if (F.phase === 'planned') { if (g.dawns >= F.day && h >= FESTIVAL.startHour && h < BEDTIME - 1) begin(F); return; }
       moveVisitors(F, dt);
       F.t += dt;
-      if (F.phase === 'gather' && F.t > 25) { F.phase = 'parade'; F.t = 0; }
+      if (F.phase === 'gather' && F.t > gatherTime(g)) { F.phase = 'parade'; F.t = 0; }
       else if (F.phase === 'parade') {
         F.s += FESTIVAL.speed * dt;
         if (F.s > F.route.length - 1 + F.rows * FESTIVAL.rowGap + F.floats * 1.6 + 1) {

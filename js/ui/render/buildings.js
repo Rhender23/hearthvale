@@ -22,7 +22,7 @@ export const HOME_LOOK = [
 ];
 export function createBuildings(K) {
   const { ctx, dia, poly, upp, mid, lerp, cor, box, walls, door, c0, st } = K;
-  const heightOf = (b, age) => ({ tc: 38 + age * 7, house: HOME_LOOK[b.lvl || 0].h + HOME_LOOK[b.lvl || 0].rf - 20, store: 22 + (b.lvl || 0) * 6, lodge: 26 + age * 3, market: 34, monument: 80, arbor: 30, school: 46, studio: 30, theater: 40, quarry: 34, claypit: 20, goldmine: 40, coop: 24, sheepfold: 10, pasture: 10, dairy: 28, apiary: 14, chandler: 28, church: 70, library: 44, playground: 22, jeweler: 32, fireflylamp: 20, grange: 46, granary: 80, lumbermill: 24, farmhouse: 52, mill: 54, bakery: 30, brewery: 30, shop: 26 + (b.lvl || 0) * 6, tavern: 34, well: (b.lvl || 0) >= 2 ? 78 : 16, statue: 34, bench: 6, potter: 22, carpenter: 22, weaver: 24, campfire: 4 }[b.k] || 0);
+  const heightOf = (b, age) => ({ tc: 38 + age * 7, house: HOME_LOOK[b.lvl || 0].h + HOME_LOOK[b.lvl || 0].rf - 20, store: 22 + (b.lvl || 0) * 6, lodge: 26 + age * 3, market: 34, monument: 80, arbor: 30, school: 46, studio: 30, theater: 40, quarry: 34, claypit: 20, goldmine: 40, coop: 24, sheepfold: 10, pasture: 10, dairy: 28, apiary: 14, chandler: 28, church: 70, library: 44, playground: 22, jeweler: 32, fireflylamp: 20, grange: 46, granary: 80, lumbermill: 24, farmhouse: 52, mill: 54, bakery: 30, brewery: 30, shop: 26 + (b.lvl || 0) * 6, tavern: 34, well: (b.lvl || 0) >= 2 ? 78 : 16, statue: 34, bench: 6, potter: 22, carpenter: 22, weaver: 24, campfire: 4, watertower: 80, greenhouse: 34, stable: 40, blacksmith: 34, waystation: 40, bathhouse: 40, bandstand: 36, church: 70 + (b.lvl || 0) * 30, greathall: 70, observatory: 80, botanical: 20, orchard_apple: 34, orchard_pear: 36, orchard_cherry: 32, orchard_plum: 32 }[b.k] || 0);
   function drawFire(g) {
     const f = g.w.fire, p = iso(f.x, f.y), h = hour(g), lit = h >= 18.5 || h < 6.5;
     ctx.fillStyle = 'rgba(40,60,40,.22)'; ctx.beginPath(); ctx.ellipse(p[0], p[1] + 2, 14, 6, 0, 0, 7); ctx.fill();
@@ -234,7 +234,19 @@ export function createBuildings(K) {
         for (let r = 0; r < 4; r++) for (let q = 0; q < 4; q++) { const u = (q + 0.5) / 4 - 0.5 + (r % 2 ? 0.06 : 0), w = (r + 0.5) / 4 - 0.5, px = c[0] + (u - w) * (TW / 2 - 3), py = c[1] + (u + w) * (TH / 2 - 1.5); ctx.fillStyle = ['#b8b2a6', '#a9a397', '#c4beb2'][(q + r + (h * 7 | 0)) % 3]; ctx.beginPath(); ctx.ellipse(px, py, 3.6, 2, 0, 0, 7); ctx.fill(); }
         return;
       }
-      ctx.fillStyle = '#cfc4ad'; dia(c[0], c[1], TW / 2 - 1, TH / 2 - 0.5); ctx.fill(); ctx.fillStyle = '#bdb19a'; for (const [dx, dy] of [[-10, 0], [8, -3], [0, 5], [-2, -6], [12, 4]]) { ctx.beginPath(); ctx.ellipse(c[0] + dx, c[1] + dy, 5, 2.6, 0, 0, 7); ctx.fill(); }
+      // Dirt path: the grass stays; a worn dirt track runs down the middle and out to each neighbouring path.
+      const G = st.G, at = (x, y) => { if (!inMap(x, y)) return false; const id = G.w.occ[idx(x, y)], o = id > 0 && G.bmap.get(id); return !!o && o.k === 'path'; };
+      const arms = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => at(b.x + dx, b.y + dy)).map(([dx, dy]) => [(dx - dy) * TW / 4, (dx + dy) * TH / 4]);
+      const track = (w, col) => {
+        ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = w; ctx.lineCap = 'round';
+        if (!arms.length) { ctx.beginPath(); ctx.ellipse(c[0], c[1], w * 0.9, w * 0.45, 0, 0, 7); ctx.fill(); return; }
+        ctx.beginPath(); for (const [ax, ay] of arms) { ctx.moveTo(c[0], c[1]); ctx.lineTo(c[0] + ax, c[1] + ay); } ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(c[0], c[1], w * 0.5, w * 0.3, 0, 0, 7); ctx.fill();
+      };
+      track(11, 'rgba(150,120,80,.35)');   // the trodden edge, fading into the grass
+      track(7, '#a88a5e');                 // bare earth
+      track(3, 'rgba(120,94,62,.55)');      // the deepest wear, where most feet go
+      for (let k = 0; k < 5; k++) { const u = hash(h * 31 + k, k * 7) - 0.5, w = hash(k * 13, h + 5) - 0.5; ctx.fillStyle = k % 2 ? '#c4ab82' : '#8f744e'; ctx.fillRect(c[0] + u * 14, c[1] + w * 6, 1.4, 1); }
     },
     fireflylamp(b) {
       const c = iso(b.x, b.y), lit = st.dark > 0.15;
@@ -433,6 +445,12 @@ export function createBuildings(K) {
     ctx.fillStyle = active ? '#f2c14e' : '#b9ab8c'; ctx.beginPath(); ctx.roundRect(p[0] - w / 2 + 1, y + 1, Math.max(0, (w - 2) * q), 6, 3); ctx.fill();
     ctx.font = '12px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.fillText(active ? '🔨' : '⏸️', p[0], y - 3);
   }
+  // Anything without art or a drawer of its own: a plain timber building on its footprint.
+  function generic(b) {
+    const c = iso(b.x + (b.w - 1) / 2, b.y + (b.h - 1) / 2), s = Math.max(b.w, b.h), h = 18 + s * 8;
+    box(c, 0.32 * s, h, '#d9c4a0', '#c4ad86', '#e8d6b4');
+    poly([[c[0] - 0.34 * s * TW, c[1] - h], [c[0], c[1] - h - 14 * s], [c[0] + 0.34 * s * TW, c[1] - h], [c[0], c[1] - h + 0.34 * s * TH]], '#a8584a');
+  }
   function drawBuilding(b, g) {
     ctx.globalAlpha = b.done ? 1 : 0.4 + 0.6 * b.prog / b.time;
     // Art slot first: building/<kind>/<level>/<season> (… down to building/<kind>); sites: site/<kind>, site/<w>x<h>, site.
@@ -446,7 +464,7 @@ export function createBuildings(K) {
     else if (BUILD[b.k].faces && b.rot) { // a turned house: mirrored so its front faces the other way
       const cx = iso(b.x + (b.w - 1) / 2, b.y + (b.h - 1) / 2)[0];
       ctx.save(); ctx.translate(cx * 2, 0); ctx.scale(-1, 1); DB[b.k](b, g.age); ctx.restore();
-    } else DB[b.k](b, g.age);
+    } else (DB[b.k] || generic)(b, g.age);
     ctx.globalAlpha = 1;
     if (!b.done) bar(b, g.age, g);
     if (b.demolish && b.demo) { // taking down: the bar empties as the villager works

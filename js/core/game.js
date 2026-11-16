@@ -17,7 +17,7 @@ import { createFestivals } from './festival.js';
 import { createCritters } from './critters.js';
 import { createSeasons } from './seasons.js';
 
-export const START = { sandbox: { ...zeroRes(), wood: 2000, stone: 1000, gold: 1000, food: 1000, water: 600 }, modest: { ...zeroRes(), wood: 100, food: 60, water: 40 } };
+export const START = { sandbox: { ...zeroRes(), wood: 2000, stone: 1000, gold: 1000, food: 1000, water: 600 }, modest: { ...zeroRes(), wood: 50, food: 60, water: 40 } };   // wood for a hut, not a storehouse
 
 // New games: map generator 2 and a campfire, no town center (you place it).
 // classic: true rebuilds the original setup (generator 1, town center already standing) for older saves and tests.

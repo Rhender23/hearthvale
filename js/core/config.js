@@ -1,5 +1,6 @@
 // Build number, shown in the game menu. Raise it with every published build.
-export const VERSION = 44;
+export const VERSION = 45;
+export const MAX_VILLAGERS = 215;   // the most villagers Hearthvale will ever hold
 // Static game data. No logic, no state. Every other module reads from here.
 export const N = 40, TW = 64, TH = 32;
 export const DAY = 432;        // seconds of real time per game day: 18 s per game hour (v38 halved the clock)
@@ -9,18 +10,18 @@ export const BEDTIME = 23, WAKE = 5;
 export const SAVE_KEY = 'hearthvale-v2', LEGACY_KEY = 'hearthvale';
 
 export const BASICS = ['wood', 'stone', 'gold', 'food', 'water'];
-export const GOODS = ['clay', 'fiber', 'pottery', 'cloth', 'furniture', 'jewelry', 'candles'];   // raw materials for workshops, and what they make
-export const FARM = ['wheat', 'flour', 'beer', 'wool', 'milk', 'wax'];   // from the fields: wheat, milled into flour or brewed into beer
+export const GOODS = ['clay', 'fiber', 'pottery', 'cloth', 'furniture', 'jewelry', 'candles', 'tools'];   // raw materials for workshops, and what they make
+export const FARM = ['wheat', 'flour', 'beer', 'wool', 'milk', 'wax', 'seedlings'];   // from the fields: wheat, milled into flour or brewed into beer
 export const RES = [...BASICS, ...FARM, ...GOODS];
 // The pantry: `food` is the total; these are the kinds it is made of (shown when you open the food count).
-export const PANTRY = ['provisions', 'berries', 'fish', 'vegetables', 'bread', 'eggs', 'cheese', 'honey'];
-export const PANTRY_ICON = { provisions: '🧺', berries: '🫐', fish: '🐟', vegetables: '🥕', bread: '🍞', eggs: '🥚', cheese: '🧀', honey: '🍯' };
-export const PANTRY_KIND = { 4: 'berries', 5: 'fish', 6: 'vegetables', 9: 'bread', 10: 'eggs', 11: 'cheese', 12: 'honey' };   // by what a villager carried in
-export const KIND_CODE = { bread: 9, eggs: 10, cheese: 11, honey: 12 };   // by what a villager carried in
+export const PANTRY = ['provisions', 'berries', 'fish', 'vegetables', 'bread', 'eggs', 'cheese', 'honey', 'fruit'];
+export const PANTRY_ICON = { provisions: '🧺', berries: '🫐', fish: '🐟', vegetables: '🥕', bread: '🍞', eggs: '🥚', cheese: '🧀', honey: '🍯', fruit: '🍐' };
+export const PANTRY_KIND = { 4: 'berries', 5: 'fish', 6: 'vegetables', 9: 'bread', 10: 'eggs', 11: 'cheese', 12: 'honey', 13: 'fruit' };   // by what a villager carried in
+export const KIND_CODE = { vegetables: 6, bread: 9, eggs: 10, cheese: 11, honey: 12, fruit: 13 };   // by what a villager carried in
 // Every resource at 0; new resources only need adding to the lists above.
 export const zeroRes = () => Object.fromEntries(RES.map(r => [r, 0]));
-export const ICON = { wood: '🪵', stone: '🪨', gold: '🪙', food: '🍎', water: '💧', clay: '🟤', fiber: '🌿', pottery: '🏺', cloth: '🧵', furniture: '🪑', jewelry: '💍', wheat: '🌾', flour: '🥣', beer: '🍺', wool: '🧶', milk: '🥛', wax: '🟨', candles: '🕯️' };
-export const RES_NAME = { wood: 'Wood', stone: 'Stone', gold: 'Gold', food: 'Food', water: 'Water', clay: 'Clay', fiber: 'Fiber', pottery: 'Pottery', cloth: 'Cloth', furniture: 'Furniture', jewelry: 'Jewelry', wheat: 'Wheat', flour: 'Flour', beer: 'Beer', wool: 'Wool', milk: 'Milk', wax: 'Beeswax', candles: 'Candles' };
+export const ICON = { wood: '🪵', stone: '🪨', gold: '🪙', food: '🍎', water: '💧', clay: '🟤', fiber: '🌿', pottery: '🏺', cloth: '🧵', furniture: '🪑', jewelry: '💍', wheat: '🌾', flour: '🥣', beer: '🍺', wool: '🧶', milk: '🥛', wax: '🟨', candles: '🕯️', tools: '⚒️', seedlings: '🌱' };
+export const RES_NAME = { wood: 'Wood', stone: 'Stone', gold: 'Gold', food: 'Food', water: 'Water', clay: 'Clay', fiber: 'Fiber', pottery: 'Pottery', cloth: 'Cloth', furniture: 'Furniture', jewelry: 'Jewelry', wheat: 'Wheat', flour: 'Flour', beer: 'Beer', wool: 'Wool', milk: 'Milk', wax: 'Beeswax', candles: 'Candles' , tools: 'Tools', seedlings: 'Seedlings' };
 
 // Resource nodes on the map.
 export const NODE = { TREE: 1, STONE: 2, GOLD: 3, BERRY: 4, FISH: 5, CLAY: 6 };
@@ -40,21 +41,22 @@ export const KEY_NODE = { wood: 1, stone: 2, gold: 3, berry: 4, fish: 5, clay: 6
 //   placer 'village' (Construction may place it on its own) or 'player' (only you)
 //   flat   no walls (drawn on the ground)   walk  villagers can walk over it
 //   Buildings with a TIERS entry start at level 0 and can be improved (see TIERS below).
-// Fields and penned animals belong to a farmhouse: each takes one of its slots, and must sit within FARM_REACH tiles of it.
+// Fields and penned animals belong to a farmhouse: each takes one of its slots. Fields join it in a chain: a field must
+// touch the farmhouse or a field already joined to it. Pens must sit within FARM_REACH tiles of it.
 export const FARM_SLOT = { farm: 'fields', wheatfield: 'fields', fiberfield: 'fields', coop: 'animals', sheepfold: 'animals', pasture: 'animals', apiary: 'animals' };
 export const FARM_REACH = 4;
 export const BUILD = {
   campfire: { name: 'Campfire', size: 1, time: 1, cost: {}, age: 0, pop: 0, placer: 'none', fixed: true,
-              store: { wood: 100, stone: 40, gold: 20, food: 60, water: 40, clay: 30, fiber: 30, pottery: 20, cloth: 20, furniture: 10, wheat: 20, beer: 5 },
+              store: { wood: 100, stone: 40, gold: 20, food: 60, water: 40, clay: 30, fiber: 30, pottery: 20, cloth: 20, furniture: 10, wheat: 20, beer: 5, tools: 10 },
               desc: 'Where the village began. Until there is a town center, villagers are trained and gather here.' },
   tc:       { name: 'Town center', size: 2, time: 30, cost: { wood: 150, stone: 40 }, age: 0, pop: 5, placer: 'village', beauty: 1, hub: true,
-              store: { wood: 200, stone: 100, gold: 400, food: 100, water: 60, clay: 40, fiber: 40, pottery: 30, cloth: 30, furniture: 20, jewelry: 10, wheat: 30, flour: 20, beer: 10, wool: 20, milk: 20, wax: 10, candles: 10 },
+              store: { wood: 200, stone: 100, gold: 400, food: 100, water: 60, clay: 40, fiber: 40, pottery: 30, cloth: 30, furniture: 20, jewelry: 10, wheat: 30, flour: 20, beer: 10, wool: 20, milk: 20, wax: 10, candles: 10, tools: 20, seedlings: 10 },
               desc: 'The heart of the village. Needed to grow beyond a hamlet. Trains villagers, researches upgrades and advances the age.' },
   house:    { name: 'House', size: 1, faces: true, time: 8, cost: { wood: 25 }, age: 0, home: true, placer: 'village',
               desc: 'A home. It improves as its surroundings grow lovelier.' },
   // Storehouse: 2x1, and can be turned to 1x2. Holds a lot, but only a little food (the granary and grange are for food).
-  store:    { name: 'Storehouse', size: 2, w: 2, h: 1, turns: true, time: 10, cost: { wood: 60 }, age: 0, placer: 'village', beauty: -1.5, icon: '📦',
-              store: { wood: 500, stone: 300, gold: 300, food: 250, water: 200, clay: 200, fiber: 200, pottery: 150, cloth: 150, furniture: 100, jewelry: 60, beer: 120, candles: 100, wool: 100, wax: 80, wheat: 120, flour: 80, milk: 60 }, desc: 'Holds a little of everything: one is enough for a hamlet until it becomes a village. The granary and lumber mill hold far more of food and wood.' },
+  store:    { name: 'Storehouse', size: 2, w: 2, h: 1, turns: true, time: 10, cost: { wood: 60, stone: 10 }, age: 0, placer: 'village', beauty: -1.5, icon: '📦',
+              store: { wood: 500, stone: 300, gold: 300, food: 250, water: 200, clay: 200, fiber: 200, pottery: 150, cloth: 150, furniture: 100, jewelry: 60, beer: 120, candles: 100, wool: 100, wax: 80, wheat: 120, flour: 80, milk: 60, tools: 60, seedlings: 40 }, desc: 'Holds a little of everything: one is enough for a hamlet until it becomes a village. The granary and lumber mill hold far more of food and wood.' },
   lumbermill: { name: 'Lumber mill', size: 2, time: 10, cost: { wood: 40 }, age: 0, placer: 'village', beauty: -2.5, icon: '🪵',
               store: { wood: 1500 }, desc: 'Stacks of logs and planks. Holds a great deal of wood, so woodcutters walk less.' },
   farm:     { name: 'Vegetable field', size: 2, time: 8, cost: { wood: 60 }, age: 0, flat: true, food: 100, crop: 'food', placer: 'village', beauty: -2,
@@ -101,19 +103,19 @@ export const BUILD = {
   fiberfield:{ name: 'Fiber field', size: 2, time: 6, cost: { wood: 40 }, age: 0, flat: true, food: 60, crop: 'fiber', placer: 'village', beauty: -1.5,
               desc: 'Tall fiber plants for the weaver to spin and weave. Re-sown for a little wood when it runs out.' },
   shop:     { name: 'Stall', size: 1, time: 8, cost: { wood: 40 }, age: 0, placer: 'village', beauty: 1, shop: true,
-              store: { pottery: 10, furniture: 5, cloth: 10, jewelry: 5, beer: 10, candles: 10 }, desc: 'Hands pottery, furniture, cloth, jewelry and beer to the homes around it, and sells a little of what is spare each day.' },
+              store: { pottery: 10, furniture: 5, cloth: 10, jewelry: 5, beer: 10, candles: 10 }, desc: 'Hands pottery, furniture, cloth, jewelry and beer to every home in the village, and sells a little of what is spare each day.' },
   potter:   { name: "Potter's workshop", size: 1, time: 10, cost: { wood: 40, stone: 10 }, age: 0, placer: 'village', beauty: -2,
               craft: { role: 'potter', in: { clay: 2 }, out: { pottery: 1 }, time: 6 }, desc: 'A potter turns clay into pottery.' },
   carpenter:{ name: 'Furniture maker', size: 1, time: 10, cost: { wood: 50, stone: 10 }, age: 0, placer: 'village', beauty: -2, icon: '🪑',
               craft: { role: 'carpenter', in: { wood: 4 }, out: { furniture: 1 }, time: 8 }, desc: 'A carpenter turns wood into furniture (🪑): homes use it, finer homes need it to level up, and you can furnish rooms with it.' },
   weaver:   { name: "Weaver's cottage", size: 1, time: 10, cost: { wood: 40, stone: 10 }, age: 1, placer: 'village', beauty: -2,
               craft: { role: 'weaver', in: { fiber: 2 }, alt: { wool: 2 }, out: { cloth: 1 }, time: 7 }, desc: 'A weaver turns fiber into cloth.' },
-  // Mines and quarries: from the Town Age, very costly in wood and gold, and they work forever.
-  quarry:   { name: 'Stone quarry', size: 2, time: 24, cost: { wood: 300, gold: 150 }, age: 2, placer: 'village', beauty: -5, nearWater: 3,
-              craft: { role: 'stonecutter', in: {}, out: { stone: 2 }, time: 12 }, desc: 'A stonecutter cuts stone from the bedrock, steadily and forever. Noisy and dusty: keep it away from homes. Must be within 3 tiles of water.' },
-  claypit:  { name: 'Clay quarry', size: 2, time: 20, cost: { wood: 250, gold: 120 }, age: 2, placer: 'village', beauty: -4, nearWater: 2,
+  // Mines and quarries: open from the first Age, very costly, and they work forever.
+  quarry:   { name: 'Stone quarry', size: 2, time: 24, cost: { wood: 300, gold: 150 }, age: 0, placer: 'village', beauty: -5,
+              craft: { role: 'stonecutter', in: {}, out: { stone: 2 }, time: 12 }, desc: 'A stonecutter cuts stone from the bedrock, steadily and forever. Noisy and dusty: keep it away from homes.' },
+  claypit:  { name: 'Clay quarry', size: 2, time: 20, cost: { wood: 250, gold: 120 }, age: 0, placer: 'village', beauty: -4, nearWater: 2,
               craft: { role: 'clay digger', in: {}, out: { clay: 2 }, time: 10 }, desc: 'A digger works a deep clay bed, steadily and forever. Muddy and unsightly. Must be within 2 tiles of water.' },
-  goldmine: { name: 'Gold mine', size: 2, time: 30, cost: { wood: 400, gold: 250 }, age: 2, placer: 'village', beauty: -5,
+  goldmine: { name: 'Gold mine', size: 2, time: 30, cost: { wood: 500, stone: 150 }, age: 0, placer: 'village', beauty: -5,
               craft: { role: 'miner', in: {}, out: { gold: 1 }, time: 14 }, desc: 'A miner brings up a little gold every few seconds, forever. Dark and dusty: keep it away from homes.' },
   jeweler:  { name: "Jeweler's workshop", size: 1, time: 14, cost: { wood: 60, stone: 40, gold: 20 }, age: 2, placer: 'village', beauty: -1.5,
               craft: { role: 'jeweler', in: { gold: 2, clay: 1 }, out: { jewelry: 1 }, time: 20 }, desc: 'A jeweler makes rings and brooches. Manors need them, and the merchant pays well.' },
@@ -144,6 +146,43 @@ export const BUILD = {
               craft: { role: 'cheesemaker', in: { milk: 2 }, out: { food: 6 }, kind: 'cheese', time: 12 }, desc: 'A cheesemaker turns milk into cheese for the pantry.' },
   apiary:   { name: 'Beehives', size: 1, time: 6, cost: { wood: 40 }, age: 1, placer: 'village', beauty: -0.5, icon: '🐝', animals: { kind: 'bees', cap: 4, start: 2 }, noWinter: true,
               craft: { role: 'beekeeper', in: {}, out: { food: 2 }, kind: 'honey', extra: { wax: 1 }, time: 14 }, desc: 'Hives for honey and beeswax. The bees rest in winter.' },
+  // ---- v45 ----
+  // A tall tank on stilts that holds a great deal of water close to the homes.
+  watertower:{ name: 'Water tower', size: 1, time: 14, cost: { wood: 120, stone: 60 }, age: 1, placer: 'village', beauty: -1, icon: '🗼',
+              store: { water: 600 }, desc: 'A tall wooden tank on stilts. Holds a great deal of water, filled by the water carriers from the wells and the shore.' },
+  // Orchards: fruit trees that bear in their own seasons (orchard.seasons: { season index: harvest }). Not farm slots.
+  orchard_apple: { name: 'Apple orchard', size: 2, time: 12, cost: { wood: 80 }, age: 0, placer: 'village', beauty: 1, icon: '🍎', crop: 'food', food: 0, fruit: true,
+              orchard: { seasons: { 2: 120 }, fruit: 'apples' }, desc: 'Apple trees. Blossom in spring, a big crop of apples in autumn.' },
+  orchard_pear: { name: 'Pear orchard', size: 2, time: 12, cost: { wood: 90, stone: 10 }, age: 1, placer: 'village', beauty: 1, icon: '🍐', crop: 'food', food: 0, fruit: true,
+              orchard: { seasons: { 1: 90 }, fruit: 'pears' }, desc: 'Pear trees. Their fruit ripens in late summer.' },
+  orchard_cherry: { name: 'Cherry orchard', size: 2, time: 12, cost: { wood: 90, gold: 10 }, age: 1, placer: 'village', beauty: 2, icon: '🍒', crop: 'food', food: 0, fruit: true,
+              orchard: { seasons: { 1: 50 }, fruit: 'cherries' }, desc: 'Cherry trees: the prettiest blossom of all, and a short, sweet crop in early summer.' },
+  orchard_plum: { name: 'Plum orchard', size: 2, time: 12, cost: { wood: 90 }, age: 1, placer: 'village', beauty: 1, icon: '🟣', crop: 'food', food: 0, fruit: true,
+              orchard: { seasons: { 2: 80, 3: 40 }, fruit: 'plums' }, desc: 'Plum trees. Plums in autumn, and dried plums that keep through the winter.' },
+  greenhouse: { name: 'Greenhouse', size: 2, time: 16, cost: { wood: 100, stone: 40, gold: 20 }, age: 1, placer: 'village', beauty: 1, icon: '🪴',
+              craft: { role: 'gardener', in: { water: 2 }, out: { food: 4 }, kind: 'vegetables', extra: { seedlings: 1 }, time: 12 },
+              store: { seedlings: 40 }, desc: 'Glass and timber, warm all year. A gardener grows greens even in winter and raises seedlings for the botanical garden.' },
+  stable:   { name: 'Stable', size: 2, time: 16, cost: { wood: 120, stone: 30, tools: 4 }, age: 1, placer: 'village', beauty: -1, icon: '🐴',
+              desc: 'Cart horses and handcarts. Villagers who load up near a path or road carry twice as much.' },
+  blacksmith: { name: 'Blacksmith', size: 1, time: 14, cost: { wood: 80, stone: 30 }, age: 1, placer: 'village', beauty: -2.5, icon: '⚒️',
+              craft: { role: 'blacksmith', in: { wood: 2, stone: 1 }, out: { tools: 1 }, time: 14 }, store: { tools: 20 },
+              desc: 'A smith at the forge turns wood and stone into tools. Timber houses and up, the better research and the stable need them.' },
+  waystation: { name: 'Waystation', size: 2, time: 14, cost: { wood: 100, stone: 40 }, age: 1, placer: 'village', beauty: 0.5, icon: '🛖', needs: 'market',
+              desc: 'A rest stop on the road for travellers. The merchant comes every other day and pays more.' },
+  bathhouse: { name: 'Bathhouse', size: 2, time: 18, cost: { wood: 100, stone: 60 }, age: 1, placer: 'village', beauty: 1.5, icon: '♨️',
+              store: { water: 40 }, desc: 'A warm soak after work. Villagers who bathe in the evening sleep and rest better.' },
+  bandstand: { name: 'Bandstand', size: 2, time: 12, cost: { wood: 80, gold: 20 }, age: 1, placer: 'village', beauty: 2, icon: '🎺', culture: true,
+              desc: 'Music in the evenings and at festivals: culture, and good company for everyone who comes.' },
+  // Grand projects: raised in stages. Each stage is paid for when it starts; the builders carry on when the stores allow.
+  greathall: { name: 'Great hall', size: 3, time: 30, age: 2, placer: 'village', beauty: 3, icon: '🏛️', culture: true, grand: true,
+              stages: [{ cost: { wood: 250, stone: 150 }, time: 30 }, { cost: { wood: 200, stone: 200, gold: 100 }, time: 30 }, { cost: { stone: 150, gold: 150, cloth: 20, furniture: 10 }, time: 30 }],
+              desc: 'A long hall with a great hearth and tables for everyone. Festivals gather here, with a feast, and give twice the culture.' },
+  observatory: { name: 'Observatory', size: 2, time: 30, age: 3, placer: 'village', beauty: 2, icon: '🔭', culture: true, grand: true,
+              stages: [{ cost: { wood: 150, stone: 200 }, time: 30 }, { cost: { stone: 200, gold: 150, tools: 10 }, time: 30 }, { cost: { gold: 200, jewelry: 20 }, time: 30 }],
+              desc: 'A domed tower with a great telescope, its lenses ground by the jeweler. Research costs a third less. At night, the stars.' },
+  botanical: { name: 'Botanical garden', size: 3, time: 24, age: 2, flat: true, placer: 'village', decor: true, beauty: 10, icon: '🌺', grand: true,
+              stages: [{ cost: { wood: 150, stone: 100 }, time: 24 }, { cost: { stone: 100, seedlings: 30, water: 60 }, time: 24 }, { cost: { gold: 120, seedlings: 30, pottery: 20 }, time: 24 }],
+              desc: 'Beds, glasshouses and winding walks, planted from greenhouse seedlings. The loveliest place in the village, and night animals visit more often.' },
   chandler: { name: 'Chandler', size: 1, time: 12, cost: { wood: 60, stone: 15 }, age: 1, placer: 'village', beauty: -2, icon: '🕯️',
               craft: { role: 'chandler', in: { wax: 2 }, out: { candles: 1 }, time: 10 }, desc: 'A chandler makes candles from beeswax. Fine homes love them, and the merchant buys them.' },
 };
@@ -154,13 +193,14 @@ export const dims = (k, rot = 0) => { const w = BUILD[k].w || BUILD[k].size, h =
 // The build menu, grouped by kind.
 export const BUILD_GROUPS = [
   ['Homes and village', ['tc', 'house', 'farmhouse', 'lodge', 'well'], '🏠'],
-  ['Storage', ['store', 'granary', 'lumbermill'], '📦'],
-  ['Farming', ['farm', 'wheatfield', 'fiberfield', 'grange', 'mill', 'bakery', 'brewery'], '🌾'],
-  ['Animals', ['coop', 'sheepfold', 'pasture', 'dairy', 'apiary', 'chandler'], '🐑'],
-  ['Crafts and industry', ['potter', 'carpenter', 'weaver', 'jeweler'], '🔨'],
+  ['Storage', ['store', 'granary', 'lumbermill', 'watertower'], '📦'],
+  ['Farming', ['farm', 'wheatfield', 'fiberfield', 'orchard_apple', 'orchard_pear', 'orchard_cherry', 'orchard_plum', 'greenhouse', 'grange', 'mill', 'bakery', 'brewery'], '🌾'],
+  ['Animals', ['coop', 'sheepfold', 'pasture', 'dairy', 'apiary', 'chandler', 'stable'], '🐑'],
+  ['Crafts and industry', ['potter', 'carpenter', 'weaver', 'jeweler', 'blacksmith'], '🔨'],
   ['Quarries and mines', ['quarry', 'claypit', 'goldmine'], '⛏️'],
-  ['Trade', ['market', 'shop'], '⚖️'],
-  ['Culture and gathering', ['school', 'library', 'studio', 'theater', 'church', 'tavern', 'playground', 'monument'], '🎭'],
+  ['Trade', ['market', 'shop', 'waystation'], '⚖️'],
+  ['Culture and gathering', ['school', 'library', 'studio', 'theater', 'church', 'tavern', 'playground', 'bathhouse', 'bandstand', 'monument'], '🎭'],
+  ['Grand projects', ['greathall', 'observatory', 'botanical'], '🏛️'],
   ['Decoration', ['flowerbed', 'bench', 'path', 'fireflylamp', 'statue', 'garden', 'arbor'], '🌸'],
 ];
 // Short descriptions for every resource icon (resource panel tooltips).
@@ -173,8 +213,9 @@ export const RES_DESC = {
   pottery: 'Made by the potter. Homes from Cozy cottage up use it.', cloth: 'Woven by the weaver. Stone houses and up use it.',
   furniture: 'Made by the carpenter. Timber houses and up use it.', wool: 'Shorn from sheep. The weaver turns it into cloth.', milk: 'From the dairy pasture. The cheesemaker turns it into cheese.',
   wax: 'From the beehives. The chandler makes candles from it.', candles: 'Made by the chandler. Fine homes glow with them; the merchant buys them.', jewelry: 'Made by the jeweler from gold and clay. Manors use it; the merchant pays well.',
+  tools: 'Made by the blacksmith from wood and stone. Timber houses and up, the better research and the stable\'s carts need them.', seedlings: 'Raised in the greenhouse. The botanical garden is planted from them.',
 };
-export const BUILD_ORDER = ['tc', 'house', 'farmhouse', 'store', 'lumbermill', 'farm', 'well', 'market', 'shop', 'wheatfield', 'grange', 'granary', 'mill', 'bakery', 'brewery', 'potter', 'carpenter', 'fiberfield', 'weaver', 'quarry', 'claypit', 'goldmine', 'jeweler', 'school', 'library', 'studio', 'theater', 'church', 'playground', 'coop', 'sheepfold', 'pasture', 'dairy', 'apiary', 'chandler', 'flowerbed', 'bench', 'path', 'fireflylamp', 'statue', 'garden', 'arbor', 'tavern', 'lodge', 'monument'];
+export const BUILD_ORDER = ['tc', 'house', 'farmhouse', 'store', 'lumbermill', 'farm', 'well', 'market', 'shop', 'wheatfield', 'grange', 'granary', 'mill', 'bakery', 'brewery', 'potter', 'carpenter', 'fiberfield', 'weaver', 'quarry', 'claypit', 'goldmine', 'jeweler', 'school', 'library', 'studio', 'theater', 'church', 'playground', 'coop', 'sheepfold', 'pasture', 'dairy', 'apiary', 'chandler', 'flowerbed', 'bench', 'path', 'fireflylamp', 'statue', 'garden', 'arbor', 'tavern', 'lodge', 'monument', 'watertower', 'orchard_apple', 'orchard_pear', 'orchard_cherry', 'orchard_plum', 'greenhouse', 'stable', 'blacksmith', 'waystation', 'bathhouse', 'bandstand', 'greathall', 'observatory', 'botanical'];
 export const ROLE_NAME = { potter: 'potter', carpenter: 'carpenter', weaver: 'weaver', artist: 'artist', stonecutter: 'stonecutter', 'clay digger': 'clay digger', miner: 'miner', jeweler: 'jeweler', miller: 'miller', baker: 'baker', brewer: 'brewer', 'hen keeper': 'hen keeper', shepherd: 'shepherd', cowherd: 'cowherd', cheesemaker: 'cheesemaker', beekeeper: 'beekeeper', chandler: 'chandler' };
 export const STORE_MULT_SANDBOX = 10;
 
@@ -189,12 +230,12 @@ export const TIERS = {
     H('Hut', 0, 0, {}, 3, 20, 0),
     H('Cottage', 0, 1, { wood: 30 }, 4, 30, 0.5),
     H('Cozy cottage', 0, 2, { wood: 40, food: 20 }, 5, 40, 1, P),
-    H('Timber house', 1, 2.5, { wood: 60, stone: 20, furniture: 2 }, 6, 50, 1.5, PF),   // from here on, climbing a level spends furniture
-    H('Fine timber house', 1, 3.5, { wood: 60, stone: 40, furniture: 3 }, 7, 60, 2, PF),
-    H('Stone house', 2, 4, { wood: 40, stone: 80, furniture: 3 }, 8, 70, 2.5, PFL),
-    H('Fine stone house', 2, 5, { stone: 100, gold: 10, furniture: 4 }, 9, 80, 3, PFL),
-    H('Manor', 3, 6, { stone: 120, gold: 40, furniture: 5 }, 10, 90, 3.5, PFLJ),
-    H('Grand manor', 3, 7.5, { stone: 150, gold: 80, furniture: 6 }, 12, 100, 4, PFLJ),
+    H('Timber house', 1, 2.5, { wood: 60, stone: 20, furniture: 2, tools: 2 }, 6, 50, 1.5, PF),   // from here on, climbing a level spends furniture
+    H('Fine timber house', 1, 3.5, { wood: 60, stone: 40, furniture: 3, tools: 2 }, 7, 60, 2, PF),
+    H('Stone house', 2, 4, { wood: 40, stone: 80, furniture: 3, tools: 3 }, 8, 70, 2.5, PFL),
+    H('Fine stone house', 2, 5, { stone: 100, gold: 10, furniture: 4, tools: 3 }, 9, 80, 3, PFL),
+    H('Manor', 3, 6, { stone: 120, gold: 40, furniture: 5, tools: 4 }, 10, 90, 3.5, PFLJ),
+    H('Grand manor', 3, 7.5, { stone: 150, gold: 80, furniture: 6, tools: 5 }, 12, 100, 4, PFLJ),
   ],
   // Paths are walked a little faster (speed), and wear into something better where the feet go. Every footstep adds 1 to
   // a stretch's wear, and wear fades by a tenth each dawn, so it settles at about ten days' footfall: a stretch wears into
@@ -209,7 +250,12 @@ export const TIERS = {
   well: [
     { name: 'Well', age: 0, need: -99, cost: {}, water: 100, refill: 1200, beauty: 1, store: { water: 100 } },   // refill per day: 50 a game hour
     { name: 'Fountain', age: 1, need: 2, cost: { stone: 50 }, water: 200, refill: 1920, beauty: 3, store: { water: 200 } },   // 80 an hour
-    { name: 'Water tower', age: 2, need: 1, cost: { wood: 120, stone: 80 }, water: 400, refill: 3600, beauty: 1, store: { water: 400 } },   // 150 an hour
+    { name: 'Pump house', age: 2, need: 1, cost: { wood: 120, stone: 80 }, water: 400, refill: 3600, beauty: 1, store: { water: 400 } },   // 150 an hour
+  ],
+  // The church raises a grand steeple: its bell rings everyone in for festivals (they gather faster) and it adds to the church's culture.
+  church: [
+    { name: 'Church', age: 1, need: -99, cost: {}, beauty: 2.5, culture: 1 },
+    { name: 'Grand steeple', age: 2, need: -99, cost: { stone: 400, gold: 30, tools: 4 }, beauty: 3.5, culture: 1.5, bell: true },
   ],
   campfire: [
     { name: 'Campfire', age: 0, need: -99, cost: {}, beauty: 0.5, company: 1 },
@@ -245,9 +291,9 @@ export const TIERS = {
     { name: 'Furniture workshop', age: 2, need: -99, cost: { wood: 100, stone: 60, gold: 20 }, beauty: -1.5, craftMul: 0.55 },
   ],
   shop: [
-    { name: 'Stall', age: 0, need: -99, cost: {}, beauty: 1, reach: 6, sells: 2 },
-    { name: 'Shop', age: 1, need: -99, cost: { wood: 60, stone: 20 }, beauty: 1.5, reach: 8, sells: 4 },
-    { name: 'Emporium', age: 2, need: -99, cost: { stone: 60, gold: 20 }, beauty: 2.5, reach: 10, sells: 6 },
+    { name: 'Stall', age: 0, need: -99, cost: {}, beauty: 1, sells: 2 },
+    { name: 'Shop', age: 1, need: -99, cost: { wood: 60, stone: 20 }, beauty: 1.5, sells: 4 },
+    { name: 'Emporium', age: 2, need: -99, cost: { stone: 60, gold: 20 }, beauty: 2.5, sells: 6 },
   ],
 };
 export const SHOP_PRICE = 0.5;   // shops sell spare goods at half what the merchant pays
@@ -327,7 +373,7 @@ const ROMAN = ['I', 'II', 'III', 'IV', 'V'];
 const tiers = (base, at, name, list) => list.map(([age, cost, desc, fx], i) => ({ id: base + (i + 1), at, name: `${name} ${ROMAN[i]}`, age, cost, desc, fx, req: i ? base + i : null }));
 // Five tiers for every line: the same small step each time, dearer and later as the tiers rise.
 const AGES5 = [0, 1, 1, 2, 3], SCALE5 = [1, 1.8, 2.6, 3.6, 5];
-const five = (base, at, name, startAge, cost, desc, fx) => tiers(base, at, name, AGES5.map((a, i) => [Math.max(startAge, a) + (startAge && i === 0 ? 0 : 0), Object.fromEntries(Object.entries(cost).map(([r, n]) => [r, Math.round(n * SCALE5[i] / 5) * 5]).concat(i >= 2 && !cost.gold ? [['gold', 20 * (i - 1)]] : [])), desc, fx]));
+const five = (base, at, name, startAge, cost, desc, fx) => tiers(base, at, name, AGES5.map((a, i) => [Math.max(startAge, a) + (startAge && i === 0 ? 0 : 0), Object.fromEntries(Object.entries(cost).map(([r, n]) => [r, Math.round(n * SCALE5[i] / 5) * 5]).concat(i >= 2 && !cost.gold ? [['gold', 20 * (i - 1)]] : []).concat(i >= 2 ? [['tools', 2 * (i - 1)]] : [])), desc, fx]));   // the better tiers need tools
 const CRAFTERS = { potter: "potter", carpenter: "carpenter", weaver: "weaver", jeweler: "jeweler", mill: "miller", bakery: "baker", brewery: "brewer", studio: "artist", quarry: "stonecutter", claypit: "clay digger", goldmine: "miner", dairy: "cheesemaker", chandler: "chandler", coop: "hen keeper", sheepfold: "shepherd", pasture: "cowherd", apiary: "beekeeper" };
 const ALL6 = { 1: 0.96, 2: 0.96, 3: 0.96, 4: 0.96, 5: 0.96, 6: 0.96 };
 export const UPGRADES = [
@@ -395,3 +441,6 @@ export const FOCI = [
 
 // Action priorities for the override stack. Higher preempts lower.
 export const PRI = { AUTO: 1, SOCIAL: 2, PLAYER: 3, SLEEP: 4 };
+
+// A grand project's cost to start is its first stage.
+for (const d of Object.values(BUILD)) if (d.stages) { d.cost = d.stages[0].cost; d.time = d.stages[0].time; }

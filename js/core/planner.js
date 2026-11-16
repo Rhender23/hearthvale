@@ -16,6 +16,8 @@
 //
 // Unfinished buildings count as if done (their beds, storage and output), so the village never doubles up on
 // something already under way.
+import { LEISURE } from './leisure.js';
+import { orchardPerDay } from './orchards.js';
 import { BUILD, TIERS, AGES, NODE, RATION_DAY, PACE, GOODS_USE_DAYS, CULTURE, DAY, N, MERCHANT, GOODS, FARM } from './config.js';
 import { tierOf, cap, bedTotal, hub, hasMarket, slotKind, townCenter } from './state.js';
 import { homeScore } from './beauty.js';
@@ -42,7 +44,8 @@ const mealsPerDay = pop => RATION_DAY * pop;
 // Output of a building per day, by resource (staffed, at its base level).
 export function outputPerDay(k) {
   const d = BUILD[k], out = {};
-  if (d.crop) out[d.crop] = (out[d.crop] || 0) + (d.food || 0) * PLAN.harvestsPerDay;
+  if (d.orchard) out.food = (out.food || 0) + orchardPerDay(k);
+  else if (d.crop) out[d.crop] = (out[d.crop] || 0) + (d.food || 0) * PLAN.harvestsPerDay;
   if (d.craft) for (const [r, n] of Object.entries(d.craft.out)) out[r] = (out[r] || 0) + n / d.craft.time * PLAN.workSeconds * (d.animals ? 0.75 : 1);
   return out;
 }
@@ -68,20 +71,19 @@ function survey(g) {
   const supply = {}, supplyDone = {}, supplyPending = {};
   for (const b of all) for (const [r, n] of Object.entries(outputPerDay(b.k))) { supply[r] = (supply[r] || 0) + n; const o = b.done ? supplyDone : supplyPending; o[r] = (o[r] || 0) + n; }
   // Goods homes use, and goods holding a home back from its next level (it has the surroundings but not the goods).
-  const goodsUse = {}, blocked = {}, furnitureLevel = { homes: 0, amount: 0 };
+  const goodsUse = {}, blocked = {}, levelGoods = {};   // levelGoods: goods a home's next level costs (furniture, tools)
   for (const h of homes) {
     const t = TIERS[h.k], cur = t[h.lvl || 0], nx = t[(h.lvl || 0) + 1];
     for (const r of cur.goods || []) goodsUse[r] = (goodsUse[r] || 0) + 1 / GOODS_USE_DAYS;
     if (nx && nx.age <= g.age && homeScore(g, h) >= nx.need) {
       for (const r of nx.goods || []) if ((g.res[r] || 0) < 1 && !(cur.goods || []).includes(r)) blocked[r] = (blocked[r] || 0) + 1;
-      const f = (nx.cost && nx.cost.furniture) || 0;
-      if (f > (g.res.furniture || 0)) { furnitureLevel.homes++; furnitureLevel.amount += f; }
+      for (const r of GOODS) { const f = (nx.cost && nx.cost[r]) || 0; if (f > (g.res[r] || 0)) { const L = levelGoods[r] = levelGoods[r] || { homes: 0, amount: 0 }; L.homes++; L.amount += f; } }
     }
   }
   // Inputs workshops will draw, scaled by how much of their output is actually wanted (a potter making pottery for
   // four homes uses a little clay, not a full day's worth). Three passes carry demand up chains (bread → flour → wheat).
   const meals = mealsPerDay(pop), wantOut = r => r === 'food' ? Math.max(0, meals - ((g.yday && g.yday.in.food) || 0)) + meals * 0.25
-    : (goodsUse[r] || 0) + (blocked[r] || 0) / GOODS_USE_DAYS + (r === 'furniture' ? furnitureLevel.amount / GOODS_USE_DAYS : 0) + (MERCHANT.price[r] ? 1 : 0);
+    : (goodsUse[r] || 0) + (blocked[r] || 0) / GOODS_USE_DAYS + (levelGoods[r] ? levelGoods[r].amount / GOODS_USE_DAYS : 0) + (MERCHANT.price[r] ? 1 : 0);
   let use = {};
   for (let pass = 0; pass < 3; pass++) {
     const u = {};
@@ -95,7 +97,7 @@ function survey(g) {
   const econ = g.manager.directors.find(d => d.name === 'Economy'), needs = (econ && econ.needs) || {};
   const specialists = all.filter(b => BUILD[b.k].craft).length;
   const openWork = all.filter(b => !b.done).reduce((s, b) => s + Math.max(0, b.time - b.prog), 0);
-  return { pop, homes, pendingBeds, supplyDone, supplyPending, nodes, supply, use, goodsUse, blocked, furnitureLevel, needs, has, specialists, openWork };
+  return { pop, homes, pendingBeds, supplyDone, supplyPending, nodes, supply, use, goodsUse, blocked, levelGoods, needs, has, specialists, openWork };
 }
 
 // Is there a source for resource r (a node, stock, or a producer already standing or under way)?
@@ -153,9 +155,9 @@ function gains(g, S, k) {
   // Goods homes use, need to level up, or the merchant (and shops) will buy.
   for (const r of [...GOODS, ...FARM]) {
     if (!outD[r] || RAW[r]) continue;
-    const demand = (S.goodsUse[r] || 0) + (S.blocked[r] || 0) / GOODS_USE_DAYS + (r === 'furniture' ? S.furnitureLevel.amount / GOODS_USE_DAYS : 0) + (S.use[r] || 0);
+    const demand = (S.goodsUse[r] || 0) + (S.blocked[r] || 0) / GOODS_USE_DAYS + (S.levelGoods[r] ? S.levelGoods[r].amount / GOODS_USE_DAYS : 0) + (S.use[r] || 0);
     const supply = (S.supply[r] || 0) + (g.res[r] || 0) / PLAN.stockDays, short = demand - supply;
-    const held = (S.blocked[r] || 0) + (r === 'furniture' ? S.furnitureLevel.homes : 0);
+    const held = (S.blocked[r] || 0) + (S.levelGoods[r] ? S.levelGoods[r].homes : 0);
     if (short > 0) add(S.use[r] ? 'supply' : 'goods', Math.max(held / Math.max(1, S.homes.length), S.use[r] ? 0.6 : 0.3), outD[r] / short,
       held ? `homes need ${r} to grow` : S.use[r] ? `${r} for the ${S.users[r] || 'workshops'}` : `homes use ${r}`);
     else if (MERCHANT.price[r] && (hasMarket(g) || S.has('shop'))) add('gold', S.needs.gold || 0, 0.5, `${r} sells well`);
@@ -181,8 +183,12 @@ function gains(g, S, k) {
   if (d.shop) {
     const want = S.homes.filter(h => { const t = TIERS[h.k]; return ((t[h.lvl].goods || []).length || (t[h.lvl + 1] && (t[h.lvl + 1].goods || []).length && homeScore(g, h) >= t[h.lvl + 1].need)) && !shopReach(g, h); });
     const goodsMade = [...GOODS, ...FARM].some(r => (S.supply[r] || 0) > 0 || g.res[r] >= 1);
-    if (want.length && goodsMade && !g.buildings.some(b => b.k === k && !b.done)) add('goods', 0.6 + 0.4 * want.length / Math.max(1, S.homes.length), 1, 'homes nearby want goods');   // a home with no shop can't grow at all
+    if (want.length && goodsMade && !g.buildings.some(b => b.k === k && !b.done)) add('goods', 0.6 + 0.4 * want.length / Math.max(1, S.homes.length), 1, 'homes want goods handed out');   // a home with no shop can't grow at all
   }
+  // v45: carts, the waystation, the bathhouse and bandstand.
+  if (k === 'stable' && !S.has(k) && g.buildings.some(b => b.k === 'path' && b.done)) add('supply', Math.min(1, pop / 12), 0.5, 'carts to carry more along the paths');
+  if (k === 'waystation' && !S.has(k) && hasMarket(g)) add('gold', Math.max(0.3, S.needs.gold || 0), 0.6, 'the merchant would come more often');
+  if (LEISURE[k] && !S.has(k)) add('social', 1 - (g.social ?? 1) + 0.2, 0.4, LEISURE[k].why);
   // Beauty: the home closest to its next level, by how much of the gap this decoration would close beside it.
   if (d.decor) {
     let best = 0, gapBest = 0, home = null;
@@ -202,10 +208,12 @@ const cultureOf = (k, pop) => {
   const key = { school: 'learn', theater: 'theater', library: 'read', church: 'church' }[k];
   if (key) return CULTURE[key] * pop * PLAN.attendSeconds * (k === 'church' ? 0.6 : 1);
   if (k === 'monument') return 1.5 + 50 / PLAN.cultureHorizon;   // a little each day, and 50 when it is finished
+  if (LEISURE[k] && LEISURE[k].culture) return LEISURE[k].culture * pop * PLAN.attendSeconds * 0.5;
+  if (k === 'greathall') return 30 / PLAN.cultureHorizon;   // festivals give twice the culture
   const c = BUILD[k].craft; return c && c.out.culture ? c.out.culture / c.time * PLAN.workSeconds : 0;
 };
 function storeAmount(g, k, r) { const t = TIERS[k] ? TIERS[k][0] : null, s = (t && t.store) || BUILD[k].store; return s && s[r] ? s[r] * ((t && t.storeMult) || 1) * (g.sandbox ? 10 : 1) : 0; }
-function shopReach(g, h) { return g.buildings.some(s => s.k === 'shop' && Math.max(Math.abs(s.x - h.x), Math.abs(s.y - h.y)) <= TIERS.shop[s.lvl || 0].reach); }
+function shopReach(g) { return g.buildings.some(s => s.k === 'shop'); }   // anywhere in the village
 function waterWalk(g, h, wells) {
   let d = 99;
   for (const w of wells) d = Math.min(d, Math.max(Math.abs(w.x - h.x), Math.abs(w.y - h.y)));

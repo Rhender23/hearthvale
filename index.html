@@ -51,6 +51,19 @@ button.ic.ready{box-shadow:0 0 0 3px var(--glow)}
 button:disabled,button.dis{opacity:.42;cursor:default}
 div.libro{border:2px solid var(--line);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:2px}div.libro small{font-size:12px;opacity:.85}div.libro.unseen{opacity:.6}
 #pop .pw{display:block;margin-top:3px;font-style:italic;color:var(--want,#8a6a3a)}
+#pop .pstep{display:block;margin:4px 0 2px;font-size:12px}#pop .pstep b{font-weight:600}#pop .pstep .pneed{display:block;font-style:italic;color:var(--want,#8a6a3a)}
+.cost.short{color:#c0392b;font-weight:bold}#tip .tipcost{display:block;margin-top:3px;font-size:12px}
+#hud .fill{display:block;height:3px;background:rgba(0,0,0,.12);border-radius:2px;margin-top:1px;overflow:hidden}#hud .fill>i,.strow .fill>i{display:block;height:100%;background:#7aa65a}.fill.high>i{background:#e0a030!important}.fill.full>i{background:#c0392b!important}
+.strow .fill{display:block;height:6px;background:rgba(0,0,0,.1);border-radius:3px;margin:3px 0;overflow:hidden}#hud .hfull{flex-basis:100%;font-size:12px;color:#c0392b;font-style:italic}
+.gsearch{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:10px;border:1px solid rgba(0,0,0,.15);font:inherit;margin-bottom:6px}
+.gletter{display:block;margin:8px 0 2px;opacity:.6}.gentry>span{display:block;font-weight:600}.gentry>small{display:block}.gentry .gkind{opacity:.6;font-style:italic;font-size:11px}
+.tree{overflow-x:auto}.tgrid{display:grid;grid-template-columns:84px repeat(4,minmax(96px,1fr));gap:4px;align-items:center;margin:2px 0}
+.thead small{font-weight:bold;opacity:.7;text-align:center}.tgroup{display:block;margin:10px 0 2px}.tname{opacity:.8;font-size:12px}
+.tcell{display:flex;flex-wrap:wrap;align-items:center;gap:2px}.trow{display:flex;flex-wrap:wrap;align-items:center;gap:3px;margin:3px 0}.trow .tname{min-width:96px}
+.tchip{font:inherit;font-size:11px;border-radius:8px;padding:3px 6px;border:1px solid rgba(0,0,0,.15);background:rgba(255,255,255,.6);cursor:pointer;text-align:left}
+.tchip small{display:block;opacity:.7;font-size:10px}.tchip.done{background:#dfeccf;border-color:#9cbf7a}.tchip.ready{background:#fff3c4;border-color:#e0b84a;box-shadow:0 0 6px #f2c14e}
+.tchip.locked{opacity:.6}.tarrow{opacity:.5;font-size:11px}.tlegend{display:block;margin:4px 0;opacity:.7}
+button.card .cwhy{display:block;font-size:11px;color:var(--want,#8a6a3a);font-style:italic;line-height:1.2}
 #tip .tipwhy{margin-top:4px;color:var(--want);font-weight:bold}
 
 #hud [data-tip]{cursor:help}

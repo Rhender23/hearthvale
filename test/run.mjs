@@ -4,16 +4,27 @@ import { createGame, update, simulate } from '../js/core/game.js';
 import { DAY, SEASON, BUILD, UPGRADES, AGES, MEALS, TIERS, MERCHANT, NAMES } from '../js/core/config.js';
 import { createVillager } from '../js/core/villagers.js';
 import { CRITTERS, NIGHT_ANIMALS, HOME_DECOR } from '../js/core/critters.js';
-import { addBuilding, completeBuilding, hour, calDay, keepsWay } from '../js/core/state.js';
+import { addBuilding, completeBuilding, hour, calDay, keepsWay, farmFor } from '../js/core/state.js';
 import { isOpen } from '../js/core/world.js';
 import { orderGather, canPlace } from '../js/core/commands.js';
 import { go, footing } from '../js/core/actions.js';
 import { besideRect, walkable } from '../js/core/world.js';
 import { workersAt } from '../js/ui/render/workers.js';
 import { popCap } from '../js/core/state.js';
-import { villagerWants } from '../js/ui/panels.js';
+import { villagerWants, buildingWants } from '../js/ui/panels.js';
 import { NODE } from '../js/core/config.js';
 import { serialize, deserialize } from '../js/core/save.js';
+import { syncLayout, floorsOf, itemsOn, moveItem, turnItem, placePiece } from '../js/core/furnish.js';
+import { beds, takeDown } from '../js/core/state.js';
+import { orchardDawn } from '../js/core/orchards.js';
+import { stageDone, canWork, beginNext } from '../js/core/grand.js';
+import { carryOf } from '../js/core/stable.js';
+import { researchCost } from '../js/core/research.js';
+import { everyDays } from '../js/core/merchant.js';
+import { restBoost } from '../js/core/leisure.js';
+import { festivalCulture } from '../js/core/festival.js';
+import { outputPerDay } from '../js/core/planner.js';
+import { place } from '../js/core/commands.js';
 import { buildNeeds, upgradeNeeds, ageNeeds, villagerNeeds, shortOf } from '../js/core/requires.js';
 import { improveInfo, skipToFestival } from '../js/core/commands.js';
 import { evaluate } from '../js/core/planner.js';
@@ -26,7 +37,7 @@ const modest = (seed = 8) => createGame({ seed, sandbox: false });
 // ---------------------------------------------------------------- what greyed-out things need
 {
   const g = modest();
-  check('town center card says what is short', buildNeeds(g, 'tc') === 'Needs 50 more wood and 40 more stone.', buildNeeds(g, 'tc'));
+  check('town center card says what is short', buildNeeds(g, 'tc') === 'Needs 100 more wood and 40 more stone.', buildNeeds(g, 'tc'));
   check('affordable card needs nothing', buildNeeds(g, 'house') === null, buildNeeds(g, 'house'));
   check('age-locked card names the age', buildNeeds(g, 'statue') === 'Opens in the Village Age.', buildNeeds(g, 'statue'));
   check('firefly lantern says how to unlock it', /fireflies/.test(buildNeeds(g, 'fireflylamp') || ''), buildNeeds(g, 'fireflylamp'));
@@ -142,7 +153,7 @@ let simG, log = [];
   check('general work is measured and compared with each workshop', g.workValue && Number.isFinite(g.workValue.general), JSON.stringify(g.workValue));
   check('gold does not pile up (under 1000 by day 14)', g.res.gold < 1000, g.res.gold);
   check('furniture does not pile up', g.res.furniture < 40, g.res.furniture);
-  check('homes climb past the second level by day 14', g.buildings.some(b => b.k === 'house' && b.lvl >= 3), g.buildings.filter(b => b.k === 'house').map(b => b.lvl).join());
+  check('homes reach the cozy cottage by day 14 (timber houses wait for tools)', g.buildings.some(b => b.k === 'house' && b.lvl >= 2), g.buildings.filter(b => b.k === 'house').map(b => b.lvl).join());
   const basket = UPGRADES.find(u => u.fx && u.fx.carryAdd);
   check('an upgrade with no income behind it never pays back', payback(createGame({ seed: 1 }), basket) === Infinity);
   check('bigger baskets pay back in a working village', payback(g, basket) < 50, payback(g, basket));
@@ -211,6 +222,101 @@ for (const fw of [false, true]) {
   const g2 = createGame({ seed: 8, sandbox: false }); g2.freeBuild = true; g2.freeWill = true;
   let seen = 0; for (let t = 0; t < DAY * 10; t += 0.1) { update(g2, 0.1); if (t % 20 < 0.1) seen += workersAt(g2).size; }
   check('busy workshops show who is at work', seen > 0, seen);
+}
+
+// ---------------------------------------------------------------- v45: a leaner start, open rules, field chains
+{
+  const g = modest();
+  check('the village starts with 50 wood', g.res.wood === 50, g.res.wood);
+  check('a storehouse takes 10 stone', BUILD.store.cost.stone === 10 && BUILD.store.cost.wood === 60);
+  check('quarries and mines from the first age', ['quarry', 'claypit', 'goldmine'].every(k => BUILD[k].age === 0) && !BUILD.quarry.nearWater && BUILD.goldmine.cost.wood === 500 && BUILD.goldmine.cost.stone === 150);
+}
+{
+  const g = createGame({ seed: 3, sandbox: true });
+  const fh = addBuilding(g, 'farmhouse', 40, 40, true), ox = 40, oy = 40;
+  check('a field joins a farmhouse it touches', farmFor(g, 'farm', ox + fh.w, oy) === fh);
+  check('a field apart from the farm will not go', !farmFor(g, 'farm', ox + fh.w + 3, oy));
+  const f = { k: 'farm', x: ox + fh.w, y: oy, w: 2, h: 2, farmId: fh.id }; g.buildings.push(f);
+  check('a field joins the chain by touching a field', farmFor(g, 'farm', ox + fh.w + 2, oy) === fh);
+  check('pens still go within reach', farmFor(g, 'coop', ox + fh.w + 3, oy) === fh);
+  g.buildings.splice(g.buildings.indexOf(f), 1);
+}
+
+{
+  const g = createGame({ seed: 5, sandbox: false }); g.freeBuild = true; g.freeWill = true;
+  for (let i = 0; i < 1e6 && g.clock < DAY * 8; i++) update(g, 0.05);
+  const homes = g.buildings.filter(b => b.done && BUILD[b.k].home);
+  const filled = homes.filter(b => (b.hw || 0) >= 1).length, total = homes.reduce((s, b) => s + (b.hw || 0), 0);
+  check('water carriers fill household barrels', filled > 0, `${filled} of ${homes.length}`);
+  check('barrels never hold more than the village has', total <= g.res.water + 0.01, `${total} > ${g.res.water}`);
+  const h = homes[0]; check('a home bubble shows its water', h && /💧 \d+ \/ \d+/.test(buildingWants(g, h) || ''), h && buildingWants(g, h));
+  const s = deserialize(serialize(g)); check('household water is saved', s.buildings.some(b => (b.hw || 0) >= 1));
+}
+
+{
+  const g = createGame({ seed: 4, sandbox: true });
+  const h = addBuilding(g, 'house', 30, 30, true); h.lvl = 2; syncLayout(h);
+  check('every bed has a place in the room', h.beds.length === beds(h) && floorsOf(h) === 1, `${h.beds.length} of ${beds(h)}`);
+  h.lvl = 8; syncLayout(h);
+  check('a grand manor has two floors and all its beds', floorsOf(h) === 2 && h.beds.length === beds(h) && h.beds.some(x => x.floor === 1), JSON.stringify(h.beds.map(x => x.floor)));
+  g.res.furniture = 5; const it = itemsOn(h, 0)[0]; moveItem(h, it, 0.3, 0.5); turnItem(it);
+  const r = placePiece(g, h, 'chair', 0.5, 0.7, 1);
+  const s = deserialize(serialize(g)), h2 = s.buildings.find(b => b.x === 30 && b.y === 30);
+  check('a rearranged home keeps its layout', h2.beds.some(x => Math.abs(x.u - 0.3) < 1e-6 && x.flip) && h2.furn.some(f => f.id === 'chair' && f.floor === 1), r.reason);
+  h.lvl = 1; syncLayout(h);
+  check('a home that slips back brings everything downstairs', h.beds.every(x => !x.floor) && h.furn.every(f => !f.floor) && h.beds.length === beds(h));
+}
+
+// ---------------------------------------------------------------- v45: new buildings and grand projects
+{
+  const g = createGame({ seed: 6, sandbox: true });
+  const o = addBuilding(g, 'orchard_apple', 44, 44, false); completeBuilding(g, o);
+  const sea = Math.floor(g.clock / SEASON) % 4;
+  check('an apple orchard rests until autumn', sea === 2 ? o.food > 0 : o.food === 0, `${sea} ${o.food}`);
+  g.clock += SEASON * ((2 - sea + 4) % 4 || 4); orchardDawn(g);
+  check('and bears in autumn', o.food === BUILD.orchard_apple.orchard.seasons[2], o.food);
+  check('orchards count as food for the planner', outputPerDay('orchard_apple').food > 0);
+}
+{
+  const g = createGame({ seed: 6, sandbox: true });
+  g.age = 2; const v = g.villagers[0]; let gx = 40, gy = 40; for (let t = 0; t < 400 && !canPlace(g, 'greathall', gx, gy); t++) { gx = 10 + (t * 7) % 40; gy = 10 + Math.floor(t / 6) % 40; }
+  const r = place(g, 'greathall', gx, gy, [v]);
+  const b = r.b; check('a grand project starts by paying its first stage', r.ok && g.res.wood === 2000 - BUILD.greathall.stages[0].cost.wood, r.reason);
+  b.prog = b.time; check('a finished stage pays for and begins the next', stageDone(g, b) === 'next' && b.stage === 1 && b.prog === 0);
+  for (const k in g.res) g.res[k] = 0; b.prog = b.time;
+  check('and waits when the stores fall short', stageDone(g, b) === 'wait' && b.waiting && !canWork(g, b));
+  g.res.stone = 1000; g.res.gold = 1000; g.res.cloth = 100; g.res.furniture = 100;
+  check('carrying on when they are filled', canWork(g, b) && beginNext(g, b) && b.stage === 2);
+  takeDown(g, b); check('taking one down returns every stage paid', g.res.wood === BUILD.greathall.stages[0].cost.wood + BUILD.greathall.stages[1].cost.wood, g.res.wood);
+}
+{
+  const g = createGame({ seed: 6, sandbox: true }), v = g.villagers[0];
+  const base = g.mods.carry; v.x = 30; v.y = 30;
+  addBuilding(g, 'path', 31, 30, true);
+  check('no stable: the usual load', carryOf(g, v) === base);
+  addBuilding(g, 'stable', 20, 20, true);
+  check('a stable doubles the load near a path', carryOf(g, v) === base * 2);
+  v.x = 50; v.y = 50; check('but not far from one', carryOf(g, v) === base);
+}
+{
+  const g = createGame({ seed: 6, sandbox: true });
+  const u = UPGRADES.find(x => x.cost.wood >= 30), c0 = researchCost(g, u).wood;
+  addBuilding(g, 'observatory', 20, 20, true);
+  check('the observatory makes research a third cheaper', researchCost(g, u).wood === Math.round(c0 * 2 / 3), `${c0} → ${researchCost(g, u).wood}`);
+  check('better research tiers need tools', UPGRADES.some(x => x.cost.tools) && !UPGRADES.filter(x => x.id.endsWith('1')).some(x => x.cost.tools));
+  check('timber houses and up need tools', TIERS.house.slice(3).every(t => t.cost.tools) && !TIERS.house.slice(0, 3).some(t => t.cost.tools));
+}
+{
+  const g = createGame({ seed: 6, sandbox: true });
+  const before = everyDays(g); addBuilding(g, 'waystation', 20, 20, true);
+  check('a waystation brings the merchant every other day', before === 3 && everyDays(g) === 2);
+  const v = g.villagers[0]; v.bathed = g.dawns; check('a soak means better rest tonight', restBoost(g, v) > 1);
+  check('festivals give twice the culture with a great hall', festivalCulture(g, 30) === 30 && (addBuilding(g, 'greathall', 30, 30, true), festivalCulture(g, 30) === 60));
+  check('the church raises a grand steeple, dear in stone', TIERS.church && TIERS.church[1].name === 'Grand steeple' && TIERS.church[1].bell && TIERS.church[1].cost.stone >= 400);
+  for (let i = 0; i < 30; i++) addBuilding(g, 'lodge', 2 + (i % 10) * 3, 2 + Math.floor(i / 10) * 3, true);
+  check('the village holds 215 villagers at most', popCap(g) === 215, popCap(g));
+  check('the well\'s top level is the pump house', TIERS.well[2].name === 'Pump house' && BUILD.watertower.store.water > 0);
+  check('the blacksmith makes tools from wood and stone', BUILD.blacksmith.craft.out.tools && BUILD.blacksmith.craft.in.wood && BUILD.blacksmith.craft.in.stone);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

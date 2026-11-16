@@ -46,3 +46,20 @@ export function villageBeauty(g) {
   const homes = g.buildings.filter(b => BUILD[b.k].home && b.done);
   return homes.length ? homes.reduce((s, b) => s + homeScore(g, b), 0) / homes.length : 0;
 }
+
+// What lifts a home's surroundings and what drags them down: each nearby building's share of its score,
+// grouped by kind and largest first. Used for the beauty hints in a home's bubble.
+export function beautyNear(g, h) {
+  const R = BEAUTY_RADIUS, by = new Map();
+  for (const b of g.buildings) {
+    if (!b.done || b === h) continue;
+    const v = beautyOf(b); if (!v) continue;
+    if (Math.max(Math.max(b.x - (h.x + h.w - 1), 0, h.x - (b.x + b.w - 1)), Math.max(b.y - (h.y + h.h - 1), 0, h.y - (b.y + b.h - 1))) > R) continue;
+    let sum = 0;
+    for (let j = 0; j < h.h; j++) for (let i = 0; i < h.w; i++) { const d = distTo(b, h.x + i, h.y + j); if (d <= R) sum += v * falloff(d); }
+    sum /= h.w * h.h; if (Math.abs(sum) < 0.05) continue;
+    by.set(b.k, (by.get(b.k) || 0) + sum);
+  }
+  const all = [...by].map(([k, n]) => ({ k, n }));
+  return { helps: all.filter(e => e.n > 0).sort((a, b) => b.n - a.n), hurts: all.filter(e => e.n < 0).sort((a, b) => a.n - b.n) };
+}

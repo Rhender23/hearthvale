@@ -264,6 +264,48 @@ def shop(level):
     return M
 
 
+
+# ---------------------------------------------------------------- v45: blacksmith, water tower, waystation
+def blacksmith():
+    M = Mesh()
+    M.box('wall-stone', 0.15, 0, 0.25, 0.85, 0.42, 0.75)
+    M.gable('roof-slate', 'wall-stone', 0.15, 0.85, 0.25, 0.75, 0.42, 0.72)
+    chimney(M, 0.3, 0.45, 0.5, 1.0, w=0.14, mat='wall-brick')
+    M.lean('roof-shingle', 0.3, 0.85, 0.75, 0.98, 0.4, 0.3)   # the open forge under a lean-to
+    for x in (0.32, 0.83): M.box('dark-wood', x - 0.015, 0, 0.95, x + 0.015, 0.3, 0.98)
+    M.box('wall-brick', 0.38, 0, 0.8, 0.56, 0.16, 0.94); M.box('ember', 0.4, 0.16, 0.82, 0.54, 0.18, 0.92)
+    M.box('iron', 0.64, 0.1, 0.84, 0.76, 0.16, 0.9); M.box('dark-wood', 0.67, 0, 0.84, 0.73, 0.1, 0.9)   # anvil on its stump
+    door(M, 0.62, 0.75, w=0.14, h=0.26); window(M, 0.85, 0.24, 0.5, w=0.1, h=0.1, face='+x')
+    barrel(M, 0.22, 0.9)
+    return M
+
+
+def watertower():
+    M = Mesh()
+    for x in (0.25, 0.75):
+        for z in (0.25, 0.75): M.box('dark-wood', x - 0.03, 0, z - 0.03, x + 0.03, 0.9, z + 0.03)
+    for y in (0.3, 0.6):
+        M.rod('dark-wood', (0.25, y, 0.75), (0.75, y + 0.25, 0.75), 0.01, n=4); M.rod('dark-wood', (0.75, y, 0.25), (0.75, y + 0.25, 0.75), 0.01, n=4)
+    M.box('plank', 0.15, 0.9, 0.15, 0.85, 0.94, 0.85)
+    M.cylinder('barrel', 0.5, 0.5, 0.34, 0.94, 1.36, n=14)
+    for y in (1.02, 1.18, 1.32): M.cylinder('iron', 0.5, 0.5, 0.345, y, y + 0.015, n=14, top=False)
+    M.cone('roof-shingle', 0.5, 0.5, 0.38, 1.36, 1.56, n=14)
+    M.rod('iron', (0.75, 0.94, 0.75), (0.75, 0.05, 0.9), 0.015, n=5)
+    return M
+
+
+def waystation():
+    M = Mesh()
+    body(M, 0.25, 1.35, 0.35, 1.25, 0.5, 'wall-plaster', 'roof-thatch', rise=0.42, timber=True)
+    chimney(M, 0.45, 0.8, 0.6, 1.05, w=0.12, mat='wall-stone')
+    door(M, 0.8, 1.25, w=0.18, h=0.3); windows_z(M, (0.45, 1.15), 0.2, 1.25, w=0.14, h=0.13)
+    M.lean('roof-shingle', 1.35, 1.85, 0.4, 1.2, 0.5, 0.38)   # an open shelter for horses and carts
+    for z in (0.45, 1.15): M.box('dark-wood', 1.8, 0, z - 0.02, 1.84, 0.38, z + 0.02)
+    M.box('hay', 1.45, 0, 0.5, 1.7, 0.14, 0.75); M.box('wood', 1.4, 0.24, 1.2, 1.8, 0.27, 1.23)   # hitching rail
+    M.rod('dark-wood', (0.2, 0, 1.6), (0.2, 0.5, 1.6), 0.015, n=4); M.box('cloth-green', 0.21, 0.36, 1.6, 0.23, 0.48, 1.75)   # the sign
+    barrel(M, 1.5, 1.55); crate(M, 1.68, 1.6)
+    return M
+
 MODELS = [
     *[(f'building/store/{i}', (lambda i=i: store(i)), {'tiles': [2, 1], 'turn': True}) for i in range(3)],
     ('building/granary', granary, {'tiles': [2, 2]}),
@@ -281,6 +323,9 @@ MODELS = [
     ('building/quarry', quarry, {'tiles': [2, 2]}),
     ('building/claypit', claypit, {'tiles': [2, 2]}),
     ('building/goldmine', goldmine, {'tiles': [2, 2]}),
+    ('building/blacksmith', blacksmith, {'tiles': [1, 1]}),
+    ('building/watertower', watertower, {'tiles': [1, 1]}),
+    ('building/waystation', waystation, {'tiles': [2, 2]}),
     *[(f'building/market/{i}', (lambda i=i: market(i)), {'tiles': [2, 2]}) for i in range(3)],
     *[(f'building/shop/{i}', (lambda i=i: shop(i)), {'tiles': [1, 1]}) for i in range(3)],
 ]

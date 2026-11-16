@@ -21,6 +21,7 @@ export const CRITTERS = {
   wolf:    { name: 'wolf', icon: '🐺', night: 0.10 },
   bear:    { name: 'bear', icon: '🐻', night: 0.05 },
 };
+export const BOTANICAL_VISITS = 1.5;   // night animals come this much more often with a botanical garden
 export const NIGHT_ANIMALS = Object.keys(CRITTERS).filter(k => CRITTERS[k].night);
 export const LANTERN_UNLOCK = 10;
 // Treasures for inside a home, made from caught critters (they are used up). Each home can have one of each.
@@ -66,8 +67,8 @@ export function createCritters(g) {
     tick(dt) {
       const night = isNight(g);
       if (!night) { wasNight = false; if (g.critters.length) g.critters = []; return; }
-      // Nightfall: one roll for a night animal (fox 40%, raccoon 20%, wolf 10%, bear 5%, else none).
-      if (!wasNight) { wasNight = true; let r = g.rng(); for (const k of NIGHT_ANIMALS) { if (r < CRITTERS[k].night) { const p = spot(k); if (p) g.critters.push({ id: nextId++, type: k, x: p[0], y: p[1], hx: p[0], hy: p[1], a: g.rng() * 6.28, t: 0, next: 1, hop: 0, dir: 1 }); break; } r -= CRITTERS[k].night; } }
+      // Nightfall: one roll for a night animal (fox 40%, raccoon 20%, wolf 10%, bear 5%, else none); a botanical garden draws them in more often.
+      if (!wasNight) { wasNight = true; let r = g.rng() / (g.buildings.some(b => b.k === 'botanical' && b.done) ? BOTANICAL_VISITS : 1); for (const k of NIGHT_ANIMALS) { if (r < CRITTERS[k].night) { const p = spot(k); if (p) g.critters.push({ id: nextId++, type: k, x: p[0], y: p[1], hx: p[0], hy: p[1], a: g.rng() * 6.28, t: 0, next: 1, hop: 0, dir: 1 }); break; } r -= CRITTERS[k].night; } }
       const sea = seasonIndex(g);
       for (const c of g.critters) {
         c.t += dt;

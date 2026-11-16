@@ -13,6 +13,7 @@ export function createInput(canvas, view, ui) {
     canvas.setPointerCapture(e.pointerId); P.set(e.pointerId, [e.clientX, e.clientY]);
     if (P.size > 1) { drag = null; pinch = null; return; }
     drag = { x: e.clientX, y: e.clientY, moved: false, btn: e.button };   // right or middle button: pan only, never a tap
+    if (!e.button && ui.drawsLine && ui.drawsLine()) { drag.draw = true; const [rx, ry] = tileAt(e.clientX, e.clientY); ui.lineDown(rx, ry); }   // drawing a path: drag draws, not pans
   });
   canvas.addEventListener('pointermove', e => {
     const [rx, ry] = tileAt(e.clientX, e.clientY); ui.hoverAt(rx, ry);
@@ -25,11 +26,13 @@ export function createInput(canvas, view, ui) {
     if (!drag) return;
     if (e.pointerType === 'mouse' && e.buttons === 0) { P.delete(e.pointerId); drag = null; return; }   // the button came up outside the game
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (drag.draw) { if (Math.hypot(dx, dy) > 8) drag.moved = true; const [rx, ry] = tileAt(e.clientX, e.clientY); ui.lineMove(rx, ry); return; }
     if (!drag.moved && Math.hypot(dx, dy) > 8) drag.moved = true;
     if (drag.moved) { cam.x -= dx / cam.z; cam.y -= dy / cam.z; drag.x = e.clientX; drag.y = e.clientY; clampCam(); }
   });
   const end = e => {
     P.delete(e.pointerId); if (P.size < 2) pinch = null;
+    if (drag && drag.draw) { if (e.type === 'pointerup') ui.lineUp(drag.moved); drag = null; return; }
     if (e.type === 'pointerup' && drag && !drag.moved && !drag.btn && !P.size) { const [rx, ry, wx, wy] = tileAt(e.clientX, e.clientY); ui.tap(rx, ry, wx, wy); }
     drag = null;
   };

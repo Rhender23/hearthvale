@@ -13,7 +13,7 @@ import { ageNeeds, villagerNeeds, shortOf } from '../core/requires.js';
 
 // Who shows what. The first few become the bubble's buttons; the rest go under ••• More.
 export const OWNS = {
-  game: ['free', 'speed', 'pause', 'sound', 'hints', 'overlay', 'album', 'save', 'sandbox', 'nextfest', 'newgame'],
+  game: ['free', 'speed', 'pause', 'sound', 'hints', 'overlay', 'glossary', 'tree', 'storage', 'album', 'save', 'sandbox', 'nextfest', 'newgame'],
   villager: ['build', 'unload', 'work', 'plant', 'add', 'rename', 'clearjob', 'remove'],
   villagers: ['build', 'work', 'unload', 'plant', 'add'],
   tc: ['train', 'age', 'festival', 'upgrades', 'rally', 'all', 'idle', 'focus', 'move', 'inside'],
@@ -50,6 +50,9 @@ export function createActions(api) {
     pause:   { icon: () => ui.paused ? '▶️' : '⏸️', tip: () => ui.paused ? ['Resume', 'Carry on (Space).'] : ['Pause', 'Stop time; you can still look around, look inside and plan (Space).'], on: () => ui.paused, run: () => { ui.paused = !ui.paused; toast(ui.paused ? 'Paused.' : 'Carrying on.'); } },
     speed:   { icon: () => settings.speed + '×', tip: ['Game speed', 'Tap to switch between 1×, 2× and 4× speed.'], run: () => { settings.speed = settings.speed === 1 ? 2 : settings.speed === 2 ? 4 : 1; settings.persist(); } },
     overlay: { icon: () => ({ off: '🗺️', beauty: '🌸', directors: '🧭' })[ui.overlay], tip: ['Overlays', 'Tap to cycle: beauty map (rose is lovely, blue unsightly), what each Director wants, then off.'], on: () => ui.overlay !== 'off', run: () => { ui.overlay = ui.overlay === 'off' ? 'beauty' : ui.overlay === 'beauty' ? 'directors' : 'off'; if (ui.overlay === 'beauty') computeBeauty(g()); toast({ beauty: 'Beauty map: rose is lovely, blue is unsightly, no tint is neutral.', directors: 'Showing what each Director wants right now.', off: 'Overlays off.' }[ui.overlay]); } },
+    glossary:{ icon: '📖', tip: ['Glossary', 'Every word in the game, A to Z.'], run: () => api.openGlossary() },
+    tree:    { icon: '🌳', tip: ['Upgrade trees', 'Everything that unlocks what, at a glance.'], run: () => api.openTree() },
+    storage: { icon: '📦', tip: ['Storage', 'How full each store is.'], run: () => api.openStorage() },
     album:   { icon: '📚', tip: ['Animal library', 'Every animal you have collected. At night, tap fireflies, moths, frogs, owls, and the rare fox, raccoon, wolf or bear. Each becomes a home treasure.'],
                run: () => api.openLibrary() },
     // ---- villagers

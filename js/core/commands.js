@@ -1,5 +1,6 @@
 // Player commands: the only way the interface changes the village.
 // Player orders always win over autonomy and lock it until the task ends.
+import { researchCost } from './research.js';
 import { dims, BUILD, TIERS, UPGRADES, AGES, ADVANCE_TIME, VILLAGER_COST, TRADE, KEY_NODE, NODE_INFO } from './config.js';
 import { bfs } from './path.js';
 import { idx, isOpen, nodeKind, besideRect, walkable, inMap, DIRS8 } from './world.js';
@@ -73,7 +74,7 @@ export function place(g, k, x, y, vs, rot = 0) {
   if (def.needs && !g.buildings.some(b => b.k === def.needs && b.done)) return { ok: false, reason: `Build a ${BUILD[def.needs].name.toLowerCase()} first.` };
   if (k === 'tc' && g.buildings.some(b => b.k === 'tc')) return { ok: false, reason: 'The village already has a town center.' };
   if (!vs.length) return { ok: false, reason: 'Select a villager to build.' };
-  if (!canPlace(g, k, x, y, rot)) return { ok: false, reason: slotKind(k) && !farmFor(g, k, x, y, rot) ? `It needs a free ${slotKind(k) === 'fields' ? 'field' : 'animal'} slot at a farmhouse within 4 tiles.` : def.nearWater ? 'It needs open ground near water.' : 'That spot is not free.' };
+  if (!canPlace(g, k, x, y, rot)) return { ok: false, reason: slotKind(k) && !farmFor(g, k, x, y, rot) ? (slotKind(k) === 'fields' ? 'A field must touch a farmhouse with a free field slot, or a field joined to one.' : 'It needs a free animal slot at a farmhouse within 4 tiles.') : def.nearWater ? 'It needs open ground near water.' : 'That spot is not free.' };
   if (!have(g, def.cost)) return { ok: false, reason: 'Not enough resources yet.' };
   const b = addBuilding(g, k, x, y, false, rot);
   const reach = vs.filter(v => bfs(g.w, Math.round(v.x), Math.round(v.y), (a, c) => besideRect(a, c, x, y, b.w, b.h)));
@@ -128,7 +129,8 @@ export function research(g, id) {
   if (!u || g.owned[id] || u.age > g.age) return { ok: false };
   if (u.req && !g.owned[u.req]) return { ok: false, reason: 'Needs the tier before it first.' };
   if (u.at && u.at !== 'tc' && !g.buildings.some(b => b.k === u.at && b.done)) return { ok: false, reason: `Needs a ${BUILD[u.at].name.toLowerCase()}.` };
-  if (!pay(g, u.cost)) return { ok: false, reason: shortOf(g, u.cost) };
+  const cost = researchCost(g, u);
+  if (!pay(g, cost)) return { ok: false, reason: shortOf(g, cost) };
   g.owned[id] = true; applyUpgrade(g, u);
   g.events.emit('researched', u);
   return { ok: true };
@@ -228,7 +230,7 @@ export function improveInfo(g, b) {
     if (next.age > g.age) return { next, reason: `The ${next.name.toLowerCase()} arrives in the ${AGES[next.age].name} Age.` };
     const sc = BUILD[b.k].home ? homeScore(g, b) : 0;
     if (sc < next.need) return { next, reason: `Needs ${beautyLabel(next.need).toLowerCase()} surroundings (${next.need}); now ${sc.toFixed(1)}. Gardens, flowers and benches nearby help; workshops and fields nearby hurt.` };
-    if ((next.goods || []).length) return { next, reason: `Needs a stall within reach to bring it ${next.goods.join(', ')}.` };
+    if ((next.goods || []).length) return { next, reason: `Needs a stall in the village to bring it ${next.goods.join(', ')}.` };
     return { next, reason: 'Not ready yet.' };
   }
   const cost = stepCost(b, to);

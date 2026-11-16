@@ -12,13 +12,17 @@ import { homeGoodsNeed } from './directors.js';
 import { bfsVisitor, visitorEdge, visitorPassable, besideTile } from './path.js';
 
 // Price per good: grows with the age, and with the marketplace's rank (Trading post, Market, General store).
-const rankBonus = g => { const m = g.buildings.find(b => b.k === 'market' && b.done); return m && TIERS.market ? TIERS.market[m.lvl || 0].priceBonus || 0 : 0; };
+const rankBonus = g => { const m = g.buildings.find(b => b.k === 'market' && b.done); return (m && TIERS.market ? TIERS.market[m.lvl || 0].priceBonus || 0 : 0) + (hasWaystation(g) ? WAYSTATION.priceBonus : 0); };
+// A waystation on the road: the merchant comes more often and pays more.
+export const WAYSTATION = { everyDays: 2, priceBonus: 0.15 };
+const hasWaystation = g => g.buildings.some(b => b.k === 'waystation' && b.done);
+export const everyDays = g => (hasWaystation(g) ? WAYSTATION.everyDays : MERCHANT.everyDays);
 export const priceOf = (g, r) => Math.round(MERCHANT.price[r] * (1 + MERCHANT.ageBonus * g.age + rankBonus(g)));
 export const warePrice = (g, w) => w.repeat ? Math.round(w.price * (1 + MERCHANT.ageBonus * g.age)) : w.price;
 // Wares on offer (whose age has come).
 export const waresFor = g => MERCHANT.wares.filter(w => (w.age || 0) <= g.age && !(w.unlock && g.unlocked[w.unlock]));
 export const surplus = (g, r) => Math.max(0, Math.floor(g.res[r]) - (homeGoodsNeed(g)[r] || 0));
-export const daysToMerchant = g => { const r = g.dawns % MERCHANT.everyDays; return r === 0 ? 0 : MERCHANT.everyDays - r; };
+export const daysToMerchant = g => { const e = everyDays(g), r = g.dawns % e; return r === 0 ? 0 : e - r; };
 
 export function createMerchant(g) {
   const M = {
@@ -26,7 +30,7 @@ export function createMerchant(g) {
     tick(dt) {
       const v = this.visit;
       if (!v) {
-        if (g.crossed.includes(MERCHANT.hour) && g.dawns > 0 && g.dawns % MERCHANT.everyDays === 0 && hasMarket(g)) this.arrive();
+        if (g.crossed.includes(MERCHANT.hour) && g.dawns > 0 && g.dawns % everyDays(g) === 0 && hasMarket(g)) this.arrive();
         return;
       }
       if (v.path.length) {

@@ -6,6 +6,7 @@
 //   with villagers selected, tap a tree, field, workshop or site -> they get to work (a short note says so)
 //   Build -> sheet of buildings -> tap the ground to see it there -> ✓ Place (or tap the same spot again)
 //   Take down, Say goodbye, New game -> asked once, inside the bubble
+import { researchCost } from '../core/research.js';
 import { BUILD_GROUPS, RES_DESC, PANTRY, PANTRY_ICON, FARM, BUILD, BUILD_ORDER, ICON, RES, RES_NAME, BASICS, GOODS, AGES, UPGRADES, SEASONS, TRADE, N, NODE_INFO } from '../core/config.js';
 import { idx, inMap, nodeKind, WATER, walkable } from '../core/world.js';
 import { have, popCap, hour, dayNumber, seasonIndex, darkness, cap, hub, clock12 } from '../core/state.js';
@@ -23,6 +24,12 @@ import { createCoach } from './coach.js';
 import { shortOf, buildNeeds, upgradeNeeds } from '../core/requires.js';
 import { CRITTERS, HOME_DECOR, LANTERN_UNLOCK } from '../core/critters.js';
 import { VERSION } from '../core/config.js';
+import { costEl, stepEl, refreshStep } from './costs.js';
+import { oneLine } from './tips.js';
+import { addFill, syncFill, fullLine, storageSheet } from './storage.js';
+import { glossarySheet } from './glossary.js';
+import { treeSheet } from './trees.js';
+import { linePlan } from './pathline.js';
 
 export { OWNS };
 
@@ -89,7 +96,7 @@ export function createUI(ctx) {
   const ACT = createActions(api);
   const coach = api.coach = createCoach({ ui, g, view, settings, toScreen, pop });
   // Short captions under bubble buttons: icons are easier to learn with a word beside them.
-  const LABEL = { nextfest: 'Next fest', build: 'Build', unload: 'Unload', work: 'To work', plant: 'Plant', add: 'Group', rename: 'Name', clearjob: 'Clear job', remove: 'Remove', train: 'Villager', age: 'Age', festival: 'Festival', upgrades: 'Upgrades', rally: 'Rally', all: 'Everyone', idle: 'Idle', focus: 'Focus', improve: 'Improve', inside: 'Inside', move: 'Move', rotate: 'Turn', trade: 'Trade', info: 'Details', more: 'More', free: 'Free will', speed: 'Speed', pause: 'Pause', sound: 'Sound', overlay: 'Maps', album: 'Library', save: 'Save', sandbox: 'Sandbox', newgame: 'New game', hints: 'Hints' };
+  const LABEL = { glossary: 'Glossary', tree: 'Trees', storage: 'Storage', nextfest: 'Next fest', build: 'Build', unload: 'Unload', work: 'To work', plant: 'Plant', add: 'Group', rename: 'Name', clearjob: 'Clear job', remove: 'Remove', train: 'Villager', age: 'Age', festival: 'Festival', upgrades: 'Upgrades', rally: 'Rally', all: 'Everyone', idle: 'Idle', focus: 'Focus', improve: 'Improve', inside: 'Inside', move: 'Move', rotate: 'Turn', trade: 'Trade', info: 'Details', more: 'More', free: 'Free will', speed: 'Speed', pause: 'Pause', sound: 'Sound', overlay: 'Maps', album: 'Library', save: 'Save', sandbox: 'Sandbox', newgame: 'New game', hints: 'Hints' };
   const rows = [];
   function button(k) {
     const a = ACT[k], b = el('button', { className: 'ic' + (a.danger ? ' danger' : '') + (k === 'more' ? ' more' : '') }); b.dataset.tip = k;
@@ -130,6 +137,20 @@ export function createUI(ctx) {
   const setText = (body, cls, t) => { const e = body.querySelector('.' + cls); if (e && e.textContent !== t) e.textContent = t; };
   function bubbleSpec() {
     const G = g();
+    if (ui.place === 'path' && !ui.moving) {   // paths are drawn as a line, then built together
+      const plan = linePlan(G, ui.line, ui.canPlace);
+      if (!plan) return null;
+      const a = ui.line.a, b = ui.line.b || a;
+      return { key: `line:${a}:${b}:${plan.n}`, at: () => anchorTile(b[0], b[1]),
+        build: body => {
+          const yes = el('button', { className: 'pbtn primary', textContent: '✓ Build' }), no = el('button', { className: 'pbtn', textContent: '✕' });
+          no.setAttribute('aria-label', 'Cancel'); no.onclick = () => { ui.line = null; };
+          const short = shortOf(G, plan.cost); yes.disabled = !plan.n || !!short; yes.onclick = confirmLine;
+          const skip = plan.tiles.length - plan.n;
+          body.append(head(BUILD.path.name, plan.n ? `${plan.n} tile${plan.n > 1 ? 's' : ''}${skip ? ` (${skip} in the way)` : ''}. Drag again to redraw.` : 'Nothing can go there. Drag across open ground.'),
+            el('div', { className: 'pstep' }, [costEl(G, plan.cost), short ? el('small', { className: 'pneed', textContent: short }) : null]), el('div', { className: 'pop-yn' }, [no, yes]));
+        } };
+    }
     if (ui.place) {
       const k = ui.place, x = ui.ghost;
       if (!x) return null;
@@ -140,7 +161,8 @@ export function createUI(ctx) {
           const yes = el('button', { className: 'pbtn primary', textContent: ui.moving ? '✓ Move here' : '✓ Place' }); yes.disabled = !ok; yes.onclick = confirmPlace;
           const rot = el('button', { className: 'pbtn', textContent: '🔄' }); rot.setAttribute('aria-label', 'Turn'); rot.onclick = () => { ui.rot = ui.rot ? 0 : 1; };
           const no = el('button', { className: 'pbtn', textContent: '✕' }); no.setAttribute('aria-label', 'Cancel'); no.onclick = cancelPlace;
-          b.append(head(ui.moving ? 'Move the ' + buildingTitle(ui.moving).toLowerCase() : BUILD[k].name, placeHint(G, k, x[0], x[1], ui.rot, ok)), el('div', { className: 'pop-yn' }, [no, ...(turn ? [rot] : []), yes]));
+          const need = !ui.moving && buildNeeds(G, k), price = !ui.moving ? el('div', { className: 'pstep' }, [costEl(G, BUILD[k].cost), need ? el('small', { className: 'pneed', textContent: need }) : null]) : null;
+          b.append(...[head(ui.moving ? 'Move the ' + buildingTitle(ui.moving).toLowerCase() : BUILD[k].name, placeHint(G, k, x[0], x[1], ui.rot, ok)), price, el('div', { className: 'pop-yn' }, [no, ...(turn ? [rot] : []), yes])].filter(Boolean));
         } };
     }
     if (ui.sel.size) {
@@ -152,8 +174,8 @@ export function createUI(ctx) {
     if (ui.selB) {
       const b0 = ui.selB, keys = !b0.done ? OWNS.site : b0.k === 'campfire' ? (G.buildings.some(o => o.k === 'tc' && o.done) ? OWNS.campfireLater : OWNS.campfire) : OWNS[b0.k] || OWNS.building;
       return { key: 'b:' + b0.id + ':' + b0.done + ':' + ui.more, at: () => anchorBuilding(b0),
-        build: b => { const [r1, r2] = actionRows(keys, ['info']); b.append(...[head(buildingTitle(b0), buildingSummary(G, b0), null, buildingWants(G, b0)), r1, r2].filter(Boolean)); },
-        refresh: b => { setText(b, 'pt', buildingTitle(b0)); setText(b, 'ps', buildingSummary(g(), b0)); setWants(b, buildingWants(g(), b0)); } };
+        build: b => { const [r1, r2] = actionRows(keys, ['info']); b.append(...[head(buildingTitle(b0), buildingSummary(G, b0), null, buildingWants(G, b0)), stepEl(G, b0), r1, r2].filter(Boolean)); },
+        refresh: b => { setText(b, 'pt', buildingTitle(b0)); setText(b, 'ps', buildingSummary(g(), b0)); setWants(b, buildingWants(g(), b0)); refreshStep(g(), b, b0); } };
     }
     if (ui.selN) {
       const n = ui.selN, x = n.i % N, y = (n.i / N) | 0;
@@ -184,13 +206,13 @@ export function createUI(ctx) {
 
   // ---------- sheets: build menu, upgrades, market, details ----------
   const CARD_TIPS = {};
-  for (const k of BUILD_ORDER) CARD_TIPS['card-' + k] = { tip: [BUILD[k].name, BUILD[k].desc], cost: BUILD[k].cost };
-  for (const r of RES) CARD_TIPS['res-' + r] = { tip: [`${ICON[r]} ${RES_NAME[r]}`, RES_DESC[r] || ''] };
+  for (const k of BUILD_ORDER) CARD_TIPS['card-' + k] = { tip: [BUILD[k].name, oneLine(BUILD[k].desc)], cost: BUILD[k].cost };
+  for (const r of RES) CARD_TIPS['res-' + r] = { tip: [`${ICON[r]} ${RES_NAME[r]}`, oneLine(RES_DESC[r] || '')] };
   const PANTRY_NAME = { provisions: 'Provisions (mixed stores)', berries: 'Berries', fish: 'Fish', vegetables: 'Vegetables', bread: 'Bread', eggs: 'Eggs', cheese: 'Cheese', honey: 'Honey' };
   for (const k of PANTRY) CARD_TIPS['pan-' + k] = { tip: [`${PANTRY_ICON[k]} ${PANTRY_NAME[k] || k}`, 'Part of the food in the pantry.'] };
   CARD_TIPS['res-pop'] = { tip: ['🏠 Villagers', 'How many live here, and how many the village has room for.'] };
   CARD_TIPS['res-age'] = { tip: ['Age, culture and season', 'The village age; 🎭 culture now and needed for the next age; the season.'] };
-  for (const u of UPGRADES) CARD_TIPS['up-' + u.id] = { tip: [u.name, u.desc], cost: u.cost };
+  for (const u of UPGRADES) CARD_TIPS['up-' + u.id] = { tip: [u.name, oneLine(u.desc)], cost: u.cost };
   CARD_TIPS.hud = { tip: ['Resources', 'Tap once for the basics, again for everything, a third time to close.'] };
 
   api.openBuild = () => {
@@ -217,18 +239,19 @@ export function createUI(ctx) {
   function card(k) {
     const d = BUILD[k], b = el('button', { className: 'card' }, [el('span', { className: 'cn', textContent: (d.icon ? d.icon + ' ' : '') + d.name }), el('small', { textContent: fmt(d.cost) || 'Free' }), d.needs || BUILD_FARM(k) ? el('small', { className: 'cneed', textContent: BUILD_FARM(k) || `Needs a ${BUILD[d.needs].name.toLowerCase()}` }) : null]);
     b.dataset.k = k; b.dataset.tip = 'card-' + k;
-    b.onclick = () => { ui.place = k; ui.rot = 0; ui.ghost = null; sheet.close(); toast('Tap the ground where it should go.'); };
+    b.onclick = () => { ui.place = k; ui.rot = 0; ui.ghost = null; ui.line = null; sheet.close(); toast(k === 'path' ? 'Drag across the ground to draw the path.' : 'Tap the ground where it should go.'); };
     return b;
   }
-  const BUILD_FARM = k => ({ farm: 1, wheatfield: 1, fiberfield: 1, coop: 1, sheepfold: 1, pasture: 1, apiary: 1 })[k] ? 'Goes within 4 tiles of a farmhouse' : '';
-  function syncCards(body) { for (const b of body.querySelectorAll('button.card')) off(b, buildNeeds(g(), b.dataset.k)); }
+  const BUILD_FARM = k => ({ farm: 1, wheatfield: 1, fiberfield: 1, coop: 1, sheepfold: 1, pasture: 1, apiary: 1 })[k] ? ({ farm: 1, wheatfield: 1, fiberfield: 1 })[k] ? 'Joins a farmhouse: touching it, or a field joined to it' : 'Goes within 4 tiles of a farmhouse' : '';
+  // A greyed card says what it needs right on the card, not only on hover.
+  function syncCards(body) { for (const b of body.querySelectorAll('button.card')) { const why = buildNeeds(g(), b.dataset.k); off(b, why); let e = b.querySelector('.cwhy'); if (why && !e) b.append(e = el('small', { className: 'cwhy' })); if (e) { e.hidden = !why; if (why && e.textContent !== why) e.textContent = why; } } }
 
   api.openUpgrades = () => {
     const b0 = ui.selB, at = b0 && (b0.k === 'campfire' ? 'tc' : b0.k);
     sheet.open({ key: 'up' + b0.id, title: 'Upgrades: ' + buildingTitle(b0), build: body => {
       const G = g(), list = UPGRADES.filter(u => u.at === at && (!u.req || G.owned[u.req]));
       for (const u of list) {
-        const owned = G.owned[u.id], need = upgradeNeeds(G, u), b = el('button', { className: 'wide' }, [el('span', { textContent: u.name + (owned ? ' ✓' : '  ' + fmt(u.cost)) }), el('small', { textContent: u.desc }), need ? el('small', { className: 'cneed', textContent: need }) : null]);
+        const owned = G.owned[u.id], need = upgradeNeeds(G, u), b = el('button', { className: 'wide' }, [el('span', { textContent: u.name + (owned ? ' ✓' : '  ' + fmt(researchCost(G, u))) }), el('small', { textContent: u.desc }), need ? el('small', { className: 'cneed', textContent: need }) : null]);
         b.dataset.tip = 'up-' + u.id; off(b, owned ? 'Already done.' : need);
         b.onclick = () => { cmd.research(G, u.id); say(`${u.name}: done. ✨`); sheet.rebuild(); };
         body.append(b);
@@ -253,6 +276,9 @@ export function createUI(ctx) {
       }
     } });
   };
+  api.openStorage = () => { ui.menuOpen = false; pop.close(); sheet.open({ key: 'storage', title: '📦 Storage', build: body => storageSheet(g())(body) }); };
+  api.openGlossary = () => { ui.menuOpen = false; pop.close(); sheet.open({ key: 'glossary', title: '📖 Glossary', full: true, build: glossarySheet() }); };
+  api.openTree = () => { ui.menuOpen = false; pop.close(); sheet.open({ key: 'tree', title: '🌳 Upgrade trees', full: true, build: body => treeSheet(g(), t => say(t), ui)(body) }); };
   api.openMarket = () => {
     sheet.open({ key: 'market', title: 'Marketplace', build: body => {
       const G = g();
@@ -301,7 +327,20 @@ export function createUI(ctx) {
     say(orderNote(G, 'place', vs, r.b), ui.lastTap);
     clearSel();
   }
-  function cancelPlace() { const was = ui.moving; ui.place = null; ui.ghost = null; ui.moving = null; if (was) selectBuilding(was); }
+  // Drawing a path line: the press starts it, the drag stretches it, a tap on another tile finishes a tapped line.
+  ui.drawsLine = () => ui.place === 'path' && !ui.moving && !ui.modal;
+  ui.lineDown = (x, y) => { if (ui.line && ui.line.tapped) { ui.line = { a: ui.line.a, b: [x, y] }; return; } ui.line = { a: [x, y], b: [x, y] }; };
+  ui.lineMove = (x, y) => { if (ui.line) ui.line.b = [x, y]; };
+  ui.lineUp = moved => { if (ui.line && !moved && ui.line.a[0] === ui.line.b[0] && ui.line.a[1] === ui.line.b[1]) ui.line.tapped = true; };
+  function confirmLine() {
+    const G = g(), plan = linePlan(G, ui.line, ui.canPlace); if (!plan || !plan.n) return;
+    let vs = [...ui.sel];
+    if (!vs.length) { const t = plan.tiles[0], v = G.villagers.filter(v => !v.inside && !(v.act && (v.act.type === 'sleep' || v.act.type === 'leave'))).sort((a, b) => Math.hypot(a.x - t.x, a.y - t.y) - Math.hypot(b.x - t.x, b.y - t.y))[0] || G.villagers[0]; if (v) vs = [v]; }
+    let n = 0; for (const t of plan.tiles) if (t.ok && ui.canPlace(t.x, t.y)) { const r = cmd.place(G, 'path', t.x, t.y, vs, 0); if (r.ok) n++; else break; }
+    buzz(); say(n ? `${n} tile${n > 1 ? 's' : ''} of path laid out. The villagers will lay it.` : 'Nothing could be placed.', ui.lastTap);
+    ui.line = null; clearSel();
+  }
+  function cancelPlace() { const was = ui.moving; ui.place = null; ui.ghost = null; ui.line = null; ui.moving = null; if (was) selectBuilding(was); }
 
   // ---------- rename dialog ----------
   api.openRename = v => {
@@ -318,7 +357,7 @@ export function createUI(ctx) {
 
   // ---------- selection ----------
   function syncHeld() { for (const v of g().villagers) v.held = ui.sel.has(v); }
-  function clearSel() { ui.sel = new Set(); ui.selB = null; ui.selN = null; ui.place = null; ui.ghost = null; ui.moving = null; ui.buildOpen = false; ui.mode = null; ui.more = false; ui.menuOpen = false; syncHeld(); }
+  function clearSel() { ui.sel = new Set(); ui.selB = null; ui.selN = null; ui.place = null; ui.ghost = null; ui.line = null; ui.moving = null; ui.buildOpen = false; ui.mode = null; ui.more = false; ui.menuOpen = false; syncHeld(); }
   const idleList = () => g().villagers.filter(v => !v.act && !v.inside);
   function center(x, y) { const p = isoW(x, y); view.cam.x = p[0]; view.cam.y = p[1]; }
   function nextIdle() { const l = idleList(); if (!l.length) return; const v = l[ui.idleI++ % l.length]; clearSel(); ui.sel.add(v); syncHeld(); center(v.x, v.y); ping(v.x, v.y, '#fff3c4'); }
@@ -417,7 +456,7 @@ export function createUI(ctx) {
   function showTip(b) {
     const k = b.dataset.tip, a = ACT[k] || CARD_TIPS[k]; if (!a || !a.tip) return;
     const [name, desc] = val(a.tip); const c = a.cost ? val(a.cost) : null;
-    tipEl.replaceChildren(el('b', { textContent: name }), el('div', { textContent: desc }), ...(c ? [el('small', { textContent: fmt(c) })] : []), ...(b.dataset.why ? [el('div', { className: 'tipwhy', textContent: '🔒 ' + b.dataset.why })] : []));
+    tipEl.replaceChildren(el('b', { textContent: name }), el('div', { textContent: oneLine(desc) }), ...(c ? [costEl(g(), c, 'tipcost')] : []), ...(b.dataset.why ? [el('div', { className: 'tipwhy', textContent: '🔒 ' + b.dataset.why })] : []));
     tipEl.hidden = false;
     // Clear of the bubble or panel it came from: above it, else below, else beside it.
     const r = b.getBoundingClientRect(), box = b.closest('#pop, #sheet, #hud, #dir'), R = box ? box.getBoundingClientRect() : r, th = tipEl.offsetHeight, tw = 240;
@@ -439,8 +478,9 @@ export function createUI(ctx) {
   }, true);
 
   // ---------- resource bar ----------
-  { const h = $('hud'), item = (r, adv) => { const e = el('span', { id: 's-' + r, className: adv ? 'adv' : '' }, [ICON[r] + ' ', el('b', { id: 'r-' + r })]); e.dataset.tip = 'res-' + r; return e; }, grp = (id, label) => el('span', { id: 'g-' + id, className: 'grp adv' }, [label]);
+  { const h = $('hud'), item = (r, adv) => { const e = el('span', { id: 's-' + r, className: adv ? 'adv' : '' }, [ICON[r] + ' ', el('b', { id: 'r-' + r })]); e.dataset.tip = 'res-' + r; addFill(e); return e; }, grp = (id, label) => el('span', { id: 'g-' + id, className: 'grp adv' }, [label]);
     h.replaceChildren(...BASICS.map(r => item(r)), el('span', { id: 'pantry', className: 'grp sub adv' }), grp('farm', 'Farm'), ...FARM.map(r => item(r, true)), grp('goods', 'Goods'), ...GOODS.map(r => item(r, true)), el('span', { className: 'grp' }, ['']), (() => { const e = el('span', {}, ['🏠 ', el('b', { id: 'r-pop' })]); e.dataset.tip = 'res-pop'; return e; })(), (() => { const e = el('span', { id: 'r-age' }); e.dataset.tip = 'res-age'; return e; })());
+    h.append(el('div', { id: 'hfull', className: 'hfull', hidden: true }));
     h.addEventListener('click', e => { const t = e.target.closest('[data-tip]'); if (t) showTip(t); }); }
 
   // ---------- Director overlay (for the curious) ----------
@@ -472,9 +512,10 @@ export function createUI(ctx) {
     $('fab').classList.toggle('on', !!ui.menuOpen);
     for (const r of RES) {
       const c = Math.floor(cap(G, r)), n = Math.floor(G.res[r]);
-      $('r-' + r).textContent = `${n}/${c}`;
+      $('r-' + r).textContent = `${n}/${c}`; syncFill(G, r, $('s-' + r));
       $('s-' + r).hidden = (GOODS.includes(r) || FARM.includes(r)) && !c && !n;
     }
+    { const t = fullLine(G), e = $('hfull'); e.hidden = !t; if (e.textContent !== t) e.textContent = t; }
     for (const [id, list] of [['farm', FARM], ['goods', GOODS]]) $('g-' + id).hidden = list.every(r => $('s-' + r).hidden);
     { const p = G.pantry || {}, kinds = PANTRY.filter(k => (p[k] || 0) >= 1); $('pantry').hidden = !kinds.length; const key = kinds.map(k => k + Math.floor(p[k])).join(); if ($('pantry').dataset.k !== key) { $('pantry').dataset.k = key; $('pantry').replaceChildren(...kinds.map(k => { const e = el('span', { textContent: `${PANTRY_ICON[k]} ${Math.floor(p[k])}  ` }); e.dataset.tip = 'pan-' + k; return e; })); } }
     $('dir').hidden = ui.overlay !== 'directors';

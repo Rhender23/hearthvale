@@ -335,6 +335,33 @@
    ]
   },
   {
+   "slot": "building/blacksmith",
+   "group": "workshops",
+   "file": "out/building-blacksmith.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/watertower",
+   "group": "workshops",
+   "file": "out/building-watertower.glb",
+   "tiles": [
+    1,
+    1
+   ]
+  },
+  {
+   "slot": "building/waystation",
+   "group": "workshops",
+   "file": "out/building-waystation.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
    "slot": "building/market/0",
    "group": "workshops",
    "file": "out/building-market-0.glb",
@@ -425,6 +452,168 @@
    ]
   },
   {
+   "slot": "building/orchard_apple",
+   "group": "farms",
+   "file": "out/building-orchard_apple.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/orchard_apple/spring",
+   "group": "farms",
+   "file": "out/building-orchard_apple-spring.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/orchard_apple/summer",
+   "group": "farms",
+   "file": "out/building-orchard_apple-summer.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/orchard_apple/autumn",
+   "group": "farms",
+   "file": "out/building-orchard_apple-autumn.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/orchard_pear",
+   "group": "farms",
+   "file": "out/building-orchard_pear.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/orchard_pear/spring",
+   "group": "farms",
+   "file": "out/building-orchard_pear-spring.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/orchard_pear/summer",
+   "group": "farms",
+   "file": "out/building-orchard_pear-summer.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/orchard_pear/autumn",
+   "group": "farms",
+   "file": "out/building-orchard_pear-autumn.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/orchard_cherry",
+   "group": "farms",
+   "file": "out/building-orchard_cherry.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/orchard_cherry/spring",
+   "group": "farms",
+   "file": "out/building-orchard_cherry-spring.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/orchard_cherry/summer",
+   "group": "farms",
+   "file": "out/building-orchard_cherry-summer.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/orchard_cherry/autumn",
+   "group": "farms",
+   "file": "out/building-orchard_cherry-autumn.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/orchard_plum",
+   "group": "farms",
+   "file": "out/building-orchard_plum.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/orchard_plum/spring",
+   "group": "farms",
+   "file": "out/building-orchard_plum-spring.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/orchard_plum/summer",
+   "group": "farms",
+   "file": "out/building-orchard_plum-summer.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/orchard_plum/autumn",
+   "group": "farms",
+   "file": "out/building-orchard_plum-autumn.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/greenhouse",
+   "group": "farms",
+   "file": "out/building-greenhouse.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/stable",
+   "group": "farms",
+   "file": "out/building-stable.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
    "slot": "building/tc/0",
    "group": "civic",
    "file": "out/building-tc-0.glb",
@@ -503,6 +692,60 @@
    "tiles": [
     2,
     2
+   ]
+  },
+  {
+   "slot": "building/church/1",
+   "group": "civic",
+   "file": "out/building-church-1.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/bathhouse",
+   "group": "civic",
+   "file": "out/building-bathhouse.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/bandstand",
+   "group": "civic",
+   "file": "out/building-bandstand.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "building/greathall",
+   "group": "civic",
+   "file": "out/building-greathall.glb",
+   "tiles": [
+    3,
+    3
+   ]
+  },
+  {
+   "slot": "building/observatory",
+   "group": "civic",
+   "file": "out/building-observatory.glb",
+   "tiles": [
+    2,
+    2
+   ]
+  },
+  {
+   "slot": "site/3x3",
+   "group": "civic",
+   "file": "out/site-3x3.glb",
+   "tiles": [
+    3,
+    3
    ]
   },
   {
@@ -612,6 +855,15 @@
    "tiles": [
     1,
     1
+   ]
+  },
+  {
+   "slot": "building/botanical",
+   "group": "decor",
+   "file": "out/building-botanical.glb",
+   "tiles": [
+    3,
+    3
    ]
   },
   {

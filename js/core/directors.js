@@ -6,6 +6,7 @@
 //   tick()   - per-frame upkeep of its own domain
 //   think()  - once a second: posts wishes (activity weights for villagers) and demands (asks of other Directors)
 // Directors influence the world; they never command villagers or address the player with instructions.
+import { researchCost } from './research.js';
 import { dims, BUILD, TIERS, AGES, NODE, PRI, MEAL_HOURS, MEALS, RATION_DAY, RATION, DAY, PACE, CULTURE_DRAIN, WAKE, N, SLIDE_DAYS, SLIDE_MARGIN, SOCIAL, ROLE_NAME, LEAVE_HUNGRY_DAYS, GOODS_USE_DAYS, GOODS, FARM, CULTURE, UPGRADES, FESTIVAL, PANTRY, MERCHANT, SHOP_PRICE, HOME_CULTURE, FARM_REACH, VALUE, KEY_NODE, PATH_FADE } from './config.js';
 import { priceOf, surplus } from './merchant.js';
 import { festivalWant, wantedFestival, festivalCost, planFestival, affordableFestival } from './festival.js';
@@ -16,6 +17,10 @@ import { homeScore, villageBeauty, beautyLabel } from './beauty.js';
 import { action, interrupt, hasAction, createVillager } from './villagers.js';
 import { bfs, besideTile, visitorEdge, visitorPassable } from './path.js';
 import { stepCost } from './actions.js';
+import { drinkFrom, settle } from './household.js';
+import { orchardDawn } from './orchards.js';
+import { leisureWishes, leisureTick, restBoost } from './leisure.js';
+import { churchCulture } from './festival.js';
 import { evaluate, PLAN } from './planner.js';
 
 const clamp01 = x => Math.max(0, Math.min(1, x));
@@ -48,7 +53,7 @@ export function payback(g, u) {
   if (fx.farmRate && fields) gain += (inc.food || 0) * 0.5 * (1 - fx.farmRate);
   if (fx.penAdd) for (const b of g.buildings) { const an = b.done && BUILD[b.k].animals, c = an && BUILD[b.k].craft; if (c) { const out = Object.keys(c.out)[0]; gain += (inc[out] || 0) * worth(out) * 0.5 * fx.penAdd / (an.cap + (g.mods.penAdd || 0)); } }   // room for more animals
   if (fx.craft) for (const [role, m] of Object.entries(fx.craft)) gain += crafted(role) * (1 - m);
-  return gain > 0 ? costWorth(u.cost) / gain : Infinity;
+  return gain > 0 ? costWorth(researchCost(g, u)) / gain : Infinity;
 }
 
 // ---------------------------------------------------------------- Economy
@@ -133,7 +138,8 @@ export const Workforce = {
     const p = this.prefs, night = isNight(g);
     for (const v of g.villagers) {
       const asleep = v.act && v.act.type === 'sleep' && v.act.phase === 'sleep', resting = v.act && (v.act.type === 'rest' || v.act.type === 'sit');
-      v.energy = asleep ? Math.min(1, v.energy + dt * p.energySleep) : Math.max(0, Math.min(1, v.energy - dt * p.energyDrain + (resting ? dt / 300 : 0)));
+      const rb = restBoost(g, v);   // a soak at the bathhouse: better sleep and rest
+      v.energy = asleep ? Math.min(1, v.energy + dt * p.energySleep * rb) : Math.max(0, Math.min(1, v.energy - dt * p.energyDrain + (resting ? rb * dt / 300 : 0)));
       v.full = Math.max(0, v.full - dt / DAY); v.hyd = Math.max(0, v.hyd - dt / DAY);
       v.eff = 0.6 + 0.4 * Math.min(1, Math.min(v.energy, v.full, v.hyd) / 0.35);
       if (night && !hasAction(v, 'sleep') && !hasAction(v, 'leave')) interrupt(g, v, action('sleep', { pri: PRI.SLEEP, src: 'schedule', why: 'Sleeping.' }));
@@ -161,7 +167,7 @@ export const Workforce = {
       this.assignRoles(g);
     }
     for (const [h, n] of MEALS) if (crossed(g, h)) this.meal(g, n);
-    if (crossed(g, WAKE)) { this.dawn(g); wearPaths(g); const L = g.workLog; if (L && L.todaySec > 0) { L.yday = L.today; L.ydaySec = L.todaySec; L.today = 0; L.todaySec = 0; } }
+    if (crossed(g, WAKE)) { this.dawn(g); wearPaths(g); orchardDawn(g); const L = g.workLog; if (L && L.todaySec > 0) { L.yday = L.today; L.ydaySec = L.todaySec; L.today = 0; L.todaySec = 0; } }
     if (this.wasNight !== null && night !== this.wasNight) {
       notice(g, night ? 'Evening settles over the village. Time for bed.' : 'Good morning, Hearthvale.');
       g.events.emit(night ? 'night' : 'morning');
@@ -240,6 +246,8 @@ export const Workforce = {
     L.today += k * this.needOf(g, r, n) * (MERCHANT.price[r] || 1);
   },
   meal(g, n = RATION.food) {
+    settle(g);
+    for (const v of g.villagers) { if (g.res.water >= n) drinkFrom(g, v, n); }
     for (const v of g.villagers) for (const [r, f] of [['food', 'full'], ['water', 'hyd']]) {
       if (g.res[r] >= n) { g.res[r] -= n; g.today.out[r] = (g.today.out[r] || 0) + n; v[f] = Math.min(1, v[f] + this.prefs.mealGain * n / (RATION_DAY / MEALS.length)); if (r === 'food') v.ate = (v.ate || 0) + 1; }
     }
@@ -315,9 +323,9 @@ export function wearPaths(g) {
     if (nx && nx.age <= g.age && b.wear >= nx.wear) { b.lvl = (b.lvl || 0) + 1; g.beautyDirty = true; g.events.emit('upgraded', b); }
   }
 }
-// Is a finished shop close enough to hand this home its goods?
-export function shopNear(g, h) {
-  return g.buildings.some(s => s.k === 'shop' && s.done && Math.max(Math.abs(s.x - h.x), Math.abs(s.y - h.y)) <= TIERS.shop[s.lvl || 0].reach);
+// Is there a finished shop in the village to hand out goods? Anywhere will do: homes don't need one close by.
+export function shopNear(g) {
+  return g.buildings.some(s => s.k === 'shop' && s.done);
 }
 const reserve = g => ({ food: rations(g, g.villagers.length, 1), water: rations(g, g.villagers.length, 1), wood: 20 });
 const affordable = (g, cost) => Object.entries(cost).every(([r, n]) => g.res[r] - n >= (reserve(g)[r] || 0));
@@ -352,7 +360,7 @@ export const Construction = {
     const dem = demandsFor(g, 'Construction'), storage = dem.filter(d => d.what === 'storage');
     // Storage requests go to the building that holds that resource best: food and its materials to a granary,
     // water to a well, wood to a lumber mill, everything else to a storehouse.
-    const storeFor = r => ['food', 'wheat', 'flour', 'milk'].includes(r) ? ['granary', 'store'] : r === 'water' ? ['well'] : r === 'wood' ? ['lumbermill', 'store'] : ['store'];
+    const storeFor = r => ['food', 'wheat', 'flour', 'milk'].includes(r) ? ['granary', 'store'] : r === 'water' ? ['watertower', 'well'] : r === 'wood' ? ['lumbermill', 'store'] : ['store'];
     const st = []; for (const d of storage) for (const k of storeFor(d.res)) st.push({ ...d, k });
     const list = evaluate(g, { storage: st.map(d => ({ res: d.res, amount: d.amount, why: d.why, k: d.k })), cultureRate: this.cRate, reserve: reserve(g) });
     // storage for a resource only counts for the buildings it is routed to
@@ -373,7 +381,7 @@ export const Construction = {
     const slotPlace = (k, why) => {
       const kind = slotKind(k);
       for (const fh of g.buildings.filter(b => b.k === 'farmhouse' && b.done && slotsUsed(g, b, kind) < farmSlots(b)[kind])) {
-        const placed = tryPlace(k, fh.x, fh.y, { minR: 1, maxR: FARM_REACH + 1, score: (x, y) => -Math.hypot(x - fh.x, y - fh.y) * 0.1 }, why); if (placed) return placed;
+        const placed = tryPlace(k, fh.x, fh.y, { minR: 1, maxR: kind === 'fields' ? 12 : FARM_REACH + 1, score: (x, y) => -Math.hypot(x - fh.x, y - fh.y) * 0.1 }, why); if (placed) return placed;
       }
       if (g.buildings.some(b => b.k === 'farmhouse' && !b.done)) return null;   // a farmhouse is on its way
       return tryPlace('farmhouse', tc.x, tc.y, { minR: 4, maxR: 12, score: (x, y) => -beautyAt(x, y) * 0.3 }, `room for ${kind === 'fields' ? 'a field' : 'animals'} (${why})`);
@@ -396,7 +404,7 @@ export const Construction = {
       if (k === 'claypit') return tryPlace(k, tc.x, tc.y, { minR: 3, maxR: 16, score: (x, y) => -beautyAt(x, y) * 0.2 }, why);
       if (k === 'grange') { const fx = fields.length ? Math.round(fields.reduce((s, b) => s + b.x, 0) / fields.length) : tc.x, fy = fields.length ? Math.round(fields.reduce((s, b) => s + b.y, 0) / fields.length) : tc.y; return tryPlace(k, fx, fy, { minR: 1, maxR: 6 }, why); }
       if (k === 'mill' || k === 'dairy') return tryPlace(k, farmHub.x, farmHub.y, { minR: 2, maxR: 8 }, why);
-      if (d.shop) { const want = homes.find(h => h.done && !shopNear(g, h)) || { x: hx, y: hy }; return tryPlace(k, want.x, want.y, { minR: 1, maxR: 5, score: (x, y) => beautyAt(x, y) * 0.2 }, why); }
+      if (d.shop) { const want = { x: hx, y: hy }; return tryPlace(k, want.x, want.y, { minR: 1, maxR: 5, score: (x, y) => beautyAt(x, y) * 0.2 }, why); }
       if (d.decor) {
         // beside the home the planner chose (the one this decoration helps most), as close as there is room
         const done = homes.filter(b => b.done && TIERS[b.k]), plain = at ? { x: at[0], y: at[1], w: at[2], h: at[3] } : done.slice().sort((a, b) => homeScore(g, a) - homeScore(g, b))[0] || { x: hx, y: hy, w: 1, h: 1 };
@@ -556,7 +564,8 @@ export const Culture = {
     // Culture accrues while villagers are at the fire, the schoolhouse or the theater.
     for (const v of g.villagers) {
       const a = v.act;
-      if (a && a.type === 'sit' && a.phase === 'wait' && CULTURE[a.key]) g.culture = (g.culture || 0) + CULTURE[a.key] * dt;
+      leisureTick(g, v, dt);
+      if (a && a.type === 'sit' && a.phase === 'wait' && CULTURE[a.key]) g.culture = (g.culture || 0) + CULTURE[a.key] * dt * (a.key === 'church' ? churchCulture(g, a.tavern) : 1);
       if (a && a.type === 'sit' && a.phase === 'wait' && a.key === 'play') v.comp = (v.comp || 0) + dt * 0.5;   // laughter is good company
       // Beer at the tavern: spirits (social) rise twice as fast and the evening adds a little culture.
       if (a && a.type === 'sit' && a.phase === 'wait' && a.key === 'tavern' && g.res.beer > 0) { g.res.beer = Math.max(0, g.res.beer - CULTURE.beerPerSec * dt); v.tav = (v.tav || 0) + dt; g.culture = (g.culture || 0) + CULTURE.tavernBeer * dt; }
@@ -573,7 +582,7 @@ export const Culture = {
     if (nx && g.ready && g.adv === 0 && spareForAge(nx.cost)) { if (advance(g).ok) notice(g, `The village has decided to grow into the ${nx.name} Age.`); return; }
     if (nx && nx.cost && have(g, nx.cost)) return;
     // Research by payback: the upgrade whose cost the village earns back soonest, if within 8 days.
-    const u = UPGRADES.filter(u => !g.owned[u.id] && u.age <= g.age && (!u.req || g.owned[u.req]) && (u.at === 'tc' || g.buildings.some(b => b.k === u.at && b.done)) && spare(u.cost))
+    const u = UPGRADES.filter(u => !g.owned[u.id] && u.age <= g.age && (!u.req || g.owned[u.req]) && (u.at === 'tc' || g.buildings.some(b => b.k === u.at && b.done)) && spare(researchCost(g, u)))
       .map(u => ({ u, days: payback(g, u) })).filter(o => o.days < VALUE.paybackDays).sort((a, b) => a.days - b.days).map(o => o.u)[0];
     if (u && research(g, u.id).ok) { this.t = 120; notice(g, `The village took up ${u.name.toLowerCase()}: ${u.desc.toLowerCase()}`); }
   },
@@ -584,6 +593,7 @@ export const Culture = {
     if (has('library') && h >= 9 && h < 20) post('Culture', 'read', 0.3, 'a good book');
     if (has('church')) { if (g.dawns % 7 === 0 && h >= 9 && h < 11) post('Culture', 'church', 1.3, 'the weekly service'); else if (h >= 7 && h < 19) post('Culture', 'church', 0.12, 'a quiet moment'); }
     if (has('playground') && h >= 13 && h < 18) post('Social', 'play', 0.35, 'an afternoon at the playground');
+    leisureWishes(g, post);
     if (g.buildings.some(b => b.pending > b.lvl)) post('Culture', 'upgrade', p.ambition, 'the village wants finer homes');
     const nx = AGES[g.age + 1], short = nx && (g.culture || 0) < (nx.culture || 0);
     // (Which culture buildings to build is the planner's call: it values each by the culture it adds against the gap to the next age.)

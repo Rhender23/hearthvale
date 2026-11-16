@@ -60,10 +60,10 @@ export function placeHint(g, k, x, y, rot, ok) {
     const sk = slotKind(k);
     if (sk && !farmFor(g, k, x, y, rot)) {
       const fhs = g.buildings.filter(b => b.k === 'farmhouse' && b.done), what = sk === 'fields' ? 'field' : 'animal';
-      if (!fhs.length) return sk === 'fields' ? 'Fields belong to a farm: build a farmhouse first, then fields go within 4 tiles of it.' : 'Animals live on a farm: build a farmhouse first, then pens go within 4 tiles of it.';
+      if (!fhs.length) return sk === 'fields' ? 'Fields belong to a farm: build a farmhouse first, then fields touching it, or touching each other.' : 'Animals live on a farm: build a farmhouse first, then pens go within 4 tiles of it.';
       const free = fhs.filter(b => slotsUsed(g, b, sk) < farmSlots(b)[sk]);
       if (!free.length) { const next = TIERS.farmhouse.find(t => (t.slots || {})[sk] > farmSlots(fhs[0])[sk]); return `Every farmhouse ${what} slot is in use.` + (next ? ` A ${lower(next.name)} has room for ${next.slots[sk]}.` : ' A second farmhouse has room for more.'); }
-      return `Bring it within ${FARM_REACH} tiles of a farmhouse with a free ${what} slot.`;
+      return sk === 'fields' ? 'Put it touching a farmhouse with a free field slot, or touching one of its fields.' : `Bring it within ${FARM_REACH} tiles of a farmhouse with a free ${what} slot.`;
     }
     if (def.needs && !g.buildings.some(b => b.k === def.needs && b.done)) return `It needs a ${lower(BUILD[def.needs].name)} first.`;
     if (def.nearWater && !nearWaterOk(g, k, x, y, rot)) return 'It needs open ground beside water.';

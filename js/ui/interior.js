@@ -8,11 +8,11 @@
 import { BUILD, TIERS, ICON, RES } from '../core/config.js';
 import { storeOf, cap, levelName, beds, hour, isNight } from '../core/state.js';
 import { CRITTERS, critterLeft, HOME_DECOR } from '../core/critters.js';
-import { PIECES, FURNITURE, TREASURES, spotsFor, pieceAt, settleTreasures, canAfford, placePiece, movePiece, turnPiece, putAway, isHome } from '../core/furnish.js';
-import { fmt } from './dom.js';
+import { PIECES, settleTreasures, isHome, itemsOn, floorsOf } from '../core/furnish.js';
+import { createArrange } from './arrange.js';
 
 // Buildings you can look into: anything with walls that is finished.
-export const hasInside = b => b && b.done && !BUILD[b.k].flat && !BUILD[b.k].decor && !['campfire', 'quarry', 'claypit', 'goldmine', 'well', 'monument', 'playground', 'apiary'].includes(b.k);
+export const hasInside = b => b && b.done && !BUILD[b.k].flat && !BUILD[b.k].decor && !['campfire', 'quarry', 'claypit', 'goldmine', 'well', 'monument', 'playground', 'apiary', 'watertower', 'bandstand', 'stable', 'waystation'].includes(b.k) && !BUILD[b.k].orchard;
 
 // Wall, floor and trim by quality (0 = humble, 4 = grand).
 const LOOK = [
@@ -49,69 +49,21 @@ export function openInterior(g, b, onClose) {
   const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   let open = true, raf = 0, toolsKey = '';
   const done = () => { if (!open) return; open = false; cancelAnimationFrame(raf); wrap.remove(); document.removeEventListener('keydown', key); onClose && onClose(); };
-  const key = e => { if (e.key === 'Escape') { if (st.mode || st.sel) { st.mode = null; st.sel = null; st.piece = null; toolsKey = ''; } else done(); } };
+  const key = e => { if (e.key === 'Escape') { if (st.mode || st.sel || st.open) { st.mode = null; st.sel = null; st.piece = null; st.open = false; A && A.refresh(); } else done(); } };
   close.onclick = done; wrap.addEventListener('pointerdown', e => { if (e.target === wrap) done(); }); document.addEventListener('keydown', key);
 
-  // Furnishing (homes only): pick a piece, tap a glowing spot. Tap a placed piece to move, turn or put it away.
-  const st = { mode: null, piece: null, sel: null, tab: 'furniture', open: false, msg: '' };
+  // Rearranging (homes only) lives in arrange.js: drag beds and pieces, turn them, furnish, switch floors.
+  const st = { mode: null, piece: null, sel: null, tab: 'furniture', open: false, msg: '', floor: 0 };
   if (isHome(b)) settleTreasures(b);
-  const say = t => { st.msg = t; toolsKey = ''; };
-  const btn = (txt, cls, on) => { const e = mk('button', cls, txt); e.onclick = on; return e; };
-  function drawTools() {
-    if (!isHome(b)) { tools.hidden = true; return; }
-    const k = [st.mode, st.piece, st.sel, st.tab, st.open, st.msg, FURNITURE.concat(TREASURES).map(id => +canAfford(g, id)).join(''), (b.furn || []).length].join('|');
-    if (k === toolsKey) return; toolsKey = k;
-    const kids = [];
-    if (st.msg) kids.push(mk('small', 'in-msg', st.msg));
-    if (st.sel) {
-      const f = pieceAt(b, st.sel), p = f && PIECES[f.id];
-      if (!p) { st.sel = null; return drawTools(); }
-      kids.push(mk('b', null, p.name));
-      kids.push(Object.assign(mk('div', 'pop-yn'), {}));
-      kids[kids.length - 1].append(
-        btn('✕', 'pbtn', () => { st.sel = null; st.mode = null; say(''); }),
-        btn('📦 Put away', 'pbtn', () => { putAway(g, b, st.sel); st.sel = null; say(p.treasure ? 'Put away. The critters are back in your collection.' : 'Put away. What it cost is back in the stores.'); }),
-        btn('🔄 Turn', 'pbtn', () => { turnPiece(b, st.sel); }),
-        btn(st.mode === 'move' ? '✋ Tap a spot…' : '✋ Move', 'pbtn primary', () => { st.mode = 'move'; say('Tap a glowing spot to move it there.'); }));
-    } else if (st.mode === 'place') {
-      kids.push(mk('b', null, `${PIECES[st.piece].icon} ${PIECES[st.piece].name}`));
-      const row = mk('div', 'pop-yn'); row.append(btn('✕ Cancel', 'pbtn', () => { st.mode = null; st.piece = null; say(''); })); kids.push(row);
-    } else if (!st.open) {
-      const row = mk('div', 'pop-yn'); row.append(btn('🛋️ Furnish', 'pbtn primary', () => { st.open = true; say('Choose a piece, then tap a glowing spot in the room. Tap anything you placed to move it.'); })); kids.push(row);
-    } else {
-      const tabs = mk('div', 'tabs');
-      for (const [id, label] of [['furniture', 'Furniture'], ['treasures', 'Treasures']]) { const t = btn(label, 'tab' + (st.tab === id ? ' on' : ''), () => { st.tab = id; toolsKey = ''; }); tabs.append(t); }
-      tabs.append(btn('Done', 'tab', () => { st.open = false; say(''); }));
-      kids.push(tabs);
-      const grid = mk('div', 'cards');
-      for (const id of st.tab === 'furniture' ? FURNITURE : TREASURES) {
-        const p = PIECES[id], c = mk('button', 'card');
-        const price = p.treasure ? `${HOME_DECOR_N(id)} ${CRITTERS[p.critter].icon} (you have ${critterLeft(g, p.critter)})` : fmt(p.cost);
-        c.append(mk('span', 'cn', `${p.icon} ${p.name}`), mk('small', null, p.age > g.age ? 'Comes with a later age' : price));
-        c.disabled = !canAfford(g, id) || (p.treasure && (b.decor || []).includes(id));
-        c.onclick = () => { st.mode = 'place'; st.piece = id; st.sel = null; say(`Tap a glowing spot ${p.spot === 'back' ? 'against the back wall' : 'on the floor'}.`); };
-        grid.append(c);
-      }
-      kids.push(grid);
-    }
-    tools.replaceChildren(...kids);
-  }
+  const say = t => { st.msg = t; A && A.refresh(); };
   const G = geom(W, H);
-  const spotXY = s => { const [x, y] = G.P(s.u, s.d); return [x, y - (s.kind === 'back' ? 0.5 : 0.15) * G.M(s.d)]; };
-  cv.addEventListener('pointerdown', e => {
-    if (!isHome(b)) return;
-    const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
-    let best = null, bd = 1e9;
-    for (const s of spotsFor(b)) { const [x, y] = spotXY(s), d = Math.hypot(px - x, py - y); if (d < Math.max(26, 0.7 * G.M(s.d)) && d < bd) { bd = d; best = s; } }
-    if (!best) { if (st.sel && st.mode !== 'move') { st.sel = null; say(''); } return; }
-    if (st.mode === 'place') { const res = placePiece(g, b, st.piece, best.id); if (res.ok) { const p = PIECES[st.piece]; st.mode = null; st.piece = null; say(`${p.name} placed.`); } else say(res.reason); return; }
-    if (st.mode === 'move' && st.sel) { const res = movePiece(g, b, st.sel, best.id); if (res.ok) { st.mode = null; st.sel = best.id; say('Moved.'); } else say(res.reason); return; }
-    if (pieceAt(b, best.id)) { st.sel = best.id; st.mode = null; st.open = false; say(''); }
-  });
+  const A = isHome(b) ? createArrange({ g, b, cv, G, W, H, st, say, mk }) : null;
+  const drawTools = () => { if (!A) { tools.hidden = true; return; } A.tools(tools); };
+  if (A) { cv.addEventListener('pointerdown', A.down); cv.addEventListener('pointermove', A.move); cv.addEventListener('pointerup', A.up); cv.addEventListener('pointercancel', A.up); cv.style.touchAction = 'none'; }
   const frame = t => {
     if (!open) return;
     if (!g.bmap.has(b.id)) return done();
-    title.textContent = levelName(b);
+    title.textContent = levelName(b) + (floorsOf(b) > 1 ? (st.floor ? ' · upstairs' : ' · downstairs') : '');
     cap1.textContent = draw(ctx, g, b, W, H, t / 1000, st);
     drawTools();
     raf = requestAnimationFrame(frame);
@@ -119,7 +71,6 @@ export function openInterior(g, b, onClose) {
   raf = requestAnimationFrame(frame);
   return done;
 }
-const HOME_DECOR_N = id => (HOME_DECOR[id] ? HOME_DECOR[id].n : 0);
 
 // ---------------------------------------------------------------- the room
 function draw(c, g, b, W, H, T, st) {
@@ -137,7 +88,9 @@ function draw(c, g, b, W, H, T, st) {
   else if (b.k === 'school') school(R);
   else if (b.k === 'theater') theater(R);
   else if (b.k === 'market' || b.k === 'shop') shop(R);
-  else if (b.k === 'tc') hall(R);
+  else if (b.k === 'tc' || b.k === 'greathall') hall(R);
+  else if (b.k === 'observatory') observatory(R);
+  else if (b.k === 'bathhouse') bathhouse(R);
   else if (b.k === 'church') church(R);
   else if (b.k === 'library') library(R);
   else storage(R);
@@ -227,51 +180,51 @@ function home(R) {
   const { c, g, b, W, H, q, L, mBack } = R, lvl = b.lvl || 0, t = TIERS[b.k] ? TIERS[b.k][lvl] : { goods: [] }, goods = t.goods || [];
   const has = r => g.res[r] >= 1, uses = r => goods.includes(r), decor = b.decor || [];
   const nWin = 1 + Math.floor(q / 2), curtains = uses('cloth') && has('cloth') ? '#c9553d' : null;
-  hearth(R, 0.14);
+  const upstairs = !!(R.st && R.st.floor);
+  if (!upstairs) hearth(R, 0.14);
   for (let i = 0; i < nWin; i++) windowAt(R, 0.42 + i * (0.5 / Math.max(1, nWin)), curtains);
   if (q >= 2) { const [x, y] = R.Wl(0.34, 1.55); rect(c, x - 0.35 * mBack, y - 0.45 * mBack, 0.7 * mBack, 0.45 * mBack, L.trim); rect(c, x - 0.3 * mBack, y - 0.4 * mBack, 0.6 * mBack, 0.35 * mBack, '#7fae5a'); c.fillStyle = '#f2c94c'; c.beginPath(); c.arc(x + 0.12 * mBack, y - 0.28 * mBack, 0.06 * mBack, 0, 7); c.fill(); }
   { const [x, y, m] = shelf(R, 0.9, 1.3, 0.7); if (uses('pottery') && has('pottery')) for (let i = 0; i < 3; i++) emoji(c, '🏺', x - 0.22 * m + i * 0.22 * m, y - 0.13 * m, 0.24 * m); if (uses('jewelry') && has('jewelry')) emoji(c, '💍', x, y - 0.5 * m, 0.2 * m); }
   if (q >= 4) { const [x] = R.Wl(0.5, 0), m = R.M(0.3); c.strokeStyle = '#8a7040'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(x, 0); c.lineTo(x, H * 0.12); c.stroke(); rect(c, x - 0.4 * m, H * 0.12, 0.8 * m, 4, '#b8963a'); for (const dx of [-0.32, 0, 0.32]) { c.fillStyle = '#ffe2a0'; c.beginPath(); c.arc(x + dx * m, H * 0.12 - 3, 3, 0, 7); c.fill(); R.glows.push([x + dx * m, H * 0.12, 0.8 * m]); } }
   // floor: rug, then everything from the back to the front
   if (q >= 2) { const [x, y] = R.P(0.47, 0.45), m = R.M(0.45); c.fillStyle = q >= 4 ? '#8a3a3a' : '#b5823a'; c.beginPath(); c.ellipse(x, y, (q >= 4 ? 1.6 : 1.1) * m, 0.42 * m, 0, 0, 7); c.fill(); c.strokeStyle = 'rgba(255,240,200,.35)'; c.lineWidth = 2; c.beginPath(); c.ellipse(x, y, (q >= 4 ? 1.4 : 0.95) * m, 0.34 * m, 0, 0, 7); c.stroke(); }
-  const items = [];
-  // beds against the right wall, 2 m long, one behind another (up to 6 shown)
-  const nBeds = beds(b), quilt = curtains ? ['#c9553d', '#4f7fb5', '#d19a3a', '#8a5fb0'] : ['#c9b48e'];
+  const items = [], floor = (R.st && R.st.floor) || 0, up = floor > 0;
+  // Beds and pieces exactly where the household has put them (the layout in b.beds and b.furn).
+  const quilt = curtains ? ['#c9553d', '#4f7fb5', '#d19a3a', '#8a5fb0'] : ['#c9b48e'];
   const sleepers = g.villagers.filter(v => v.inside && v.act && v.act.type === 'sleep' && v.act.bed === b.id);
-  const SPOTS = [[0.86, 0.06], [0.62, 0.06], [0.88, 0.42], [0.88, 0.8]], shown = Math.min(SPOTS.length, nBeds);   // the rest are upstairs
-  for (let i = 0; i < shown; i++) items.push({ d: SPOTS[i][1], f: () => bed(R, SPOTS[i][0], SPOTS[i][1], quilt[i % quilt.length], sleepers[i]) });
-  // Placed pieces (the player's furnishing); a bare room gets its plain table and stool.
-  const placed = b.furn || [];
-  for (const f of placed) { const s = spotsFor(b).find(x => x.id === f.spot); if (s) items.push({ d: s.d + 0.001, f: () => piece(R, f, s) }); }
+  const here = itemsOn(b, floor), sel = R.st && R.st.sel && R.st.sel.ref;
+  for (const it of here) {
+    if (it.kind === 'bed') items.push({ d: it.ref.d, f: () => bed(R, it.ref.u, it.ref.d, quilt[it.i % quilt.length], sleepers[it.i], it.ref.flip, it.ref === sel) });
+    else items.push({ d: it.ref.d + 0.001, f: () => piece(R, it.ref, it.ref, it.ref === sel) });
+  }
+  if (floorsOf(b) > 1) items.push({ d: up ? 0.02 : 0.03, f: () => stairs(R, up) });
+  // A room with no table of its own gets its plain table and stool (downstairs).
   const fine = q >= 2 && (!uses('furniture') || has('furniture'));
-  if (!placed.some(f => !PIECES[f.id].treasure)) items.push({ d: 0.5, f: () => {
+  if (!up && !(b.furn || []).some(f => f.id === 'table')) items.push({ d: 0.5, f: () => {
     const p = g.pantry || {};
-    if (fine) { floorBox(R, 0.28, 0.42, 0.45, 0.45, '#7a4a2c'); const [x, y, m] = floorBox(R, 0.4, 0.5, 1.2, 0.75, '#8a5a3a'); floorBox(R, 0.52, 0.58, 0.45, 0.45, '#7a4a2c'); tableTop(R, x, y, m, p, uses, has); }
-    else { const [x, y, m] = floorBox(R, 0.4, 0.5, 0.6, 0.45, '#8a6a44'); tableTop(R, x, y, m, p, uses, has); }
+    const t = floorsOf(b) > 1 ? 0.3 : 0.4;   // with stairs, the table moves over to make room
+    if (fine) { floorBox(R, t - 0.12, 0.42, 0.45, 0.45, '#7a4a2c'); const [x, y, m] = floorBox(R, t, 0.5, 1.2, 0.75, '#8a5a3a'); floorBox(R, t + 0.12, 0.58, 0.45, 0.45, '#7a4a2c'); tableTop(R, x, y, m, p, uses, has); }
+    else { const [x, y, m] = floorBox(R, t, 0.5, 0.6, 0.45, '#8a6a44'); tableTop(R, x, y, m, p, uses, has); }
   } });
   items.sort((a, z) => a.d - z.d).forEach(i => i.f());
-  spotsGlow(R);
-  R.notes.push(`${beds(b)} beds` + (beds(b) > 4 ? ' (some upstairs)' : ''));
+  const nb = (b.beds || []).length, upBeds = (b.beds || []).filter(x => x.floor === 1).length;
+  R.notes.push(`${nb} bed${nb === 1 ? '' : 's'}` + (floorsOf(b) > 1 ? ` (${nb - upBeds} down, ${upBeds} up)` : ''));
   R.notes.push(goods.length ? goods.map(r => `${ICON[r]} ${has(r) ? '✓' : '·'}`).join(' ') : 'Plain and snug');
-  if (placed.length) R.notes.push(`${placed.length} piece${placed.length === 1 ? '' : 's'} placed`);
+  const placed = (b.furn || []).length; if (placed) R.notes.push(`${placed} piece${placed === 1 ? '' : 's'} placed`);
   if (sleepers.length) R.notes.push(`${sleepers.length} asleep`);
 }
-// Glowing spots while choosing where a piece goes; a ring round the selected piece.
-function spotsGlow(R) {
-  const { c, b, st, T } = R;
-  if (!st || (!st.mode && !st.sel)) return;
-  const kind = st.mode === 'place' ? PIECES[st.piece].spot : st.sel ? PIECES[(pieceAt(b, st.sel) || {}).id || 'chair'].spot : null;
-  for (const s of spotsFor(b)) {
-    const [x, y] = R.P(s.u, s.d), m = R.M(s.d), mine = s.id === st.sel, fits = st.mode && s.kind === kind && (!pieceAt(b, s.id) || st.mode === 'move');
-    if (!mine && !fits) continue;
-    c.strokeStyle = mine ? '#f2c14e' : `rgba(255,236,160,${0.55 + 0.35 * Math.sin(T * 4)})`; c.lineWidth = mine ? 3 : 2.5;
-    c.beginPath(); c.ellipse(x, y, 0.5 * m, 0.16 * m, 0, 0, 7); c.stroke();
-    if (fits && !mine) { c.fillStyle = 'rgba(255,236,160,.22)'; c.fill(); }
-  }
+// The stairs: going up from the back corner downstairs, an opening with a rail upstairs.
+function stairs(R, up) {
+  const { c, L } = R;
+  if (!up) { for (let k = 5; k >= 0; k--) { const d = 0.58 - k * 0.07, [x, y] = R.P(0.93, d), m = R.M(d); rect(c, x - 0.45 * m, y - (k + 1) * 0.42 * m, 0.9 * m, (k + 1) * 0.42 * m, shade(L.trim, 1.25 - k * 0.04)); rect(c, x - 0.45 * m, y - (k + 1) * 0.42 * m, 0.9 * m, 0.06 * m, shade(L.trim, 1.5)); } return; }
+  const [x, y] = R.P(0.9, 0.4), m = R.M(0.4);
+  c.fillStyle = 'rgba(30,20,10,.55)'; c.fillRect(x - 0.6 * m, y - 0.25 * m, 1.2 * m, 0.5 * m);
+  rect(c, x - 0.65 * m, y - 0.95 * m, 1.3 * m, 0.07 * m, L.trim); for (const dx of [-0.6, -0.2, 0.2, 0.6]) rect(c, x + dx * m - 0.03 * m, y - 0.95 * m, 0.06 * m, 0.7 * m, L.trim);
 }
 // One placed piece, drawn to scale at its spot (mirrored when turned).
-function piece(R, f, s) {
+function piece(R, f, s, picked) {
   const { c, T } = R, p = PIECES[f.id], [x0] = R.P(s.u, s.d);
+  if (picked) ring(R, s.u, s.d, Math.max(0.5, p.w));
   c.save(); if (f.flip) { c.translate(x0 * 2, 0); c.scale(-1, 1); }
   const [x, y] = R.P(s.u, s.d), m = R.M(s.d);
   switch (f.id) {
@@ -310,12 +263,17 @@ function piece(R, f, s) {
   }
   c.restore();
 }
-function bed(R, u, d, quilt, sleeper) {
-  const { c, q, L } = R, [x, y] = R.P(u, d), m = R.M(d), len = 2.0 * m, hgt = (q === 0 ? 0.15 : 0.45) * m;
+function ring(R, u, d, w) { const { c, T } = R, [x, y] = R.P(u, d), m = R.M(d); c.strokeStyle = `rgba(242,193,78,${0.7 + 0.3 * Math.sin(T * 5)})`; c.lineWidth = 3; c.beginPath(); c.ellipse(x, y, (w / 2 + 0.15) * m, 0.22 * m, 0, 0, 7); c.stroke(); }
+function bed(R, u, d, quilt, sleeper, flip, picked) {
+  const { c, q, L } = R, [x0] = R.P(u, d);
+  if (picked) ring(R, u, d, 2.0);
+  c.save(); if (flip) { c.translate(x0 * 2, 0); c.scale(-1, 1); }
+  const [x, y] = R.P(u, d), m = R.M(d), len = 2.0 * m, hgt = (q === 0 ? 0.15 : 0.45) * m;
   if (q > 0) rect(c, x + len / 2 - 0.06 * m, y - 0.9 * m, 0.08 * m, 0.9 * m, L.trim);           // headboard
   c.fillStyle = q === 0 ? '#c9b48e' : quilt; c.beginPath(); c.roundRect(x - len / 2, y - hgt, len, hgt, 0.08 * m); c.fill();
   c.fillStyle = '#f3ecdc'; c.beginPath(); c.roundRect(x + len / 2 - 0.5 * m, y - hgt - 0.1 * m, 0.4 * m, 0.16 * m, 0.06 * m); c.fill();
   if (sleeper) { c.fillStyle = sleeper.skin || '#c08a5d'; c.beginPath(); c.arc(x + len / 2 - 0.3 * m, y - hgt - 0.08 * m, 0.12 * m, 0, 7); c.fill(); c.fillStyle = sleeper.hair || '#3d2b20'; c.beginPath(); c.arc(x + len / 2 - 0.22 * m, y - hgt - 0.12 * m, 0.1 * m, 0, 7); c.fill(); c.fillStyle = shade(quilt, 0.9); c.beginPath(); c.roundRect(x - len / 2 + 0.1 * m, y - hgt - 0.12 * m, len - 0.65 * m, 0.16 * m, 0.08 * m); c.fill(); }
+  c.restore();
 }
 function tableTop(R, x, y, m, p, uses, has) {
   const { c } = R;
@@ -416,4 +374,30 @@ function library(R) {
   const readers = g.villagers.filter(v => v.act && v.act.type === 'sit' && v.act.tavern === b.id && v.act.phase === 'wait');
   [[0.35, 0.6], [0.65, 0.6]].forEach(([u, d], i) => { if (readers[i]) person(R, u, d - 0.06, readers[i], 'sit'); const [x, y, m] = floorBox(R, u, d, 1.0, 0.75, '#8a5a3a'); emoji(c, '📖', x, y - 0.1 * m, 0.25 * m); });
   R.notes.push(readers.length ? `${readers.length} reading` : 'Hushed and waiting for readers'); R.notes.push(`🎭 culture ${Math.floor(g.culture || 0)}`);
+}
+
+// The observatory: a dark dome, the great telescope, and the stars through the slit (by night).
+function observatory(R) {
+  const { c, g, W, H, T, bx0, bx1, by0, by1 } = R;
+  rect(c, bx0, by0, bx1 - bx0, by1 - by0, '#2a2f4a');
+  const night = R.night;
+  c.fillStyle = night ? '#141a3a' : '#7fa8d0'; c.fillRect((bx0 + bx1) / 2 - 22, by0, 44, (by1 - by0) * 0.75);
+  if (night) for (let i = 0; i < 60; i++) { const x = bx0 + ((i * 97) % 100) / 100 * (bx1 - bx0), y = by0 + ((i * 53) % 100) / 100 * (by1 - by0) * 0.8, tw = 0.5 + 0.5 * Math.sin(T * 2 + i); c.fillStyle = `rgba(255,250,220,${0.4 + 0.5 * tw})`; c.fillRect(x, y, 1.6, 1.6); }
+  const [x, y, m] = floorBox(R, 0.5, 0.5, 0.6, 0.9, '#6a4a2c');
+  c.save(); c.translate(x, y - 0.1 * m); c.rotate(-0.6); rect(c, -0.12 * m, -1.6 * m, 0.24 * m, 1.8 * m, '#b8963a'); rect(c, -0.15 * m, -1.7 * m, 0.3 * m, 0.14 * m, '#8a7040'); c.restore();
+  R.notes.push(night ? 'The stars are out' : 'Waiting for nightfall'); R.notes.push('Research costs a third less');
+}
+// The bathhouse: warm tiled tubs and steam.
+function bathhouse(R) {
+  const { c, g, b, T } = R;
+  windowAt(R, 0.5, null);
+  const here = g.villagers.filter(v => v.act && v.act.type === 'sit' && v.act.tavern === b.id && v.act.phase === 'wait');
+  [[0.3, 0.5], [0.7, 0.5]].forEach(([u, d], i) => {
+    const [x, y] = R.P(u, d), m = R.M(d);
+    c.fillStyle = '#b8b0a2'; c.beginPath(); c.ellipse(x, y - 0.2 * m, 0.9 * m, 0.3 * m, 0, 0, 7); c.fill();
+    c.fillStyle = '#7fb8c8'; c.beginPath(); c.ellipse(x, y - 0.26 * m, 0.75 * m, 0.22 * m, 0, 0, 7); c.fill();
+    if (here[i]) { c.fillStyle = here[i].skin || '#c08a5d'; c.beginPath(); c.arc(x, y - 0.4 * m, 0.13 * m, 0, 7); c.fill(); }
+    for (let k = 0; k < 3; k++) { c.fillStyle = `rgba(255,255,255,${0.15 + 0.1 * Math.sin(T * 2 + k + i)})`; c.beginPath(); c.arc(x - 0.3 * m + k * 0.3 * m, y - (0.7 + 0.2 * Math.sin(T + k)) * m, 0.18 * m, 0, 7); c.fill(); }
+  });
+  R.notes.push(here.length ? `${here.length} soaking` : 'Warm water waiting');
 }

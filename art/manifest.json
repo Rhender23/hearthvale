@@ -2038,6 +2038,502 @@
     42
    ],
    "from": "3d"
+  },
+  "building/blacksmith": {
+   "file": "building-blacksmith.png",
+   "anchor": [
+    71,
+    133
+   ],
+   "from": "3d"
+  },
+  "building/blacksmith/winter": {
+   "file": "building-blacksmith-winter.png",
+   "anchor": [
+    71,
+    133
+   ],
+   "from": "3d"
+  },
+  "building/blacksmith-night": {
+   "file": "building-blacksmith-night.png",
+   "anchor": [
+    71,
+    133
+   ],
+   "from": "3d"
+  },
+  "building/watertower": {
+   "file": "building-watertower.png",
+   "anchor": [
+    71,
+    163
+   ],
+   "from": "3d"
+  },
+  "building/watertower/winter": {
+   "file": "building-watertower-winter.png",
+   "anchor": [
+    71,
+    163
+   ],
+   "from": "3d"
+  },
+  "building/waystation": {
+   "file": "building-waystation.png",
+   "anchor": [
+    135,
+    182
+   ],
+   "from": "3d"
+  },
+  "building/waystation/winter": {
+   "file": "building-waystation-winter.png",
+   "anchor": [
+    135,
+    182
+   ],
+   "from": "3d"
+  },
+  "building/waystation-night": {
+   "file": "building-waystation-night.png",
+   "anchor": [
+    135,
+    182
+   ],
+   "from": "3d"
+  },
+  "building/orchard_apple": {
+   "file": "building-orchard_apple.png",
+   "anchor": [
+    135,
+    154
+   ],
+   "from": "3d"
+  },
+  "building/orchard_apple/winter": {
+   "file": "building-orchard_apple-winter.png",
+   "anchor": [
+    135,
+    154
+   ],
+   "from": "3d"
+  },
+  "building/orchard_apple/spring": {
+   "file": "building-orchard_apple-spring.png",
+   "anchor": [
+    135,
+    172
+   ],
+   "from": "3d"
+  },
+  "building/orchard_apple/spring/winter": {
+   "file": "building-orchard_apple-spring-winter.png",
+   "anchor": [
+    135,
+    171
+   ],
+   "from": "3d"
+  },
+  "building/orchard_apple/summer": {
+   "file": "building-orchard_apple-summer.png",
+   "anchor": [
+    135,
+    172
+   ],
+   "from": "3d"
+  },
+  "building/orchard_apple/summer/winter": {
+   "file": "building-orchard_apple-summer-winter.png",
+   "anchor": [
+    135,
+    154
+   ],
+   "from": "3d"
+  },
+  "building/orchard_apple/autumn": {
+   "file": "building-orchard_apple-autumn.png",
+   "anchor": [
+    135,
+    172
+   ],
+   "from": "3d"
+  },
+  "building/orchard_apple/autumn/winter": {
+   "file": "building-orchard_apple-autumn-winter.png",
+   "anchor": [
+    135,
+    172
+   ],
+   "from": "3d"
+  },
+  "building/orchard_pear": {
+   "file": "building-orchard_pear.png",
+   "anchor": [
+    135,
+    154
+   ],
+   "from": "3d"
+  },
+  "building/orchard_pear/winter": {
+   "file": "building-orchard_pear-winter.png",
+   "anchor": [
+    135,
+    154
+   ],
+   "from": "3d"
+  },
+  "building/orchard_pear/spring": {
+   "file": "building-orchard_pear-spring.png",
+   "anchor": [
+    135,
+    172
+   ],
+   "from": "3d"
+  },
+  "building/orchard_pear/spring/winter": {
+   "file": "building-orchard_pear-spring-winter.png",
+   "anchor": [
+    135,
+    171
+   ],
+   "from": "3d"
+  },
+  "building/orchard_pear/summer": {
+   "file": "building-orchard_pear-summer.png",
+   "anchor": [
+    135,
+    172
+   ],
+   "from": "3d"
+  },
+  "building/orchard_pear/summer/winter": {
+   "file": "building-orchard_pear-summer-winter.png",
+   "anchor": [
+    135,
+    161
+   ],
+   "from": "3d"
+  },
+  "building/orchard_pear/autumn": {
+   "file": "building-orchard_pear-autumn.png",
+   "anchor": [
+    135,
+    172
+   ],
+   "from": "3d"
+  },
+  "building/orchard_pear/autumn/winter": {
+   "file": "building-orchard_pear-autumn-winter.png",
+   "anchor": [
+    135,
+    172
+   ],
+   "from": "3d"
+  },
+  "building/orchard_cherry": {
+   "file": "building-orchard_cherry.png",
+   "anchor": [
+    135,
+    154
+   ],
+   "from": "3d"
+  },
+  "building/orchard_cherry/winter": {
+   "file": "building-orchard_cherry-winter.png",
+   "anchor": [
+    135,
+    154
+   ],
+   "from": "3d"
+  },
+  "building/orchard_cherry/spring": {
+   "file": "building-orchard_cherry-spring.png",
+   "anchor": [
+    135,
+    172
+   ],
+   "from": "3d"
+  },
+  "building/orchard_cherry/spring/winter": {
+   "file": "building-orchard_cherry-spring-winter.png",
+   "anchor": [
+    135,
+    171
+   ],
+   "from": "3d"
+  },
+  "building/orchard_cherry/summer": {
+   "file": "building-orchard_cherry-summer.png",
+   "anchor": [
+    135,
+    172
+   ],
+   "from": "3d"
+  },
+  "building/orchard_cherry/summer/winter": {
+   "file": "building-orchard_cherry-summer-winter.png",
+   "anchor": [
+    135,
+    161
+   ],
+   "from": "3d"
+  },
+  "building/orchard_cherry/autumn": {
+   "file": "building-orchard_cherry-autumn.png",
+   "anchor": [
+    135,
+    172
+   ],
+   "from": "3d"
+  },
+  "building/orchard_cherry/autumn/winter": {
+   "file": "building-orchard_cherry-autumn-winter.png",
+   "anchor": [
+    135,
+    172
+   ],
+   "from": "3d"
+  },
+  "building/orchard_plum": {
+   "file": "building-orchard_plum.png",
+   "anchor": [
+    135,
+    154
+   ],
+   "from": "3d"
+  },
+  "building/orchard_plum/winter": {
+   "file": "building-orchard_plum-winter.png",
+   "anchor": [
+    135,
+    154
+   ],
+   "from": "3d"
+  },
+  "building/orchard_plum/spring": {
+   "file": "building-orchard_plum-spring.png",
+   "anchor": [
+    135,
+    172
+   ],
+   "from": "3d"
+  },
+  "building/orchard_plum/spring/winter": {
+   "file": "building-orchard_plum-spring-winter.png",
+   "anchor": [
+    135,
+    171
+   ],
+   "from": "3d"
+  },
+  "building/orchard_plum/summer": {
+   "file": "building-orchard_plum-summer.png",
+   "anchor": [
+    135,
+    172
+   ],
+   "from": "3d"
+  },
+  "building/orchard_plum/summer/winter": {
+   "file": "building-orchard_plum-summer-winter.png",
+   "anchor": [
+    135,
+    154
+   ],
+   "from": "3d"
+  },
+  "building/orchard_plum/autumn": {
+   "file": "building-orchard_plum-autumn.png",
+   "anchor": [
+    135,
+    172
+   ],
+   "from": "3d"
+  },
+  "building/orchard_plum/autumn/winter": {
+   "file": "building-orchard_plum-autumn-winter.png",
+   "anchor": [
+    135,
+    172
+   ],
+   "from": "3d"
+  },
+  "building/greenhouse": {
+   "file": "building-greenhouse.png",
+   "anchor": [
+    135,
+    170
+   ],
+   "from": "3d"
+  },
+  "building/greenhouse/winter": {
+   "file": "building-greenhouse-winter.png",
+   "anchor": [
+    135,
+    170
+   ],
+   "from": "3d"
+  },
+  "building/stable": {
+   "file": "building-stable.png",
+   "anchor": [
+    135,
+    183
+   ],
+   "from": "3d"
+  },
+  "building/stable/winter": {
+   "file": "building-stable-winter.png",
+   "anchor": [
+    135,
+    183
+   ],
+   "from": "3d"
+  },
+  "building/church/1": {
+   "file": "building-church-1.png",
+   "anchor": [
+    135,
+    282
+   ],
+   "from": "3d"
+  },
+  "building/church/1/winter": {
+   "file": "building-church-1-winter.png",
+   "anchor": [
+    135,
+    282
+   ],
+   "from": "3d"
+  },
+  "building/church/1-night": {
+   "file": "building-church-1-night.png",
+   "anchor": [
+    135,
+    282
+   ],
+   "from": "3d"
+  },
+  "building/bathhouse": {
+   "file": "building-bathhouse.png",
+   "anchor": [
+    135,
+    163
+   ],
+   "from": "3d"
+  },
+  "building/bathhouse/winter": {
+   "file": "building-bathhouse-winter.png",
+   "anchor": [
+    135,
+    163
+   ],
+   "from": "3d"
+  },
+  "building/bathhouse-night": {
+   "file": "building-bathhouse-night.png",
+   "anchor": [
+    135,
+    163
+   ],
+   "from": "3d"
+  },
+  "building/bandstand": {
+   "file": "building-bandstand.png",
+   "anchor": [
+    135,
+    159
+   ],
+   "from": "3d"
+  },
+  "building/bandstand/winter": {
+   "file": "building-bandstand-winter.png",
+   "anchor": [
+    135,
+    159
+   ],
+   "from": "3d"
+  },
+  "building/greathall": {
+   "file": "building-greathall.png",
+   "anchor": [
+    199,
+    295
+   ],
+   "from": "3d"
+  },
+  "building/greathall/winter": {
+   "file": "building-greathall-winter.png",
+   "anchor": [
+    199,
+    295
+   ],
+   "from": "3d"
+  },
+  "building/greathall-night": {
+   "file": "building-greathall-night.png",
+   "anchor": [
+    199,
+    295
+   ],
+   "from": "3d"
+  },
+  "building/observatory": {
+   "file": "building-observatory.png",
+   "anchor": [
+    135,
+    206
+   ],
+   "from": "3d"
+  },
+  "building/observatory/winter": {
+   "file": "building-observatory-winter.png",
+   "anchor": [
+    135,
+    206
+   ],
+   "from": "3d"
+  },
+  "building/observatory-night": {
+   "file": "building-observatory-night.png",
+   "anchor": [
+    135,
+    206
+   ],
+   "from": "3d"
+  },
+  "site/3x3": {
+   "file": "site-3x3.png",
+   "anchor": [
+    199,
+    264
+   ],
+   "from": "3d"
+  },
+  "site/3x3/winter": {
+   "file": "site-3x3-winter.png",
+   "anchor": [
+    199,
+    264
+   ],
+   "from": "3d"
+  },
+  "building/botanical": {
+   "file": "building-botanical.png",
+   "anchor": [
+    199,
+    206
+   ],
+   "from": "3d"
+  },
+  "building/botanical/winter": {
+   "file": "building-botanical-winter.png",
+   "anchor": [
+    199,
+    198
+   ],
+   "from": "3d"
   }
  }
 }

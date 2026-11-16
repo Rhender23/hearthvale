@@ -7,6 +7,10 @@ import { addRes, isNight, completeBuilding, canStore, acceptsAt, record, pay, ha
 import { finish, action } from './villagers.js';
 
 import { dutyFailed } from './duty.js';
+import { besideThirstyHome, anyThirstyHome, fillHomeAt } from './household.js';
+import { isGrand, stageDone, canWork, beginNext } from './grand.js';
+import { isOrchard, restingWhy } from './orchards.js';
+import { carryOf } from './stable.js';
 const RUN = 0, DONE = 1, FAIL = 2;
 const FARM_KIND = 6;
 const at = v => [Math.round(v.x), Math.round(v.y)];
@@ -35,9 +39,14 @@ function haul(g, v, a) {
   if (v.carry <= 0) return 'done';
   if (!canStore(g, v.carryRes)) { v.why = `Waiting for room in the stores for more ${v.carryRes === 'food' ? 'food' : v.carryRes}.`; return 'full'; }
   if (!a.haulT0) { a.haulT0 = g.clock; a.from = [Math.round(v.x), Math.round(v.y)]; }
-  const s = go(g, v, a, (x, y) => isDropoff(g, x, y, v.carryRes));
+  // Water goes to a home with room in its barrel first; if none can be reached, to any store.
+  if (a.toHome === undefined) a.toHome = v.carryRes === 'water' && anyThirstyHome(g);
+  let s = go(g, v, a, a.toHome ? (x, y) => besideThirstyHome(g, x, y) : (x, y) => isDropoff(g, x, y, v.carryRes));
+  if (s === 'fail' && a.toHome) { a.toHome = false; a.tries = 0; v.noWay = null; v.path = []; return 'walking'; }
   if (s !== 'arrived') return s;
   addRes(g, v.carryRes, v.carry); record(g, 'in', v.carryRes, v.carry);
+  if (v.carryRes === 'water') { const [px, py] = at(v); fillHomeAt(g, px, py, v.carry); }
+  a.toHome = undefined;
   if (v.carryRes === 'food') { const p = g.pantry || (g.pantry = {}), k = PANTRY_KIND[v.carryKind] || 'provisions'; p[k] = (p[k] || 0) + v.carry; }
   g.events.emit('delivered', { v, res: v.carryRes, n: v.carry, walk: g.clock - a.haulT0, from: a.from });
   a.haulT0 = 0; v.why = '';
@@ -99,7 +108,7 @@ const H = {
         if (v.carryKind !== k) v.carry = 0;
         v.carryKind = k; v.carryRes = info.res; v.carry++;
         g.events.emit('gathered', { v, k });
-        if (v.carry >= g.mods.carry) return phase(a, 'haul');
+        if (v.carry >= carryOf(g, v)) return phase(a, 'haul');
         if (a.node == null) return phase(a, 'find');
         return RUN;
       }
@@ -121,6 +130,7 @@ const H = {
         return RUN;
       }
       case 'work': {
+        if (b.food <= 0 && isOrchard(b)) { v.why = restingWhy(g, b); return v.carry > 0 ? phase(a, 'haul') : DONE; }   // orchards rest out of season; nothing to re-sow
         if (b.food <= 0) {
           if (g.res.wood < RESOW_COST) { v.why = 'Waiting for wood to re-sow the field.'; return FAIL; }
           g.res.wood -= RESOW_COST; record(g, 'out', 'wood', RESOW_COST); b.food = b.k === 'farm' ? g.mods.farmFood : BUILD[b.k].food; g.events.emit('resown', b);
@@ -129,8 +139,8 @@ const H = {
         if (a.t < 0.9 * g.mods.farmRate) return RUN;
         a.t = 0; b.food--;
         if (v.carryRes !== crop) v.carry = 0;
-        v.carryKind = FARM_KIND; v.carryRes = crop; v.carry++;
-        return v.carry >= g.mods.carry ? phase(a, 'haul') : RUN;
+        v.carryKind = isOrchard(b) ? KIND_CODE.fruit : FARM_KIND; v.carryRes = crop; v.carry++;
+        return v.carry >= carryOf(g, v) ? phase(a, 'haul') : RUN;
       }
       case 'haul': return hauling(g, v, a, 'go');
     }
@@ -172,7 +182,7 @@ const H = {
         if (b) b.water -= 1;
         if (v.carryRes !== 'water') v.carry = 0;
         v.carryRes = 'water'; v.carryKind = 7; v.carry++;
-        return v.carry >= g.mods.carry ? phase(a, 'haul') : RUN;
+        return v.carry >= carryOf(g, v) ? phase(a, 'haul') : RUN;
       }
       case 'haul': return hauling(g, v, a, 'find');
     }
@@ -271,8 +281,10 @@ const H = {
       if (s === 'arrived') { face(v, b.x, b.y); return phase(a, 'work'); }
       return RUN;
     }
+    if (b.waiting) { if (!canWork(g, b) || !beginNext(g, b)) { v.why = `Waiting for the stores to cover the next stage of the ${BUILD[b.k].name.toLowerCase()}.`; return DONE; } }
     b.prog += dt;
     if (b.prog >= b.time) {
+      if (isGrand(b.k)) { const r = stageDone(g, b); if (r === 'next') return RUN; if (r === 'wait') { v.why = `Waiting for the stores to cover the next stage of the ${BUILD[b.k].name.toLowerCase()}.`; return DONE; } }
       completeBuilding(g, b);
       if (b.k === 'farm') a.next = action('farm', { b: b.id, src: a.src, pri: a.pri, key: 'farm', why: 'Tending the new field.' });
       return DONE;
@@ -386,7 +398,7 @@ const H = {
         const d = Math.hypot(b.x - px, b.y - py);
         if (d < bd) { bd = d; best = b; }
       }
-      if (best) { best.sleepers++; a.bed = best.id; }
+      if (best) { best.sleepers++; a.bed = best.id; if (BUILD[best.k].home) v.homeId = best.id; }
       else {
         const f = g.w.fire, taken = g.villagers.filter(u => u !== v && u.act && u.act.type === 'sleep' && !u.act.bed).length;
         const ring = DIRS8.map(([dx, dy]) => [f.x + dx, f.y + dy]).filter(([x, y]) => walkable(g.w, x, y));

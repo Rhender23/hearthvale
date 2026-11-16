@@ -1,0 +1,6 @@
+# made by the tools, not kept in the repository
+tools/previews/
+tools/models/out/
+__pycache__/
+*.pyc
+.DS_Store

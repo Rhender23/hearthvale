@@ -1,6 +1,10 @@
 // What the interface says about a building, villager or resource spot. Pure text from the game state; no DOM.
 //   summary(...)  one short line for the bubble
 //   details(...)  every line, for the Details sheet
+import { isGrand, stageLine, stagesOf, stageOf, nextStageCost } from '../core/grand.js';
+import { isOrchard, restingWhy } from '../core/orchards.js';
+import { homeWater, homeWaterCap } from '../core/household.js';
+import { shortOf } from '../core/requires.js';
 import { BUILD, TIERS, ICON, RES, RES_NAME, ROLE_NAME, MERCHANT, FOCI, NODE_INFO } from '../core/config.js';
 import { popCap, isNight, beds, storeOf, levelName, townCenter, beautyOf, farmSlots, slotsUsed } from '../core/state.js';
 import { daysToMerchant, priceOf } from '../core/merchant.js';
@@ -14,8 +18,10 @@ import { fmt } from './dom.js';
 import { ageNeeds } from '../core/requires.js';
 import { AGES, DAY } from '../core/config.js';
 import { workersAt } from './render/workers.js';
+import { homeLines } from './homehints.js';
 const fmtN = n => (Math.round(n * 100) / 100).toString();
 
+const cap1 = t => t.charAt(0).toUpperCase() + t.slice(1);
 export const NODE_NAME = { 1: 'Tree', 2: 'Stone', 3: 'Gold', 4: 'Berry bush', 5: 'Fish', 6: 'Clay' };
 const holds = (G, b) => RES.filter(r => storeOf(G, b, r) > 0).map(r => Math.round(storeOf(G, b, r)) + ICON[r]).join(' ');
 
@@ -23,7 +29,8 @@ export function buildingTitle(b) { return b.done ? levelName(b) : BUILD[b.k].nam
 
 export function buildingSummary(G, b) {
   const def = BUILD[b.k];
-  if (!b.done) return `Being built: ${Math.round(100 * b.prog / b.time)}%`;
+  if (!b.done) return isGrand(b.k) ? `${stageLine(b)}: ${b.waiting ? 'waiting for ' + (shortOf(G, nextStageCost(b)) || 'the builders').replace(/^Needs /, '').replace(/\.$/, '') : Math.round(100 * b.prog / b.time) + '%'}` : `Being built: ${Math.round(100 * b.prog / b.time)}%`;
+  if (isOrchard(b)) return b.food >= 1 ? `${cap1(def.orchard.fruit)} to pick: ${Math.round(b.food)}` : restingWhy(G, b);
   if (b.k === 'farmhouse') { const s = farmSlots(b); return `Fields ${slotsUsed(G, b, 'fields')} of ${s.fields} · Animals ${slotsUsed(G, b, 'animals')} of ${s.animals}`; }
   if (def.craft) { const who = G.villagers.find(v => v.job === b.id); return who ? `${who.name} works here` : 'Waiting for a worker: tap it with a villager selected'; }
   if (b.k === 'tc' || (b.k === 'campfire' && !townCenter(G))) return `Villagers ${G.villagers.length} of ${popCap(G)} · Spirits ${Math.round((G.social || 0) * 100)}%`;
@@ -37,21 +44,22 @@ export function buildingSummary(G, b) {
 
 export function buildingDetails(G, b) {
   const def = BUILD[b.k], parts = [];
-  if (!b.done) return [`Being built: ${Math.round(100 * b.prog / b.time)}%`, def.desc];
+  if (!b.done) return isGrand(b.k) ? [`${stageLine(b)}: ${Math.round(100 * b.prog / b.time)}%`, ...stagesOf(b.k).map((s, i) => `${i < stageOf(b) ? '✓' : i === stageOf(b) ? '●' : '○'} Stage ${i + 1}: ${fmt(s.cost)}`), def.desc] : [`Being built: ${Math.round(100 * b.prog / b.time)}%`, def.desc];
   parts.push(def.desc);
   if (b.k === 'tc' || (b.k === 'campfire' && !townCenter(G))) parts.push(`Villagers: ${G.villagers.length} of ${popCap(G)} · Focus: ${FOCI[G.focus].name}`);
   if (b.k === 'campfire' && !townCenter(G)) parts.push('Build a town center to grow beyond a hamlet.');
-  if (b.k === 'farmhouse') { const s = farmSlots(b); parts.push(`Fields ${slotsUsed(G, b, 'fields')} of ${s.fields} · Animals ${slotsUsed(G, b, 'animals')} of ${s.animals}. Fields and pens go within 4 tiles; a higher level has more room.`); }
+  if (b.k === 'farmhouse') { const s = farmSlots(b); parts.push(`Fields ${slotsUsed(G, b, 'fields')} of ${s.fields} · Animals ${slotsUsed(G, b, 'animals')} of ${s.animals}. Fields join it in a chain, touching it or each other; pens go within 4 tiles. A higher level has more room.`); }
   if (def.craft) { const c = def.craft, who = G.villagers.find(v => v.job === b.id), [o] = Object.keys(c.out);
     parts.push(`${who ? who.name + ' works here' : 'No worker yet: select a villager, then tap this building'} · makes ${c.out[o]} ${o} from ${Object.entries(c.in).map(([r, n]) => n + ' ' + r).join(' and ')}`); }
   if (b.k === 'market') { parts.push('Buys spare ' + Object.keys(MERCHANT.price).map(r => `${r} ${priceOf(G, r)}${ICON.gold}`).join(', ') + ' (homes keep what they need).'); }
-  if (b.k === 'shop') { const t = TIERS.shop[b.lvl || 0]; parts.push(`Hands goods to homes within ${t.reach} tiles · sells up to ${t.sells} spare goods a day`); if (b.earned) parts.push(`Sold today for ${b.earned}${ICON.gold}`); }
+  if (b.k === 'shop') { const t = TIERS.shop[b.lvl || 0]; parts.push(`Hands goods to every home · sells up to ${t.sells} spare goods a day`); if (b.earned) parts.push(`Sold today for ${b.earned}${ICON.gold}`); }
   if (b.k === 'tc' || (b.k === 'campfire' && !townCenter(G))) { const f = wantedFestival(G); if (f && !G.festival) parts.push(`🎉 ${f.name}: ${fmt(festivalCost(G, f))}`); else if (G.festival) parts.push(`🎉 ${G.festival.name} planned`); if (G.seasonal) parts.push(`${G.seasonal.icon} ${G.seasonal.name}${G.seasonal.phase === 'on' ? ' today!' : ' coming'}`); parts.push(`Spirits ${Math.round((G.social || 0) * 100)}%`); }
   if (def.animals) parts.push(`${def.animals.kind === 'bees' ? 'Hives' : 'Animals'}: ${b.animals ?? def.animals.start} of ${def.animals.cap + (G.mods.penAdd || 0)}`);
   if (b.k === 'tavern') parts.push(G.res.beer >= 1 ? 'Beer in the cellar: evenings here lift spirits twice as fast' : 'Brewing beer would make evenings here livelier');
   if (b.k === 'well') parts.push(`Water: ${Math.floor(b.water)}`);
   if (def.beds) parts.push(`Beds: ${beds(b)}` + (isNight(G) ? ` · sleeping now: ${b.sleepers}` : ''));
-  if (def.home && TIERS[b.k] && !shopNear(G, b) && TIERS[b.k].some(t => (t.goods || []).length)) parts.push('A shop nearby lets this home reach finer levels.');
+  if (def.home && TIERS[b.k] && !shopNear(G, b) && TIERS[b.k].some(t => (t.goods || []).length)) parts.push('A shop in the village lets this home reach finer levels.');
+  if (def.home) { const c = homeWaterCap(G, b); if (c) parts.push(`Household water: ${homeWater(b)} of ${c}`); }
   if (def.home) { const sc = homeScore(G, b); parts.push(`Surroundings: ${beautyLabel(sc)} (${sc.toFixed(1)})`);
     const gd = TIERS[b.k] && TIERS[b.k][b.lvl].goods; if (gd && gd.length) { const dd = daysToGoods(G); parts.push(`Uses 1 ${gd.join(', 1 ')} ${dd ? `in ${dd} day${dd === 1 ? '' : 's'}` : 'tomorrow morning'}`); } }
   { const bv = beautyOf(b); if (bv && !def.home) parts.push(bv > 0 ? `Adds ${bv} beauty nearby` : `Unsightly: ${bv} beauty nearby`); }
@@ -104,7 +112,7 @@ function villagerWants0(G, v) {
 export function buildingWants(G, b) {
   const w = buildingWants0(G, b), e = b.done && workersAt(G).get(b.id);
   const who = e ? `Working here: ${e.names.join(', ')}.` : null;
-  return [who, w].filter(Boolean).join(' ') || null;
+  return [who, w, ...homeLines(G, b)].filter(Boolean).join(' ') || null;
 }
 function buildingWants0(G, b) {
   if (!b.done) return null;
@@ -126,7 +134,7 @@ function buildingWants0(G, b) {
     if (nx.age > G.age) return `Dreams of becoming a ${nx.name.toLowerCase()} in the ${['Hamlet', 'Village', 'Town', 'Township'][nx.age]} Age.`;
     const sc = homeScore(G, b); if (sc < nx.need) parts.push(`${beautyLabel(nx.need).toLowerCase()} surroundings (${sc.toFixed(1)} of ${nx.need})`);
     const goods = nx.goods || [];
-    if (goods.length && !shopNear(G, b)) parts.push('a stall within reach');
+    if (goods.length && !shopNear(G, b)) parts.push('a stall in the village');
     const noGoods = goods.filter(r => (G.res[r] || 0) < 1); if (noGoods.length) parts.push(noGoods.join(' and ') + ' in the stores');
     const info = improveInfo(G, b); if (!parts.length && info && info.reason) parts.push(info.reason.replace(/^Needs /, '').replace(/\.$/, ''));
     return parts.length ? `To become a ${nx.name.toLowerCase()}: ${list(parts)}.` : `Ready to become a ${nx.name.toLowerCase()}.`;

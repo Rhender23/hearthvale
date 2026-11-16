@@ -131,6 +131,8 @@ MATS = {   # base colour (sRGB), emissive (sRGB) — one cozy palette for every 
     'barrel': ((0.58, 0.40, 0.24), None), 'ember': ((0.55, 0.30, 0.18), (1.0, 0.45, 0.15)), 'sand': ((0.92, 0.84, 0.64), None),
     'leaves-dark': ((0.30, 0.48, 0.24), None), 'pine': ((0.24, 0.42, 0.28), None), 'wax': ((0.97, 0.90, 0.70), None),
     'hive': ((0.90, 0.74, 0.40), None),
+    'glass': ((0.70, 0.84, 0.88), None), 'apple': ((0.85, 0.20, 0.18), None), 'pear': ((0.80, 0.78, 0.35), None), 'plum': ((0.42, 0.24, 0.50), None),
+    'russet': ((0.78, 0.45, 0.18), None), 'copper': ((0.38, 0.62, 0.55), None), 'blossom': ((0.98, 0.82, 0.88), None),
 }
 
 

@@ -107,6 +107,27 @@ def campfire(level):
     return M
 
 
+
+# ---------------------------------------------------------------- v45: the botanical garden
+def botanical():
+    """3x3: winding gravel walks, beds of every colour, a little glasshouse and a fountain."""
+    M = Mesh()
+    M.box('grass', 0.05, 0, 0.05, 2.95, 0.01, 2.95)
+    for x0, z0, x1, z1 in ((1.42, 0.05, 1.58, 2.95), (0.05, 1.42, 2.95, 1.58)): M.box('sand', x0, 0.0, z0, x1, 0.02, z1)
+    M.cylinder('wall-stone', 1.5, 1.5, 0.28, 0, 0.12, n=12); M.cylinder('water', 1.5, 1.5, 0.24, 0.1, 0.125, n=12); M.cylinder('wall-stone', 1.5, 1.5, 0.05, 0.12, 0.35, n=8)
+    beds = ('pink-flowers', 'yellow-flowers', 'blue-flowers', 'flowers', 'white', 'blossom')
+    for i, (cx, cz) in enumerate(((0.7, 0.7), (2.3, 0.7), (0.7, 2.3))):
+        for k in range(7):
+            a = k * 0.9; M.blob('bush', cx + 0.4 * np.cos(a), 0.06, cz + 0.4 * np.sin(a), 0.1, seed=i * 9 + k, squash=0.7)
+            M.blob(beds[(i + k) % len(beds)], cx + 0.4 * np.cos(a), 0.14, cz + 0.4 * np.sin(a), 0.05, seed=k)
+        M.cylinder('trunk', cx, cz, 0.04, 0, 0.3, n=6); M.blob('leaves', cx, 0.45, cz, 0.2, seed=i)
+    # the little glasshouse
+    M.box('wall-brick', 1.9, 0, 1.9, 2.8, 0.08, 2.8); M.box('glass', 1.92, 0.08, 1.92, 2.78, 0.45, 2.78)
+    M.gable('glass', 'glass', 1.9, 2.8, 1.9, 2.8, 0.45, 0.72, over=0.02)
+    for x in np.linspace(1.92, 2.78, 5): M.box('white', x - 0.01, 0.08, 2.78, x + 0.01, 0.46, 2.8)
+    for x in (0.4, 2.6): M.box('wood', x - 0.15, 0, 1.25, x + 0.15, 0.1, 1.33)   # benches
+    return M
+
 MODELS = [
     ('building/flowerbed', flowerbed, {'tiles': [1, 1]}),
     ('building/bench', bench, {'tiles': [1, 1]}),
@@ -114,6 +135,7 @@ MODELS = [
     ('building/garden', garden, {'tiles': [1, 1]}),
     ('building/arbor', arbor, {'tiles': [1, 1], 'seasons': True}),
     ('building/fireflylamp', fireflylamp, {'tiles': [1, 1]}),
+    ('building/botanical', botanical, {'tiles': [3, 3]}),
     *[(f'building/well/{i}', (lambda i=i: well(i)), {'tiles': [1, 1]}) for i in range(3)],
     *[(f'building/campfire/{i}', (lambda i=i: campfire(i)), {'tiles': [1, 1]}) for i in range(3)],
 ]
