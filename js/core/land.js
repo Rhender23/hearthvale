@@ -4,6 +4,7 @@
 //   - saplings grow into trees; forests creep outward; berry bushes appear on long-empty grass near forest
 // Nothing grows in winter.
 import { N, NODE, NODE_INFO, DAY, REGROW_PER_DAY, STUMP_SAPLING } from './config.js';
+export const FISH_REGROW = 2, FISH_BACK = 2;   // fish regrow twice as fast, and an emptied shoal returns in 2 days
 import { idx, tx, ty, isOpen, countNear, buildingNear, WATER } from './world.js';
 // Nature keeps paths clear: nothing new grows on the road or within LAND.clearAround tiles of a building.
 import { seasonIndex } from './state.js';
@@ -16,17 +17,20 @@ const RENEWS = { [NODE.TREE]: true, [NODE.BERRY]: true, [NODE.FISH]: true, [NODE
 export function createLand(g) {
   let t = 0;
   const fishBack = [];
+  // Fish come back: an emptied shoal returns after FISH_BACK days, half full.
+  g.events.on('depleted', ({ i, k }) => { if (k === NODE.FISH) (g.fishBack = g.fishBack || []).push({ i, at: g.clock + FISH_BACK * DAY }); });
   g.events.on('depleted', ({ i, k }) => { if (k === NODE.FISH) fishBack.push({ i, t: FISH.back }); });
   g.events.on('depleted', ({ i, k }) => { if (k === NODE.TREE && !g.w.road[i] && !buildingNear(g.w, tx(i), ty(i), LAND.clearAround) && g.rng() < STUMP_SAPLING) g.w.G[i] = 1; });
   return {
     tick(dt) {
       const w = g.w, winter = seasonIndex(g) === 3;
+      if (g.fishBack && g.fishBack.length && g.fishBack[0].at <= g.clock) { const f = g.fishBack.shift(); if (!w.R[f.i] && !w.occ[f.i]) { w.R[f.i] = NODE.FISH; w.A[f.i] = Math.round(NODE_INFO[NODE.FISH].amt / 2); w.F[f.i] = 0; } }
       for (let i = 0; i < N * N; i++) {
         if (!winter) {
           if (w.G[i] > 0) { w.G[i] += dt; if (w.G[i] >= LAND.saplingTime) { w.G[i] = 0; w.R[i] = NODE.TREE; w.A[i] = NODE_INFO[NODE.TREE].amt; g.events.emit('grown', i); } }
           else if (w.A[i] > 0 && RENEWS[w.R[i]]) {
             const full = NODE_INFO[w.R[i]].amt;
-            if (w.A[i] < full) { w.F[i] += full * REGROW_PER_DAY * dt / DAY; if (w.F[i] >= 1) { const n = Math.floor(w.F[i]); w.A[i] = Math.min(full, w.A[i] + n); w.F[i] -= n; } }
+            if (w.A[i] < full) { w.F[i] += full * REGROW_PER_DAY * (w.R[i] === NODE.FISH ? FISH_REGROW : 1) * dt / DAY; if (w.F[i] >= 1) { const n = Math.floor(w.F[i]); w.A[i] = Math.min(full, w.A[i] + n); w.F[i] -= n; } }
           }
         }
         if (isOpen(w, tx(i), ty(i))) w.E[i] += dt; else w.E[i] = 0;

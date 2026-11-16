@@ -1,6 +1,7 @@
 // What the interface says about a building, villager or resource spot. Pure text from the game state; no DOM.
 //   summary(...)  one short line for the bubble
 //   details(...)  every line, for the Details sheet
+import { waiting, progress } from '../core/recruit.js';
 import { isGrand, stageLine, stagesOf, stageOf, nextStageCost } from '../core/grand.js';
 import { isOrchard, restingWhy } from '../core/orchards.js';
 import { homeWater, homeWaterCap } from '../core/household.js';
@@ -33,7 +34,7 @@ export function buildingSummary(G, b) {
   if (isOrchard(b)) return b.food >= 1 ? `${cap1(def.orchard.fruit)} to pick: ${Math.round(b.food)}` : restingWhy(G, b);
   if (b.k === 'farmhouse') { const s = farmSlots(b); return `Fields ${slotsUsed(G, b, 'fields')} of ${s.fields} · Animals ${slotsUsed(G, b, 'animals')} of ${s.animals}`; }
   if (def.craft) { const who = G.villagers.find(v => v.job === b.id); return who ? `${who.name} works here` : 'Waiting for a worker: tap it with a villager selected'; }
-  if (b.k === 'tc' || (b.k === 'campfire' && !townCenter(G))) return `Villagers ${G.villagers.length} of ${popCap(G)} · Spirits ${Math.round((G.social || 0) * 100)}%`;
+  if (b.k === 'tc' || (b.k === 'campfire' && !townCenter(G))) return `Villagers ${G.villagers.length} of ${popCap(G)} · Spirits ${Math.round((G.social || 0) * 100)}%` + (waiting(G) ? ` · Welcoming ${waiting(G)}: ${Math.round(progress(G) * 100)}%` : '');
   if (b.k === 'well') return `Water ${Math.floor(b.water)} of ${TIERS.well ? (TIERS.well[b.lvl || 0].water ?? def.water) : def.water}`;
   if (def.crop) return `${RES_NAME[def.crop] || 'Harvest'} left: ${Math.max(0, Math.round(b.food))}`;
   if (def.home) return `Surroundings: ${beautyLabel(homeScore(G, b))} · beds ${beds(b)}`;

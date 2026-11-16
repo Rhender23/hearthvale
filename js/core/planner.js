@@ -78,12 +78,13 @@ function survey(g) {
     if (nx && nx.age <= g.age && homeScore(g, h) >= nx.need) {
       for (const r of nx.goods || []) if ((g.res[r] || 0) < 1 && !(cur.goods || []).includes(r)) blocked[r] = (blocked[r] || 0) + 1;
       for (const r of GOODS) { const f = (nx.cost && nx.cost[r]) || 0; if (f > (g.res[r] || 0)) { const L = levelGoods[r] = levelGoods[r] || { homes: 0, amount: 0 }; L.homes++; L.amount += f; } }
+      if (h.brick && [5, 6].includes((h.lvl || 0) + 1)) { const f = Math.round((nx.cost.stone || 0) * 0.5); if (f > (g.res.bricks || 0)) { const L = levelGoods.bricks = levelGoods.bricks || { homes: 0, amount: 0 }; L.homes++; L.amount += f; } }   // homes to be built in brick
     }
   }
   // Inputs workshops will draw, scaled by how much of their output is actually wanted (a potter making pottery for
   // four homes uses a little clay, not a full day's worth). Three passes carry demand up chains (bread → flour → wheat).
   const meals = mealsPerDay(pop), wantOut = r => r === 'food' ? Math.max(0, meals - ((g.yday && g.yday.in.food) || 0)) + meals * 0.25
-    : (goodsUse[r] || 0) + (blocked[r] || 0) / GOODS_USE_DAYS + (levelGoods[r] ? levelGoods[r].amount / GOODS_USE_DAYS : 0) + (MERCHANT.price[r] ? 1 : 0);
+    : (goodsUse[r] || 0) + (blocked[r] || 0) / GOODS_USE_DAYS + (levelGoods[r] ? levelGoods[r].amount / GOODS_USE_DAYS : 0) + (MERCHANT.price[r] ? 1 : 0) + (r === 'bricks' ? 1 : 0);   // a brickyard keeps a little stock for brick paths
   let use = {};
   for (let pass = 0; pass < 3; pass++) {
     const u = {};
@@ -175,8 +176,8 @@ function gains(g, S, k) {
       add('culture', days / PLAN.cultureHorizon, per / (rate + per), nx ? `the ${nx.name} Age needs more culture` : 'culture');
     }
   }
-  // Places to gather (play, plays, the weekly service): company when spirits are low.
-  if (['playground', 'theater', 'church', 'tavern'].includes(k) && !S.has(k)) add('social', 1 - (g.social ?? 1), k === 'tavern' ? 0.6 : k === 'playground' ? 0.5 : 0.4, k === 'tavern' ? 'evenings together at the tavern' : k === 'playground' ? 'somewhere to play' : 'somewhere to gather');
+  // Places to gather (leisure.js): company when spirits are low.
+  if (LEISURE[k] && LEISURE[k].social && !S.has(k)) add('social', 1 - (g.social ?? 1), LEISURE[k].social, LEISURE[k].gather || 'somewhere to gather');
   // A trading post: the merchant comes every few days to buy what the workshops make and sell stone.
   if (k === 'market' && !S.has(k)) { const made = [...GOODS, ...FARM].some(r => MERCHANT.price[r] && ((S.supply[r] || 0) > 0 || (g.res[r] || 0) >= 5)); add('gold', Math.max(0.4, S.needs.gold || 0), made ? 1 : 0.5, 'the merchant will come to trade'); }
   // A shop within reach of homes whose level wants goods, once there are goods to hand out.
@@ -188,7 +189,6 @@ function gains(g, S, k) {
   // v45: carts, the waystation, the bathhouse and bandstand.
   if (k === 'stable' && !S.has(k) && g.buildings.some(b => b.k === 'path' && b.done)) add('supply', Math.min(1, pop / 12), 0.5, 'carts to carry more along the paths');
   if (k === 'waystation' && !S.has(k) && hasMarket(g)) add('gold', Math.max(0.3, S.needs.gold || 0), 0.6, 'the merchant would come more often');
-  if (LEISURE[k] && !S.has(k)) add('social', 1 - (g.social ?? 1) + 0.2, 0.4, LEISURE[k].why);
   // Beauty: the home closest to its next level, by how much of the gap this decoration would close beside it.
   if (d.decor) {
     let best = 0, gapBest = 0, home = null;
@@ -205,10 +205,9 @@ function gains(g, S, k) {
   return out;
 }
 const cultureOf = (k, pop) => {
-  const key = { school: 'learn', theater: 'theater', library: 'read', church: 'church' }[k];
-  if (key) return CULTURE[key] * pop * PLAN.attendSeconds * (k === 'church' ? 0.6 : 1);
+  const L = LEISURE[k];
+  if (L && L.culture) return L.culture * pop * PLAN.attendSeconds * (L.attend ?? 1);   // villagers' time there
   if (k === 'monument') return 1.5 + 50 / PLAN.cultureHorizon;   // a little each day, and 50 when it is finished
-  if (LEISURE[k] && LEISURE[k].culture) return LEISURE[k].culture * pop * PLAN.attendSeconds * 0.5;
   if (k === 'greathall') return 30 / PLAN.cultureHorizon;   // festivals give twice the culture
   const c = BUILD[k].craft; return c && c.out.culture ? c.out.culture / c.time * PLAN.workSeconds : 0;
 };

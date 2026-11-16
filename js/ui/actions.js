@@ -1,12 +1,15 @@
 // Every button in the game, in one table. Menus (bubbles, sheets) only list keys from OWNS; nothing else adds buttons.
 //   icon, tip [name, description], cost, on (lit), dis (greyed), why (what it still needs, shown when greyed), ready (glows), hide (not shown here), run
 // `api` is filled in by ui.js: the selection, the bubble, the sheet, and the helpers that open things.
+import { recruitTime, waiting } from '../core/recruit.js';
+import { DAY } from '../core/config.js';
+const hoursOf = s => { const h = Math.round(s / (DAY / 24)); return h >= 24 ? `${Math.round(h / 24 * 10) / 10} days` : `${h} hours`; };
 import { BUILD, UPGRADES, AGES, FOCI, VILLAGER_COST, TRADE } from '../core/config.js';
-import { have, popCap, townCenter } from '../core/state.js';
+import { have, popCap, townCenter, flagUp } from '../core/state.js';
 import { wantedFestival, affordableFestival, festivalCost } from '../core/festival.js';
 import { computeBeauty } from '../core/beauty.js';
 import * as cmd from '../core/commands.js';
-import { hasInside } from './interior.js';
+import { hasInside } from './interior/index.js';
 import { CRITTERS, LANTERN_UNLOCK } from '../core/critters.js';
 import { buildingTitle } from './panels.js';
 import { ageNeeds, villagerNeeds, shortOf } from '../core/requires.js';
@@ -22,10 +25,12 @@ export const OWNS = {
   market: ['trade', 'improve', 'move', 'inside', 'remove'],
   shop: ['improve', 'move', 'inside', 'remove'],
   grange: ['improve', 'upgrades', 'move', 'inside', 'remove'],
-  house: ['improve', 'rotate', 'inside', 'move', 'remove'],
+  house: ['improve', 'rotate', 'inside', 'brick', 'move', 'remove'],
   well: ['improve', 'move', 'remove'],
   store: ['improve', 'upgrades', 'inside', 'move', 'rotate', 'remove'],
   building: ['improve', 'upgrades', 'inside', 'move', 'rotate', 'remove'],
+  weaver: ['improve', 'quilt', 'upgrades', 'inside', 'move', 'rotate', 'remove'],
+  flagpole: ['flag', 'move', 'remove'],
   site: ['move', 'remove'],    // still being built
   node: ['remove'],
 };
@@ -67,11 +72,15 @@ export function createActions(api) {
     clearjob:{ icon: '🧹', tip: ['Clear job', 'Let go of the job they were given.'], hide: () => !(one() && one().duty),
                run: () => { const v = one(); cmd.clearDuty(g(), [v]); api.say(`${v.name} is free of their job.`); } },
     // ---- buildings
-    train:   { icon: '🧑‍🌾', tip: ['Villager', 'Welcome a new villager.'], cost: () => VILLAGER_COST, dis: () => !have(g(), VILLAGER_COST) || g().villagers.length >= popCap(g()), why: () => villagerNeeds(g()), run: () => { const r = cmd.train(g()); if (!r.ok) api.say(r.reason); } },
+    train:   { icon: '🧑‍🌾', tip: () => ['Villager', `Welcome a new villager: about ${hoursOf(recruitTime(g()))} at today's spirits${waiting(g()) ? ` (${waiting(g())} on the way)` : ''}.`], cost: () => VILLAGER_COST, dis: () => !have(g(), VILLAGER_COST) || g().villagers.length + waiting(g()) >= popCap(g()), why: () => villagerNeeds(g()), run: () => { const r = cmd.train(g()); if (!r.ok) api.say(r.reason); else api.say(`A welcome has begun: about ${hoursOf(recruitTime(g()))} at today's spirits. Happier villagers make it quicker.`); } },
     age:     { icon: () => g().adv > 0 ? Math.ceil(g().adv) + 's' : '⭐', tip: () => g().age >= 3 ? ['Final age', 'Your village has reached its final age.'] : ['Advance age', `Grow into the ${AGES[g().age + 1].name} Age. Unlocks new buildings and upgrades. Needs ${AGES[g().age + 1].culture} culture (the village has ${Math.floor(g().culture || 0)}).`], cost: () => AGES[g().age + 1] && AGES[g().age + 1].cost, ready: () => g().ready && g().adv === 0, dis: () => g().age >= 3 || g().adv > 0 || !townCenter(g()) || !have(g(), AGES[g().age + 1].cost) || (g().culture || 0) < AGES[g().age + 1].culture, why: () => ageNeeds(g()), run: () => { const r = cmd.advance(g()); if (!r.ok && r.reason) api.say(r.reason); } },
     upgrades:{ icon: '✨', tip: ['Upgrades', 'Small improvements for this building and the villagers who use it, in tiers.'], hide: () => !UPGRADES.some(u => u.at === upAt()), run: () => api.openUpgrades() },
     rally:   { icon: '🚩', tip: ['Rally point', 'Tap a tree, field or spot. New villagers head there first.'], on: () => ui.mode === 'rally', run: () => { ui.mode = ui.mode === 'rally' ? null : 'rally'; if (ui.mode) { api.pop.close(); toast('Tap a tree, field or spot for the rally point.'); } } },
     all:     { icon: '👥', tip: ['Select all', 'Select every villager who is awake.'], run: () => { api.clearSel(); ui.sel = new Set(g().villagers.filter(v => !v.inside && !(v.act && v.act.type === 'sleep'))); api.syncHeld(); } },
+    flag:    { icon: '🚩', tip: () => flagUp(g()) ? ['Design the flag', 'Change the flag\'s colours, pattern and emblem.'] : ['Village flag', 'Put up a village flag first (50 gold, under Build → Decoration). Then choose its colours and emblem.'],
+               dis: () => !flagUp(g()), why: 'Put up a village flag first: Build → Decoration, 50 gold.', run: () => api.openFlag() },
+    quilt:   { icon: '🧵', tip: ['Piece a quilt', 'Sew a quilt from squares of cloth, to a pattern or your own way. It goes on a bed in a home. Uses 2 cloth.'], dis: () => (g().res.cloth || 0) < 2, why: 'Needs 2 cloth in the stores.', run: () => api.openQuilt() },
+    home:    { icon: '🏛️', tip: ['Town center', 'Look at the heart of the village (H).'], run: () => api.goHome() },
     idle:    { icon: '💤', tip: ['Find idle', 'Jump to a villager with nothing to do.'], dis: () => !api.idleList().length, why: 'Everyone has something to do.', run: () => api.nextIdle() },
     festival:{ icon: '🎉', tip: () => { const G = g(), f = G.festival ? null : wantedFestival(G); return G.festival ? ['Festival planned', `A ${G.festival.name.toLowerCase()} is coming. Everyone gathers at 5 PM.`] : ['Hold a festival', `A ${f.name.toLowerCase()}: a parade around the village and the campfire, then a feast. Spirits stay high for days.`]; },
                cost: () => { const G = g(), f = !G.festival && (affordableFestival(G) || wantedFestival(G)); return f ? festivalCost(G, f) : null; },
@@ -83,6 +92,10 @@ export function createActions(api) {
                cost: () => { const i = selB() && cmd.improveInfo(g(), selB()); return i && i.cost; },
                ready: () => selB() && selB().pending > selB().lvl, dis: () => { const i = selB() && cmd.improveInfo(g(), selB()); return !i || !i.next || !!i.reason; }, why: () => { const i = selB() && cmd.improveInfo(g(), selB()); return i && i.reason; },
                run: () => { const r = cmd.improve(g(), selB()); api.say(r.ok ? `${r.v.name} is on the way to improve it.` : r.reason); } },
+    brick:   { icon: '🧱', tip: () => { const b = selB(); return b && b.brick ? ['Built in brick', 'When this home becomes a stone house it is built in brick instead. Tap to build in stone.'] : ['Build in brick', 'When this home becomes a stone house, build it in brick: a warm red face, and bricks instead of most of the stone.']; },
+               on: () => !!(selB() && selB().brick), hide: () => !selB() || selB().k !== 'house' || (selB().lvl || 0) >= 5 || g().age < 1,
+               dis: () => !g().buildings.some(b => b.k === 'brickyard' && b.done), why: 'Build a brickyard first.',
+               run: () => { const b = selB(); b.brick = !b.brick; toast(b.brick ? 'This home will be built in brick.' : 'This home will be built in stone.'); } },
     inside:  { icon: '🚪', tip: ['Look inside', 'Open the door and peek in.'], hide: () => !hasInside(selB()), run: () => api.openInside(selB()) },
     move:    { icon: '✋', tip: ['Move', 'Pick it up and tap where it should go. It keeps its level, its stores and its progress.'], hide: () => !selB() || BUILD[selB().k].fixed, run: () => api.startMove(selB()) },
     rotate:  { icon: '🔄', tip: () => { const k = ui.place || (selB() && selB().k); return k && BUILD[k].faces ? ['Turn', 'Turn the house so its front faces the other way (R).'] : ['Turn', 'Turn it a quarter turn (R).']; }, hide: () => !turnable(),

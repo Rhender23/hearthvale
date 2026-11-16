@@ -23,7 +23,12 @@ export const net = (g, day, r) => (day.in[r] || 0) - (day.out[r] || 0);
 
 // Levels
 export const tierOf = b => (TIERS[b.k] ? TIERS[b.k][b.lvl || 0] : null);
-export const levelName = b => (tierOf(b) ? tierOf(b).name : BUILD[b.k].name);
+// The village's flag flies only once it has been bought and put up (its design is kept even if it is taken down).
+export const flagUp = g => g.buildings.some(b => b.k === 'flagpole');
+export const levelName = b => (brickLook(b) ? BRICK_NAME[b.lvl] : tierOf(b) ? tierOf(b).name : BUILD[b.k].name);
+// Stone houses can be built in brick instead (the owner's choice, before the walls go up): same rooms, a warmer face.
+export const BRICK_LEVELS = [5, 6], BRICK_NAME = { 5: 'Brick house', 6: 'Fine brick house' };
+export const brickLook = b => !!(b && b.k === 'house' && b.brick && BRICK_LEVELS.includes(b.lvl || 0));
 export const beautyOf = b => { const t = tierOf(b); return t && t.beauty !== undefined ? t.beauty : BUILD[b.k].beauty || 0; };
 
 // Storage. Unfinished buildings hold nothing. Levels can replace or multiply a building's storage.
@@ -82,8 +87,9 @@ export function completeBuilding(g, b) {
   if (b.k === 'monument') { g.culture = (g.culture || 0) + 50; notice(g, 'The monument stands complete. Hearthvale thrives!'); }
   else if (!BUILD[b.k].decor) notice(g, `The ${BUILD[b.k].name.toLowerCase()} is finished.`);
 }
-export const beds = b => { if (!b.done) return 0; const t = tierOf(b); return (t && t.beds) || BUILD[b.k].beds || 0; };
-export const popCap = g => { const tc = g.buildings.some(o => o.k === 'tc' && o.done); return Math.min(MAX_VILLAGERS, g.buildings.reduce((n, b) => n + (b.done && !(b.k === 'campfire' && tc) ? (BUILD[b.k].pop || 0) + (BUILD[b.k].home && !BUILD[b.k].pop ? beds(b) : 0) : 0), 0)); };
+// Beds a home has: its level's beds, less any the household took away (b.bedsOff).
+export const beds = b => { if (!b.done) return 0; const t = tierOf(b), n = (t && t.beds) || BUILD[b.k].beds || 0; return n ? Math.max(1, n - (b.bedsOff || 0)) : 0; };
+export const popCap = g => { const tc = g.buildings.some(o => o.k === 'tc' && o.done); return Math.min(MAX_VILLAGERS, g.buildings.reduce((n, b) => n + (b.done && !(b.k === 'campfire' && tc) ? (BUILD[b.k].pop ? Math.max(1, BUILD[b.k].pop - (b.bedsOff || 0)) : 0) + (BUILD[b.k].home && !BUILD[b.k].pop ? beds(b) : 0) : 0), 0)); };
 export const bedTotal = g => g.buildings.reduce((n, b) => n + beds(b), 0);
 export const sites = g => g.buildings.filter(b => !b.done);
 export const nextAgeCost = g => (AGES[g.age + 1] ? AGES[g.age + 1].cost : null);

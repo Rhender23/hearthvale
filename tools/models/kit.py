@@ -112,6 +112,9 @@ class Mesh:
 
 
 MATS = {   # base colour (sRGB), emissive (sRGB) — one cozy palette for every model
+    # villagers: the parts the game recolours are white here (the game multiplies in each villager's colours)
+    'v-skin': ((1.0, 1.0, 1.0), None), 'v-shirt': ((1.0, 1.0, 1.0), None), 'v-legs': ((1.0, 1.0, 1.0), None), 'v-hair': ((1.0, 1.0, 1.0), None),
+    'v-shoe': ((0.30, 0.22, 0.16), None), 'v-eye': ((0.16, 0.12, 0.10), None), 'v-cheek': ((0.95, 0.62, 0.55), None), 'v-belt': ((0.40, 0.28, 0.18), None),
     'wall-plaster': ((0.93, 0.87, 0.74), None), 'wall-timber': ((0.55, 0.38, 0.24), None), 'wall-stone': ((0.70, 0.67, 0.62), None),
     'wall-log': ((0.62, 0.44, 0.27), None), 'beam': ((0.42, 0.28, 0.17), None), 'roof-thatch': ((0.80, 0.66, 0.38), None),
     'roof-tile': ((0.72, 0.36, 0.26), None), 'roof-slate': ((0.42, 0.45, 0.52), None), 'gable': ((0.88, 0.80, 0.65), None),
@@ -131,7 +134,13 @@ MATS = {   # base colour (sRGB), emissive (sRGB) — one cozy palette for every 
     'barrel': ((0.58, 0.40, 0.24), None), 'ember': ((0.55, 0.30, 0.18), (1.0, 0.45, 0.15)), 'sand': ((0.92, 0.84, 0.64), None),
     'leaves-dark': ((0.30, 0.48, 0.24), None), 'pine': ((0.24, 0.42, 0.28), None), 'wax': ((0.97, 0.90, 0.70), None),
     'hive': ((0.90, 0.74, 0.40), None),
-    'glass': ((0.70, 0.84, 0.88), None), 'apple': ((0.85, 0.20, 0.18), None), 'pear': ((0.80, 0.78, 0.35), None), 'plum': ((0.42, 0.24, 0.50), None),
+    'glass': ((0.70, 0.84, 0.88), None),
+    'wallpaper': ((0.62, 0.70, 0.58), None), 'wallpaper-rose': ((0.84, 0.66, 0.62), None), 'floor-polish': ((0.50, 0.32, 0.20), None),
+    'flagstone': ((0.60, 0.58, 0.54), None), 'pewter': ((0.66, 0.68, 0.70), None), 'cloth-ochre': ((0.86, 0.62, 0.28), None),
+    'cloth-plum': ((0.52, 0.32, 0.50), None), 'linen': ((0.95, 0.93, 0.88), None), 'tile': ((0.86, 0.90, 0.92), None),
+    'straw': ((0.86, 0.74, 0.44), None), 'hearthstone': ((0.52, 0.48, 0.44), None), 'soot': ((0.16, 0.13, 0.12), None),
+    'burlap': ((0.74, 0.62, 0.44), None), 'horse': ((0.48, 0.32, 0.22), None), 'mane': ((0.2, 0.14, 0.1), None),
+    'paint-blue': ((0.40, 0.52, 0.62), None), 'paint-red': ((0.62, 0.30, 0.24), None), 'paint-green': ((0.40, 0.52, 0.40), None), 'apple': ((0.85, 0.20, 0.18), None), 'pear': ((0.80, 0.78, 0.35), None), 'plum': ((0.42, 0.24, 0.50), None),
     'russet': ((0.78, 0.45, 0.18), None), 'copper': ((0.38, 0.62, 0.55), None), 'blossom': ((0.98, 0.82, 0.88), None),
 }
 

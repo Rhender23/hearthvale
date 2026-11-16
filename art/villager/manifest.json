@@ -1,0 +1,99 @@
+{
+ "scale": 0.5,
+ "w": 142,
+ "h": 97,
+ "anchor": [
+  71,
+  61
+ ],
+ "layers": [
+  "base",
+  "skin",
+  "shirt",
+  "legs",
+  "hair"
+ ],
+ "poses": {
+  "idle": {
+   "start": 0,
+   "frames": 2,
+   "fps": 1.2
+  },
+  "walk": {
+   "start": 2,
+   "frames": 4,
+   "fps": 7
+  },
+  "carry": {
+   "start": 6,
+   "frames": 4,
+   "fps": 6
+  },
+  "work": {
+   "start": 10,
+   "frames": 3,
+   "fps": 5
+  },
+  "cheer": {
+   "start": 13,
+   "frames": 2,
+   "fps": 4
+  },
+  "sit": {
+   "start": 15,
+   "frames": 1,
+   "fps": 1
+  }
+ },
+ "figH": 53,
+ "big": {
+  "scale": 0.5,
+  "w": 398,
+  "h": 269,
+  "anchor": [
+   199,
+   169
+  ],
+  "layers": [
+   "base",
+   "skin",
+   "shirt",
+   "legs",
+   "hair"
+  ],
+  "poses": {
+   "idle": {
+    "start": 0,
+    "frames": 2,
+    "fps": 1.2
+   },
+   "walk": {
+    "start": 2,
+    "frames": 4,
+    "fps": 7
+   },
+   "carry": {
+    "start": 6,
+    "frames": 4,
+    "fps": 6
+   },
+   "work": {
+    "start": 10,
+    "frames": 3,
+    "fps": 5
+   },
+   "cheer": {
+    "start": 13,
+    "frames": 2,
+    "fps": 4
+   },
+   "sit": {
+    "start": 15,
+    "frames": 1,
+    "fps": 1
+   }
+  },
+  "figH": 158,
+  "file": "sheet-big.png"
+ }
+}

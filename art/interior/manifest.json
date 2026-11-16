@@ -1,0 +1,2706 @@
+{
+ "scale": 0.5,
+ "slots": {
+  "room/hut": {
+   "file": "room-hut.png",
+   "anchor": [
+    307,
+    498
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    3076,
+    3163,
+    614,
+    509
+   ]
+  },
+  "room/cottage": {
+   "file": "room-cottage.png",
+   "anchor": [
+    338,
+    530
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    1720,
+    3163,
+    676,
+    540
+   ]
+  },
+  "room/cozy": {
+   "file": "room-cozy.png",
+   "anchor": [
+    371,
+    562
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    812,
+    2572,
+    742,
+    573
+   ]
+  },
+  "room/timber": {
+   "file": "room-timber.png",
+   "anchor": [
+    405,
+    579
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    0,
+    2572,
+    810,
+    589
+   ]
+  },
+  "room/stone": {
+   "file": "room-stone.png",
+   "anchor": [
+    435,
+    610
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    872,
+    1358,
+    870,
+    621
+   ]
+  },
+  "room/manor": {
+   "file": "room-manor.png",
+   "anchor": [
+    470,
+    643
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    2816,
+    703,
+    940,
+    652
+   ]
+  },
+  "room/timber-up": {
+   "file": "room-timber-up.png",
+   "anchor": [
+    405,
+    579
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    3172,
+    1981,
+    810,
+    589
+   ]
+  },
+  "room/stone-up": {
+   "file": "room-stone-up.png",
+   "anchor": [
+    435,
+    610
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    0,
+    1358,
+    870,
+    621
+   ]
+  },
+  "room/manor-up": {
+   "file": "room-manor-up.png",
+   "anchor": [
+    470,
+    643
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    932,
+    703,
+    940,
+    652
+   ]
+  },
+  "room/workshop": {
+   "file": "room-workshop.png",
+   "anchor": [
+    338,
+    530
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    2398,
+    3163,
+    676,
+    540
+   ]
+  },
+  "room/forge": {
+   "file": "room-forge.png",
+   "anchor": [
+    339,
+    530
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    1040,
+    3163,
+    678,
+    541
+   ]
+  },
+  "room/tavern": {
+   "file": "room-tavern.png",
+   "anchor": [
+    465,
+    643
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    0,
+    703,
+    930,
+    653
+   ]
+  },
+  "room/hall": {
+   "file": "room-hall.png",
+   "anchor": [
+    531,
+    690
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    2128,
+    0,
+    1062,
+    701
+   ]
+  },
+  "room/church": {
+   "file": "room-church.png",
+   "anchor": [
+    531,
+    690
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    0,
+    0,
+    1062,
+    701
+   ]
+  },
+  "room/school": {
+   "file": "room-school.png",
+   "anchor": [
+    403,
+    578
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    812,
+    1981,
+    806,
+    589
+   ]
+  },
+  "room/library": {
+   "file": "room-library.png",
+   "anchor": [
+    470,
+    643
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    1874,
+    703,
+    940,
+    652
+   ]
+  },
+  "room/theater": {
+   "file": "room-theater.png",
+   "anchor": [
+    531,
+    690
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    1064,
+    0,
+    1062,
+    701
+   ]
+  },
+  "room/store": {
+   "file": "room-store.png",
+   "anchor": [
+    405,
+    579
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    0,
+    1981,
+    810,
+    589
+   ]
+  },
+  "room/shop": {
+   "file": "room-shop.png",
+   "anchor": [
+    370,
+    546
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    1556,
+    2572,
+    740,
+    556
+   ]
+  },
+  "room/bath": {
+   "file": "room-bath.png",
+   "anchor": [
+    403,
+    578
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    1620,
+    1981,
+    806,
+    589
+   ]
+  },
+  "room/stable": {
+   "file": "room-stable.png",
+   "anchor": [
+    405,
+    579
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    2552,
+    1358,
+    810,
+    589
+   ]
+  },
+  "room/glass": {
+   "file": "room-glass.png",
+   "anchor": [
+    403,
+    579
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    1744,
+    1358,
+    806,
+    589
+   ]
+  },
+  "room/observatory": {
+   "file": "room-observatory.png",
+   "anchor": [
+    371,
+    578
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    2428,
+    1981,
+    742,
+    589
+   ]
+  },
+  "prop/bed": {
+   "file": "prop-bed.png",
+   "anchor": [
+    135,
+    183
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1360,
+    465,
+    270,
+    187
+   ]
+  },
+  "prop/bed/turned": {
+   "file": "prop-bed-turned.png",
+   "anchor": [
+    135,
+    183
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2448,
+    465,
+    270,
+    187
+   ]
+  },
+  "prop/bed-red": {
+   "file": "prop-bed-red.png",
+   "anchor": [
+    135,
+    183
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2176,
+    465,
+    270,
+    187
+   ]
+  },
+  "prop/bed-red/turned": {
+   "file": "prop-bed-red-turned.png",
+   "anchor": [
+    135,
+    183
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3748,
+    244,
+    270,
+    187
+   ]
+  },
+  "prop/bed-blue": {
+   "file": "prop-bed-blue.png",
+   "anchor": [
+    135,
+    183
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    816,
+    465,
+    270,
+    187
+   ]
+  },
+  "prop/bed-blue/turned": {
+   "file": "prop-bed-blue-turned.png",
+   "anchor": [
+    135,
+    183
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    544,
+    465,
+    270,
+    187
+   ]
+  },
+  "prop/bed-ochre": {
+   "file": "prop-bed-ochre.png",
+   "anchor": [
+    135,
+    183
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1632,
+    465,
+    270,
+    187
+   ]
+  },
+  "prop/bed-ochre/turned": {
+   "file": "prop-bed-ochre-turned.png",
+   "anchor": [
+    135,
+    183
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1088,
+    465,
+    270,
+    187
+   ]
+  },
+  "prop/bed-plum": {
+   "file": "prop-bed-plum.png",
+   "anchor": [
+    135,
+    183
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    272,
+    465,
+    270,
+    187
+   ]
+  },
+  "prop/bed-plum/turned": {
+   "file": "prop-bed-plum-turned.png",
+   "anchor": [
+    135,
+    183
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3476,
+    244,
+    270,
+    187
+   ]
+  },
+  "prop/bed-green": {
+   "file": "prop-bed-green.png",
+   "anchor": [
+    135,
+    183
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    0,
+    465,
+    270,
+    187
+   ]
+  },
+  "prop/bed-green/turned": {
+   "file": "prop-bed-green-turned.png",
+   "anchor": [
+    135,
+    183
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1904,
+    465,
+    270,
+    187
+   ]
+  },
+  "prop/pallet": {
+   "file": "prop-pallet.png",
+   "anchor": [
+    128,
+    107
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    334,
+    987,
+    256,
+    111
+   ]
+  },
+  "prop/pallet/turned": {
+   "file": "prop-pallet-turned.png",
+   "anchor": [
+    128,
+    107
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    76,
+    987,
+    256,
+    111
+   ]
+  },
+  "prop/table": {
+   "file": "prop-table.png",
+   "anchor": [
+    83,
+    131
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2172,
+    832,
+    166,
+    135
+   ]
+  },
+  "prop/table/turned": {
+   "file": "prop-table-turned.png",
+   "anchor": [
+    83,
+    131
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2004,
+    832,
+    166,
+    135
+   ]
+  },
+  "prop/table-fine": {
+   "file": "prop-table-fine.png",
+   "anchor": [
+    109,
+    147
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    932,
+    832,
+    218,
+    151
+   ]
+  },
+  "prop/table-fine/turned": {
+   "file": "prop-table-fine-turned.png",
+   "anchor": [
+    109,
+    147
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    712,
+    832,
+    218,
+    151
+   ]
+  },
+  "prop/stool": {
+   "file": "prop-stool.png",
+   "anchor": [
+    30,
+    62
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    314,
+    1101,
+    60,
+    66
+   ]
+  },
+  "prop/stool/turned": {
+   "file": "prop-stool-turned.png",
+   "anchor": [
+    30,
+    62
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    140,
+    1101,
+    60,
+    66
+   ]
+  },
+  "prop/windsor": {
+   "file": "prop-windsor.png",
+   "anchor": [
+    37,
+    108
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    0,
+    987,
+    74,
+    112
+   ]
+  },
+  "prop/windsor/turned": {
+   "file": "prop-windsor-turned.png",
+   "anchor": [
+    37,
+    108
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3948,
+    832,
+    74,
+    112
+   ]
+  },
+  "prop/chest": {
+   "file": "prop-chest.png",
+   "anchor": [
+    65,
+    96
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1540,
+    987,
+    130,
+    100
+   ]
+  },
+  "prop/chest/turned": {
+   "file": "prop-chest-turned.png",
+   "anchor": [
+    65,
+    96
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1672,
+    987,
+    130,
+    100
+   ]
+  },
+  "prop/dresser": {
+   "file": "prop-dresser.png",
+   "anchor": [
+    99,
+    226
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2230,
+    0,
+    198,
+    230
+   ]
+  },
+  "prop/dresser/turned": {
+   "file": "prop-dresser-turned.png",
+   "anchor": [
+    99,
+    226
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2430,
+    0,
+    198,
+    230
+   ]
+  },
+  "prop/bookcase": {
+   "file": "prop-bookcase.png",
+   "anchor": [
+    71,
+    207
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1282,
+    244,
+    142,
+    211
+   ]
+  },
+  "prop/bookcase/turned": {
+   "file": "prop-bookcase-turned.png",
+   "anchor": [
+    71,
+    211
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    172,
+    244,
+    142,
+    215
+   ]
+  },
+  "prop/cupboard": {
+   "file": "prop-cupboard.png",
+   "anchor": [
+    72,
+    193
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1572,
+    244,
+    144,
+    197
+   ]
+  },
+  "prop/cupboard/turned": {
+   "file": "prop-cupboard-turned.png",
+   "anchor": [
+    72,
+    193
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1426,
+    244,
+    144,
+    197
+   ]
+  },
+  "prop/wardrobe": {
+   "file": "prop-wardrobe.png",
+   "anchor": [
+    80,
+    226
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2630,
+    0,
+    160,
+    230
+   ]
+  },
+  "prop/wardrobe/turned": {
+   "file": "prop-wardrobe-turned.png",
+   "anchor": [
+    80,
+    226
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2068,
+    0,
+    160,
+    230
+   ]
+  },
+  "prop/spinning-wheel": {
+   "file": "prop-spinning-wheel.png",
+   "anchor": [
+    64,
+    120
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2948,
+    832,
+    128,
+    124
+   ]
+  },
+  "prop/spinning-wheel/turned": {
+   "file": "prop-spinning-wheel-turned.png",
+   "anchor": [
+    64,
+    112
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3602,
+    832,
+    128,
+    116
+   ]
+  },
+  "prop/churn": {
+   "file": "prop-churn.png",
+   "anchor": [
+    30,
+    109
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3886,
+    832,
+    60,
+    113
+   ]
+  },
+  "prop/churn/turned": {
+   "file": "prop-churn-turned.png",
+   "anchor": [
+    30,
+    109
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3824,
+    832,
+    60,
+    113
+   ]
+  },
+  "prop/tallclock": {
+   "file": "prop-tallclock.png",
+   "anchor": [
+    42,
+    215
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    0,
+    244,
+    84,
+    219
+   ]
+  },
+  "prop/tallclock/turned": {
+   "file": "prop-tallclock-turned.png",
+   "anchor": [
+    42,
+    215
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    86,
+    244,
+    84,
+    219
+   ]
+  },
+  "prop/settle": {
+   "file": "prop-settle.png",
+   "anchor": [
+    103,
+    180
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2850,
+    465,
+    206,
+    184
+   ]
+  },
+  "prop/settle/turned": {
+   "file": "prop-settle-turned.png",
+   "anchor": [
+    103,
+    180
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3058,
+    465,
+    206,
+    184
+   ]
+  },
+  "prop/rocker": {
+   "file": "prop-rocker.png",
+   "anchor": [
+    40,
+    118
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3154,
+    832,
+    80,
+    122
+   ]
+  },
+  "prop/rocker/turned": {
+   "file": "prop-rocker-turned.png",
+   "anchor": [
+    40,
+    118
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3236,
+    832,
+    80,
+    122
+   ]
+  },
+  "prop/washstand": {
+   "file": "prop-washstand.png",
+   "anchor": [
+    45,
+    102
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    592,
+    987,
+    90,
+    106
+   ]
+  },
+  "prop/washstand/turned": {
+   "file": "prop-washstand-turned.png",
+   "anchor": [
+    45,
+    111
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3732,
+    832,
+    90,
+    115
+   ]
+  },
+  "prop/desk": {
+   "file": "prop-desk.png",
+   "anchor": [
+    83,
+    151
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3078,
+    654,
+    166,
+    155
+   ]
+  },
+  "prop/desk/turned": {
+   "file": "prop-desk-turned.png",
+   "anchor": [
+    83,
+    151
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3246,
+    654,
+    166,
+    155
+   ]
+  },
+  "prop/highboy": {
+   "file": "prop-highboy.png",
+   "anchor": [
+    74,
+    222
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3326,
+    0,
+    148,
+    226
+   ]
+  },
+  "prop/highboy/turned": {
+   "file": "prop-highboy-turned.png",
+   "anchor": [
+    74,
+    222
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2984,
+    0,
+    148,
+    226
+   ]
+  },
+  "prop/armchair": {
+   "file": "prop-armchair.png",
+   "anchor": [
+    56,
+    138
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1578,
+    832,
+    112,
+    142
+   ]
+  },
+  "prop/armchair/turned": {
+   "file": "prop-armchair-turned.png",
+   "anchor": [
+    56,
+    139
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1464,
+    832,
+    112,
+    143
+   ]
+  },
+  "prop/harpsichord": {
+   "file": "prop-harpsichord.png",
+   "anchor": [
+    135,
+    218
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3476,
+    0,
+    270,
+    222
+   ]
+  },
+  "prop/harpsichord/turned": {
+   "file": "prop-harpsichord-turned.png",
+   "anchor": [
+    135,
+    218
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3748,
+    0,
+    270,
+    222
+   ]
+  },
+  "prop/barrel": {
+   "file": "prop-barrel.png",
+   "anchor": [
+    46,
+    102
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    684,
+    987,
+    92,
+    106
+   ]
+  },
+  "prop/barrel/turned": {
+   "file": "prop-barrel-turned.png",
+   "anchor": [
+    46,
+    102
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    778,
+    987,
+    92,
+    106
+   ]
+  },
+  "prop/stairs": {
+   "file": "prop-stairs.png",
+   "anchor": [
+    151,
+    339
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    0,
+    3706,
+    302,
+    343
+   ]
+  },
+  "prop/stairs/turned": {
+   "file": "prop-stairs-turned.png",
+   "anchor": [
+    151,
+    368
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    3692,
+    3163,
+    302,
+    372
+   ]
+  },
+  "prop/stairwell": {
+   "file": "prop-stairwell.png",
+   "anchor": [
+    150,
+    153
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2662,
+    654,
+    300,
+    157
+   ]
+  },
+  "prop/stairwell/turned": {
+   "file": "prop-stairwell-turned.png",
+   "anchor": [
+    149,
+    184
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3176,
+    244,
+    298,
+    188
+   ]
+  },
+  "prop/basket": {
+   "file": "prop-basket.png",
+   "anchor": [
+    31,
+    44
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    552,
+    1101,
+    62,
+    48
+   ]
+  },
+  "prop/basket/turned": {
+   "file": "prop-basket-turned.png",
+   "anchor": [
+    31,
+    44
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    488,
+    1101,
+    62,
+    48
+   ]
+  },
+  "prop/broom": {
+   "file": "prop-broom.png",
+   "anchor": [
+    21,
+    128
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2340,
+    832,
+    42,
+    132
+   ]
+  },
+  "prop/broom/turned": {
+   "file": "prop-broom-turned.png",
+   "anchor": [
+    21,
+    125
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2384,
+    832,
+    42,
+    129
+   ]
+  },
+  "prop/bench": {
+   "file": "prop-bench.png",
+   "anchor": [
+    96,
+    99
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1346,
+    987,
+    192,
+    103
+   ]
+  },
+  "prop/bench/turned": {
+   "file": "prop-bench-turned.png",
+   "anchor": [
+    96,
+    99
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1012,
+    987,
+    192,
+    103
+   ]
+  },
+  "prop/plant": {
+   "file": "prop-plant.png",
+   "anchor": [
+    33,
+    75
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3708,
+    987,
+    66,
+    79
+   ]
+  },
+  "prop/plant/turned": {
+   "file": "prop-plant-turned.png",
+   "anchor": [
+    33,
+    76
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3334,
+    987,
+    66,
+    80
+   ]
+  },
+  "prop/lantern": {
+   "file": "prop-lantern.png",
+   "anchor": [
+    37,
+    119
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3078,
+    832,
+    74,
+    123
+   ]
+  },
+  "prop/lantern/turned": {
+   "file": "prop-lantern-turned.png",
+   "anchor": [
+    37,
+    117
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3318,
+    832,
+    74,
+    121
+   ]
+  },
+  "prop/aquarium": {
+   "file": "prop-aquarium.png",
+   "anchor": [
+    51,
+    115
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3394,
+    832,
+    102,
+    119
+   ]
+  },
+  "prop/aquarium/turned": {
+   "file": "prop-aquarium-turned.png",
+   "anchor": [
+    51,
+    115
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3498,
+    832,
+    102,
+    119
+   ]
+  },
+  "prop/owlcage": {
+   "file": "prop-owlcage.png",
+   "anchor": [
+    36,
+    157
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1624,
+    654,
+    72,
+    161
+   ]
+  },
+  "prop/owlcage/turned": {
+   "file": "prop-owlcage-turned.png",
+   "anchor": [
+    36,
+    157
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1698,
+    654,
+    72,
+    161
+   ]
+  },
+  "prop/foxhearth": {
+   "file": "prop-foxhearth.png",
+   "anchor": [
+    69,
+    66
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    0,
+    1101,
+    138,
+    70
+   ]
+  },
+  "prop/foxhearth/turned": {
+   "file": "prop-foxhearth-turned.png",
+   "anchor": [
+    69,
+    70
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3922,
+    987,
+    138,
+    74
+   ]
+  },
+  "prop/curio": {
+   "file": "prop-curio.png",
+   "anchor": [
+    64,
+    174
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3506,
+    465,
+    128,
+    178
+   ]
+  },
+  "prop/curio/turned": {
+   "file": "prop-curio-turned.png",
+   "anchor": [
+    64,
+    181
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2720,
+    465,
+    128,
+    185
+   ]
+  },
+  "prop/wolfbasket": {
+   "file": "prop-wolfbasket.png",
+   "anchor": [
+    55,
+    61
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    376,
+    1101,
+    110,
+    65
+   ]
+  },
+  "prop/wolfbasket/turned": {
+   "file": "prop-wolfbasket-turned.png",
+   "anchor": [
+    55,
+    62
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    202,
+    1101,
+    110,
+    66
+   ]
+  },
+  "prop/bearnook": {
+   "file": "prop-bearnook.png",
+   "anchor": [
+    77,
+    143
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1308,
+    832,
+    154,
+    147
+   ]
+  },
+  "prop/bearnook/turned": {
+   "file": "prop-bearnook-turned.png",
+   "anchor": [
+    77,
+    143
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1152,
+    832,
+    154,
+    147
+   ]
+  },
+  "prop/workbench": {
+   "file": "prop-workbench.png",
+   "anchor": [
+    109,
+    149
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3750,
+    654,
+    218,
+    153
+   ]
+  },
+  "prop/workbench/turned": {
+   "file": "prop-workbench-turned.png",
+   "anchor": [
+    109,
+    149
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    0,
+    832,
+    218,
+    153
+   ]
+  },
+  "prop/potters-wheel": {
+   "file": "prop-potters-wheel.png",
+   "anchor": [
+    64,
+    95
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1804,
+    987,
+    128,
+    99
+   ]
+  },
+  "prop/potters-wheel/turned": {
+   "file": "prop-potters-wheel-turned.png",
+   "anchor": [
+    64,
+    95
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2122,
+    987,
+    128,
+    99
+   ]
+  },
+  "prop/kiln": {
+   "file": "prop-kiln.png",
+   "anchor": [
+    70,
+    156
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1772,
+    654,
+    140,
+    160
+   ]
+  },
+  "prop/kiln/turned": {
+   "file": "prop-kiln-turned.png",
+   "anchor": [
+    70,
+    156
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2160,
+    654,
+    140,
+    160
+   ]
+  },
+  "prop/loom": {
+   "file": "prop-loom.png",
+   "anchor": [
+    95,
+    222
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2792,
+    0,
+    190,
+    226
+   ]
+  },
+  "prop/loom/turned": {
+   "file": "prop-loom-turned.png",
+   "anchor": [
+    95,
+    222
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3134,
+    0,
+    190,
+    226
+   ]
+  },
+  "prop/forge": {
+   "file": "prop-forge.png",
+   "anchor": [
+    111,
+    267
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    498,
+    3706,
+    222,
+    271
+   ]
+  },
+  "prop/forge/turned": {
+   "file": "prop-forge-turned.png",
+   "anchor": [
+    109,
+    255
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    1356,
+    3706,
+    218,
+    260
+   ]
+  },
+  "prop/anvil": {
+   "file": "prop-anvil.png",
+   "anchor": [
+    46,
+    95
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2028,
+    987,
+    92,
+    99
+   ]
+  },
+  "prop/anvil/turned": {
+   "file": "prop-anvil-turned.png",
+   "anchor": [
+    46,
+    95
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1934,
+    987,
+    92,
+    99
+   ]
+  },
+  "prop/millstones": {
+   "file": "prop-millstones.png",
+   "anchor": [
+    96,
+    267
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    304,
+    3706,
+    192,
+    271
+   ]
+  },
+  "prop/millstones/turned": {
+   "file": "prop-millstones-turned.png",
+   "anchor": [
+    96,
+    267
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    722,
+    3706,
+    192,
+    271
+   ]
+  },
+  "prop/oven": {
+   "file": "prop-oven.png",
+   "anchor": [
+    119,
+    175
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3266,
+    465,
+    238,
+    179
+   ]
+  },
+  "prop/oven/turned": {
+   "file": "prop-oven-turned.png",
+   "anchor": [
+    119,
+    164
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1384,
+    654,
+    238,
+    168
+   ]
+  },
+  "prop/vat": {
+   "file": "prop-vat.png",
+   "anchor": [
+    83,
+    150
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3414,
+    654,
+    166,
+    154
+   ]
+  },
+  "prop/vat/turned": {
+   "file": "prop-vat-turned.png",
+   "anchor": [
+    83,
+    150
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3582,
+    654,
+    166,
+    154
+   ]
+  },
+  "prop/shelves": {
+   "file": "prop-shelves.png",
+   "anchor": [
+    135,
+    238
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    3224,
+    3706,
+    270,
+    242
+   ]
+  },
+  "prop/shelves/turned": {
+   "file": "prop-shelves-turned.png",
+   "anchor": [
+    135,
+    238
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    0,
+    0,
+    270,
+    242
+   ]
+  },
+  "prop/counter": {
+   "file": "prop-counter.png",
+   "anchor": [
+    164,
+    189
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2692,
+    244,
+    328,
+    193
+   ]
+  },
+  "prop/counter/turned": {
+   "file": "prop-counter-turned.png",
+   "anchor": [
+    164,
+    189
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2362,
+    244,
+    328,
+    193
+   ]
+  },
+  "prop/pew": {
+   "file": "prop-pew.png",
+   "anchor": [
+    147,
+    171
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3636,
+    465,
+    294,
+    176
+   ]
+  },
+  "prop/pew/turned": {
+   "file": "prop-pew-turned.png",
+   "anchor": [
+    147,
+    171
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    0,
+    654,
+    294,
+    176
+   ]
+  },
+  "prop/altar": {
+   "file": "prop-altar.png",
+   "anchor": [
+    160,
+    191
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1718,
+    244,
+    320,
+    196
+   ]
+  },
+  "prop/altar/turned": {
+   "file": "prop-altar-turned.png",
+   "anchor": [
+    160,
+    191
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2040,
+    244,
+    320,
+    196
+   ]
+  },
+  "prop/pulpit": {
+   "file": "prop-pulpit.png",
+   "anchor": [
+    56,
+    153
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2964,
+    654,
+    112,
+    157
+   ]
+  },
+  "prop/pulpit/turned": {
+   "file": "prop-pulpit-turned.png",
+   "anchor": [
+    56,
+    153
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2548,
+    654,
+    112,
+    157
+   ]
+  },
+  "prop/school-desk": {
+   "file": "prop-school-desk.png",
+   "anchor": [
+    77,
+    132
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1848,
+    832,
+    154,
+    136
+   ]
+  },
+  "prop/school-desk/turned": {
+   "file": "prop-school-desk-turned.png",
+   "anchor": [
+    77,
+    132
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1692,
+    832,
+    154,
+    136
+   ]
+  },
+  "prop/blackboard": {
+   "file": "prop-blackboard.png",
+   "anchor": [
+    135,
+    169
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    568,
+    654,
+    270,
+    174
+   ]
+  },
+  "prop/blackboard/turned": {
+   "file": "prop-blackboard-turned.png",
+   "anchor": [
+    135,
+    169
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    296,
+    654,
+    270,
+    174
+   ]
+  },
+  "prop/bar": {
+   "file": "prop-bar.png",
+   "anchor": [
+    202,
+    209
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    722,
+    244,
+    404,
+    213
+   ]
+  },
+  "prop/bar/turned": {
+   "file": "prop-bar-turned.png",
+   "anchor": [
+    202,
+    209
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    316,
+    244,
+    404,
+    213
+   ]
+  },
+  "prop/keg-rack": {
+   "file": "prop-keg-rack.png",
+   "anchor": [
+    122,
+    148
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    466,
+    832,
+    244,
+    152
+   ]
+  },
+  "prop/keg-rack/turned": {
+   "file": "prop-keg-rack-turned.png",
+   "anchor": [
+    122,
+    148
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    220,
+    832,
+    244,
+    152
+   ]
+  },
+  "prop/stage": {
+   "file": "prop-stage.png",
+   "anchor": [
+    519,
+    537
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    2298,
+    2572,
+    1038,
+    541
+   ]
+  },
+  "prop/stage/turned": {
+   "file": "prop-stage-turned.png",
+   "anchor": [
+    519,
+    537
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    0,
+    3163,
+    1038,
+    541
+   ]
+  },
+  "prop/tub": {
+   "file": "prop-tub.png",
+   "anchor": [
+    94,
+    124
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2428,
+    832,
+    188,
+    128
+   ]
+  },
+  "prop/tub/turned": {
+   "file": "prop-tub-turned.png",
+   "anchor": [
+    94,
+    124
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2758,
+    832,
+    188,
+    128
+   ]
+  },
+  "prop/telescope": {
+   "file": "prop-telescope.png",
+   "anchor": [
+    76,
+    188
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3022,
+    244,
+    152,
+    192
+   ]
+  },
+  "prop/telescope/turned": {
+   "file": "prop-telescope-turned.png",
+   "anchor": [
+    76,
+    208
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1128,
+    244,
+    152,
+    212
+   ]
+  },
+  "prop/horse-stall": {
+   "file": "prop-horse-stall.png",
+   "anchor": [
+    147,
+    245
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    1576,
+    3706,
+    294,
+    249
+   ]
+  },
+  "prop/horse-stall/turned": {
+   "file": "prop-horse-stall-turned.png",
+   "anchor": [
+    147,
+    245
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    1872,
+    3706,
+    294,
+    249
+   ]
+  },
+  "prop/crate": {
+   "file": "prop-crate.png",
+   "anchor": [
+    46,
+    85
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2492,
+    987,
+    92,
+    90
+   ]
+  },
+  "prop/crate/turned": {
+   "file": "prop-crate-turned.png",
+   "anchor": [
+    46,
+    85
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2398,
+    987,
+    92,
+    90
+   ]
+  },
+  "prop/sacks": {
+   "file": "prop-sacks.png",
+   "anchor": [
+    69,
+    100
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    872,
+    987,
+    138,
+    104
+   ]
+  },
+  "prop/sacks/turned": {
+   "file": "prop-sacks-turned.png",
+   "anchor": [
+    69,
+    99
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1206,
+    987,
+    138,
+    103
+   ]
+  },
+  "prop/long-table": {
+   "file": "prop-long-table.png",
+   "anchor": [
+    263,
+    243
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    2168,
+    3706,
+    526,
+    247
+   ]
+  },
+  "prop/long-table/turned": {
+   "file": "prop-long-table-turned.png",
+   "anchor": [
+    263,
+    243
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    2696,
+    3706,
+    526,
+    247
+   ]
+  },
+  "prop/reading-table": {
+   "file": "prop-reading-table.png",
+   "anchor": [
+    122,
+    156
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1914,
+    654,
+    244,
+    160
+   ]
+  },
+  "prop/reading-table/turned": {
+   "file": "prop-reading-table-turned.png",
+   "anchor": [
+    122,
+    156
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2302,
+    654,
+    244,
+    160
+   ]
+  },
+  "prop/potting-bench": {
+   "file": "prop-potting-bench.png",
+   "anchor": [
+    135,
+    167
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    840,
+    654,
+    270,
+    171
+   ]
+  },
+  "prop/potting-bench/turned": {
+   "file": "prop-potting-bench-turned.png",
+   "anchor": [
+    135,
+    165
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1112,
+    654,
+    270,
+    169
+   ]
+  },
+  "prop/bookcase-tall": {
+   "file": "prop-bookcase-tall.png",
+   "anchor": [
+    109,
+    261
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    916,
+    3706,
+    218,
+    265
+   ]
+  },
+  "prop/bookcase-tall/turned": {
+   "file": "prop-bookcase-tall-turned.png",
+   "anchor": [
+    109,
+    259
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    1136,
+    3706,
+    218,
+    263
+   ]
+  },
+  "room/attic": {
+   "file": "room-attic.png",
+   "anchor": [
+    440,
+    644
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    3192,
+    0,
+    880,
+    657
+   ]
+  },
+  "prop/bunk": {
+   "file": "prop-bunk.png",
+   "anchor": [
+    135,
+    238
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    544,
+    0,
+    270,
+    242
+   ]
+  },
+  "prop/bunk/turned": {
+   "file": "prop-bunk-turned.png",
+   "anchor": [
+    135,
+    237
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1360,
+    0,
+    270,
+    241
+   ]
+  },
+  "prop/bunk-2": {
+   "file": "prop-bunk-2.png",
+   "anchor": [
+    135,
+    238
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    272,
+    0,
+    270,
+    242
+   ]
+  },
+  "prop/bunk-2/turned": {
+   "file": "prop-bunk-2-turned.png",
+   "anchor": [
+    135,
+    237
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1088,
+    0,
+    270,
+    241
+   ]
+  },
+  "prop/bunk-3": {
+   "file": "prop-bunk-3.png",
+   "anchor": [
+    135,
+    238
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    3768,
+    3706,
+    270,
+    242
+   ]
+  },
+  "prop/bunk-3/turned": {
+   "file": "prop-bunk-3-turned.png",
+   "anchor": [
+    135,
+    237
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    816,
+    0,
+    270,
+    241
+   ]
+  },
+  "prop/bunk-plain": {
+   "file": "prop-bunk-plain.png",
+   "anchor": [
+    135,
+    238
+   ],
+   "from": "3d",
+   "atlas": 0,
+   "rect": [
+    3496,
+    3706,
+    270,
+    242
+   ]
+  },
+  "prop/bunk-plain/turned": {
+   "file": "prop-bunk-plain-turned.png",
+   "anchor": [
+    135,
+    237
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1632,
+    0,
+    270,
+    241
+   ]
+  },
+  "prop/ladder": {
+   "file": "prop-ladder.png",
+   "anchor": [
+    40,
+    229
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1986,
+    0,
+    80,
+    233
+   ]
+  },
+  "prop/ladder/turned": {
+   "file": "prop-ladder-turned.png",
+   "anchor": [
+    40,
+    229
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    1904,
+    0,
+    80,
+    233
+   ]
+  },
+  "prop/hatch": {
+   "file": "prop-hatch.png",
+   "anchor": [
+    72,
+    94
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2252,
+    987,
+    144,
+    98
+   ]
+  },
+  "prop/hatch/turned": {
+   "file": "prop-hatch-turned.png",
+   "anchor": [
+    69,
+    124
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2618,
+    832,
+    138,
+    128
+   ]
+  },
+  "prop/foxhearth-1": {
+   "file": "prop-foxhearth-1.png",
+   "anchor": [
+    72,
+    72
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3776,
+    987,
+    144,
+    76
+   ]
+  },
+  "prop/foxhearth-1/turned": {
+   "file": "prop-foxhearth-1-turned.png",
+   "anchor": [
+    72,
+    75
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3562,
+    987,
+    144,
+    79
+   ]
+  },
+  "prop/foxhearth-2": {
+   "file": "prop-foxhearth-2.png",
+   "anchor": [
+    79,
+    75
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3402,
+    987,
+    158,
+    79
+   ]
+  },
+  "prop/foxhearth-2/turned": {
+   "file": "prop-foxhearth-2-turned.png",
+   "anchor": [
+    79,
+    86
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2586,
+    987,
+    158,
+    90
+   ]
+  },
+  "prop/wolfbasket-1": {
+   "file": "prop-wolfbasket-1.png",
+   "anchor": [
+    62,
+    78
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3040,
+    987,
+    124,
+    82
+   ]
+  },
+  "prop/wolfbasket-1/turned": {
+   "file": "prop-wolfbasket-1-turned.png",
+   "anchor": [
+    62,
+    80
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2914,
+    987,
+    124,
+    84
+   ]
+  },
+  "prop/wolfbasket-2": {
+   "file": "prop-wolfbasket-2.png",
+   "anchor": [
+    83,
+    76
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    3166,
+    987,
+    166,
+    80
+   ]
+  },
+  "prop/wolfbasket-2/turned": {
+   "file": "prop-wolfbasket-2-turned.png",
+   "anchor": [
+    83,
+    84
+   ],
+   "from": "3d",
+   "atlas": 1,
+   "rect": [
+    2746,
+    987,
+    166,
+    88
+   ]
+  }
+ },
+ "atlases": 2
+}

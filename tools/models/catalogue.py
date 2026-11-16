@@ -22,8 +22,9 @@ def groups():
     import homes
     G = {'homes': [(f'building/house/{i}', f, {'tiles': [1, 1], 'turn': True}) for i, f in enumerate(homes.HOUSE)]
                   + [(f'building/farmhouse/{i}', (lambda i=i: homes.farmhouse(i)), {'tiles': [2, 2]}) for i in range(3)]
-                  + [('building/lodge', homes.lodge, {'tiles': [2, 2]})]}
-    for name in ('workshops', 'farms', 'civic', 'decor', 'resources'):
+                  + [('building/lodge', homes.lodge, {'tiles': [2, 2]})]
+                  + [('building/house-brick/5', homes.brick_house, {'tiles': [1, 1], 'turn': True}), ('building/house-brick/6', homes.fine_brick_house, {'tiles': [1, 1], 'turn': True})]}
+    for name in ('workshops', 'farms', 'civic', 'decor', 'resources', 'interiors'):
         try: G[name] = __import__(name).MODELS
         except ImportError: pass
     return G
@@ -45,6 +46,8 @@ def build(only=None):
             if len(files) > 1: e['frames'] = files
             entries.append(e)
     json.dump({'models': entries}, open(os.path.join(HERE, 'models.json'), 'w'), indent=1)
+    if not only or 'interiors' in only:   # what the game needs to know about rooms and props
+        import interiors; interiors.write_spec(os.path.join(HERE, '..', '..', 'art', 'interior', 'rooms.json'))
     print(f'{len(entries)} models → tools/models/out, models.json')
 
 

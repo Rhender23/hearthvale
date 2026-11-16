@@ -6,36 +6,43 @@
 //   with villagers selected, tap a tree, field, workshop or site -> they get to work (a short note says so)
 //   Build -> sheet of buildings -> tap the ground to see it there -> ✓ Place (or tap the same spot again)
 //   Take down, Say goodbye, New game -> asked once, inside the bubble
-import { researchCost } from '../core/research.js';
-import { BUILD_GROUPS, RES_DESC, PANTRY, PANTRY_ICON, FARM, BUILD, BUILD_ORDER, ICON, RES, RES_NAME, BASICS, GOODS, AGES, UPGRADES, SEASONS, TRADE, N, NODE_INFO } from '../core/config.js';
+
+import { PATH_KINDS, TIERS, NODE, PANTRY, PANTRY_ICON, FARM, BUILD, ICON, RES, BASICS, GOODS, AGES, SEASONS, N } from '../core/config.js';
 import { idx, inMap, nodeKind, WATER, walkable } from '../core/world.js';
-import { have, popCap, hour, dayNumber, seasonIndex, darkness, cap, hub, clock12 } from '../core/state.js';
-import { waresFor, warePrice } from '../core/merchant.js';
-import { beautyLabel, villageBeauty } from '../core/beauty.js';
+import { popCap, seasonIndex, darkness, cap, hub } from '../core/state.js';
+
 import * as cmd from '../core/commands.js';
-import { openInterior } from './interior.js';
-import { $, el, fmt, val, buzz } from './dom.js';
+
+import { $, el, val, buzz } from './dom.js';
 import { createPopover } from './popover.js';
 import { createSheet } from './sheet.js';
 import { createActions, OWNS, PRIMARY } from './actions.js';
-import { NODE_NAME, buildingTitle, buildingSummary, buildingDetails, villagerTitle, villagerSummary, villagerJob, nodeSummary, villagerWants, buildingWants } from './panels.js';
+import { NODE_NAME, buildingTitle, buildingSummary, villagerTitle, villagerSummary, villagerJob, nodeSummary, villagerWants, buildingWants } from './panels.js';
 import { placeHint, orderNote } from '../core/hints.js';
 import { createCoach } from './coach.js';
-import { shortOf, buildNeeds, upgradeNeeds } from '../core/requires.js';
-import { CRITTERS, HOME_DECOR, LANTERN_UNLOCK } from '../core/critters.js';
-import { VERSION } from '../core/config.js';
+import { shortOf, buildNeeds } from '../core/requires.js';
+
 import { costEl, stepEl, refreshStep } from './costs.js';
-import { oneLine } from './tips.js';
-import { addFill, syncFill, fullLine, storageSheet } from './storage.js';
-import { glossarySheet } from './glossary.js';
-import { treeSheet } from './trees.js';
-import { linePlan } from './pathline.js';
+
+import { addFill, syncFill, fullLine } from './storage.js';
+
+import { createMenus } from './menus.js';
+import { createSheets } from './sheets.js';
+import { createTooltips } from './tooltips.js';
+import { directorView } from './directorview.js';
+import * as hands from '../core/handson.js';
+import { floatText } from './play/overlay.js';
+import { openFishing } from './play/fishing.js';
+import { openQuilt } from './play/quilt.js';
+import { openSorting } from './play/sorting.js';
+
+import { linePlan, KIND_NAME } from './pathline.js';
 
 export { OWNS };
 
 export function createUI(ctx) {
   const { getGame, view, settings, audio } = ctx;
-  const ui = { sel: new Set(), selB: null, selN: null, overlay: 'off', place: null, ghost: null, mode: null, menuOpen: false, hudOpen: false, modal: false, hover: [-9, -9], hoverCells: null, ping: null, plantI: 0, idleI: 0, give: 'wood', get: 'food', rot: 0, more: false };
+  const ui = { sel: new Set(), selB: null, selN: null, overlay: 'off', place: null, ghost: null, mode: null, hudOpen: false, modal: false, hover: [-9, -9], hoverCells: null, ping: null, plantI: 0, idleI: 0, give: 'wood', get: 'food', rot: 0, more: false };
   const g = () => getGame();
   const pop = createPopover(), sheet = createSheet();
 
@@ -79,6 +86,7 @@ export function createUI(ctx) {
       const q = pop.root.getBoundingClientRect();
       if (left < q.right && left + r.width > q.left && top < q.bottom && top + r.height > q.top) top = q.bottom + 10 + r.height < innerHeight - 70 ? q.bottom + 10 : Math.max(60, q.top - r.height - 10);
     }
+    if (sheet.key) { const q = sheet.root.getBoundingClientRect(); if (top + r.height > q.top - 8 && left < q.right && left + r.width > q.left) top = Math.max(70, q.top - r.height - 10); }   // never over an open sheet
     sayEl.style.left = left + 'px'; sayEl.style.top = top + 'px';
     sayEl.classList.add('show'); clearTimeout(sayT); sayT = setTimeout(() => sayEl.classList.remove('show'), 2600);
   }
@@ -94,7 +102,7 @@ export function createUI(ctx) {
   // ---------- the actions and their buttons ----------
   const api = { ui, g, settings, audio, toast, say, pop, sheet, save: ctx.save, newGame: ctx.newGame };
   const ACT = createActions(api);
-  const coach = api.coach = createCoach({ ui, g, view, settings, toScreen, pop });
+  const coach = api.coach = createCoach({ ui, g, view, settings, toScreen, pop, sheet });
   // Short captions under bubble buttons: icons are easier to learn with a word beside them.
   const LABEL = { glossary: 'Glossary', tree: 'Trees', storage: 'Storage', nextfest: 'Next fest', build: 'Build', unload: 'Unload', work: 'To work', plant: 'Plant', add: 'Group', rename: 'Name', clearjob: 'Clear job', remove: 'Remove', train: 'Villager', age: 'Age', festival: 'Festival', upgrades: 'Upgrades', rally: 'Rally', all: 'Everyone', idle: 'Idle', focus: 'Focus', improve: 'Improve', inside: 'Inside', move: 'Move', rotate: 'Turn', trade: 'Trade', info: 'Details', more: 'More', free: 'Free will', speed: 'Speed', pause: 'Pause', sound: 'Sound', overlay: 'Maps', album: 'Library', save: 'Save', sandbox: 'Sandbox', newgame: 'New game', hints: 'Hints' };
   const rows = [];
@@ -138,17 +146,25 @@ export function createUI(ctx) {
   function bubbleSpec() {
     const G = g();
     if (ui.place === 'path' && !ui.moving) {   // paths are drawn as a line, then built together
-      const plan = linePlan(G, ui.line, ui.canPlace);
-      if (!plan) return null;
+      const kind = ui.pathKind || 'dirt', plan = linePlan(G, ui.line, ui.canPlace, kind);
+      // Before a line is drawn: just the choice of kind, by the Build tab.
+      const kinds = () => el('div', { className: 'seg kinds' }, PATH_KINDS.map(([k, lvl, c]) => {
+        const T = TIERS.path[lvl], b = el('button', { className: k === kind ? 'on' : '' }, [el('i', { className: 'swatch sw-' + k }), el('span', { textContent: KIND_NAME[k] })]);
+        b.dataset.tip = 'pathkind-' + k; CARD_TIPS['pathkind-' + k] = { tip: [T.name, T.age > G.age ? `Arrives in the ${AGES[T.age].name} Age.` : `Walk ${Math.round((T.speed - 1) * 100)}% faster.`], cost: c };
+        if (T.age > G.age) off(b, `Arrives in the ${AGES[T.age].name} Age.`);
+        b.onclick = () => { if (T.age > G.age) return; ui.pathKind = k; pop.close(); }; return b; }));
+      if (!plan) return { key: `pathkind:${kind}:${G.age}`, at: () => $('tabbar').querySelector('[data-tab="build"]'),
+        build: body => body.append(head('Draw a path', 'Drag across the ground, in any direction.'), kinds()) };
       const a = ui.line.a, b = ui.line.b || a;
-      return { key: `line:${a}:${b}:${plan.n}`, at: () => anchorTile(b[0], b[1]),
+      return { key: `line:${a}:${b}:${plan.n}:${plan.r}:${kind}`, at: () => anchorTile(b[0], b[1]),
         build: body => {
-          const yes = el('button', { className: 'pbtn primary', textContent: '✓ Build' }), no = el('button', { className: 'pbtn', textContent: '✕' });
+          const yes = el('button', { className: 'pbtn primary', textContent: '✓ Lay it' }), no = el('button', { className: 'pbtn', textContent: '✕' });
           no.setAttribute('aria-label', 'Cancel'); no.onclick = () => { ui.line = null; };
-          const short = shortOf(G, plan.cost); yes.disabled = !plan.n || !!short; yes.onclick = confirmLine;
-          const skip = plan.tiles.length - plan.n;
-          body.append(head(BUILD.path.name, plan.n ? `${plan.n} tile${plan.n > 1 ? 's' : ''}${skip ? ` (${skip} in the way)` : ''}. Drag again to redraw.` : 'Nothing can go there. Drag across open ground.'),
-            el('div', { className: 'pstep' }, [costEl(G, plan.cost), short ? el('small', { className: 'pneed', textContent: short }) : null]), el('div', { className: 'pop-yn' }, [no, yes]));
+          const short = shortOf(G, plan.cost); yes.disabled = !(plan.n + plan.r) || !!short; yes.onclick = confirmLine;
+          const skip = plan.tiles.filter(t => !t.ok && !t.relay && !t.same).length;
+          const what = [plan.n ? `${plan.n} new` : '', plan.r ? `${plan.r} re-laid` : ''].filter(Boolean).join(', ');
+          body.append(head(plan.name, what ? `${what}${skip ? ` (${skip} in the way)` : ''}. Drag again to redraw.` : 'Nothing to lay there. Drag across open ground.'),
+            kinds(), el('div', { className: 'pstep' }, [costEl(G, plan.cost), short ? el('small', { className: 'pneed', textContent: short }) : null]), el('div', { className: 'pop-yn' }, [no, yes]));
         } };
     }
     if (ui.place) {
@@ -183,128 +199,16 @@ export function createUI(ctx) {
         build: b => { b.append(head(n.type === 'sapling' ? 'Sapling' : NODE_NAME[G.w.R[n.i]] || 'Nothing', nodeSummary(G, n)), el('div', { className: 'prow' }, [button('remove')])); },
         refresh: b => setText(b, 'ps', nodeSummary(g(), n)) };
     }
-    if (ui.menuOpen) return { key: 'game', at: () => $('fab'), build: buildGameMenu, refresh: b => setText(b, 'ps', gameLine()) };
     return null;
   }
   const cmdDims = () => { const k = ui.place, d = BUILD[k], w = d.w || d.size, h = d.h || d.size; return ui.rot ? [h, w] : [w, h]; };
 
-  // ---------- the game menu: a bubble from its button ----------
-  const gameLine = () => { const G = g(), h = hour(G); return `Day ${dayNumber(G)} · ${SEASONS[seasonIndex(G)]} · ${AGES[G.age].name} Age · ${clock12(Math.floor(h), Math.floor((h % 1) * 60), false)} · Beauty: ${beautyLabel(villageBeauty(G))}`; };
-  function buildGameMenu(b) {
-    b.append(head(`Hearthvale · v${VERSION}`, gameLine()), el('div', { className: 'prow wrap' }, OWNS.game.map(button)));
-    if (settings.sound) {
-      const vol = el('input', { type: 'range', min: '0', max: '100', step: '1', value: String(Math.round((settings.volume ?? 0.7) * 100)) });
-      vol.setAttribute('aria-label', 'Volume');
-      vol.oninput = () => { settings.volume = vol.value / 100; audio.setVolume(settings.volume); settings.persist(); };
-      b.append(el('label', { className: 'volrow' }, [el('span', { textContent: '🔉' }), vol]));
-    }
-  }
-  api.refreshGame = () => { if (pop.key === 'game') pop.close(); };
-  $('fab').onclick = () => { const was = ui.menuOpen; clearSel(); ui.menuOpen = !was; };
-  $('buildbtn').onclick = () => { if (ui.place) { cancelPlace(); return; } if (sheet.key === 'build') { sheet.close(); return; } ui.menuOpen = false; ui.selB = null; ui.selN = null; api.openBuild(); };
-  $('hudbtn').onclick = () => { ui.hudMode = ((ui.hudMode || 0) + 1) % 3; ui.hudOpen = ui.hudMode > 0; };
+  // ---------- the menus around the map (top bar, tab bar, Village / Book / Game sheets) live in menus.js ----------
+  api.refreshGame = () => sheet.rebuild();
+  api.goHome = () => { const tc = hub(g()); selectBuilding(tc); center(tc.x + 0.5, tc.y + 0.5); };
 
-  // ---------- sheets: build menu, upgrades, market, details ----------
-  const CARD_TIPS = {};
-  for (const k of BUILD_ORDER) CARD_TIPS['card-' + k] = { tip: [BUILD[k].name, oneLine(BUILD[k].desc)], cost: BUILD[k].cost };
-  for (const r of RES) CARD_TIPS['res-' + r] = { tip: [`${ICON[r]} ${RES_NAME[r]}`, oneLine(RES_DESC[r] || '')] };
-  const PANTRY_NAME = { provisions: 'Provisions (mixed stores)', berries: 'Berries', fish: 'Fish', vegetables: 'Vegetables', bread: 'Bread', eggs: 'Eggs', cheese: 'Cheese', honey: 'Honey' };
-  for (const k of PANTRY) CARD_TIPS['pan-' + k] = { tip: [`${PANTRY_ICON[k]} ${PANTRY_NAME[k] || k}`, 'Part of the food in the pantry.'] };
-  CARD_TIPS['res-pop'] = { tip: ['🏠 Villagers', 'How many live here, and how many the village has room for.'] };
-  CARD_TIPS['res-age'] = { tip: ['Age, culture and season', 'The village age; 🎭 culture now and needed for the next age; the season.'] };
-  for (const u of UPGRADES) CARD_TIPS['up-' + u.id] = { tip: [u.name, oneLine(u.desc)], cost: u.cost };
-  CARD_TIPS.hud = { tip: ['Resources', 'Tap once for the basics, again for everything, a third time to close.'] };
-
-  api.openBuild = () => {
-    const vs = [...ui.sel]; pop.close();
-    sheet.open({ key: 'build', title: 'Build', build: buildSheet, refresh: syncCards, onClose: () => { if (!ui.place) ui.buildOpen = false; } });
-    ui.buildOpen = true; ui.sel = new Set(vs);
-  };
-  function buildSheet(body) {
-    const G = g();
-    const ks = BUILD_ORDER.filter(k => BUILD[k].age <= G.age && !(BUILD[k].unlock && !G.unlocked[k]) && !(k === 'tc' && G.buildings.some(b => b.k === 'tc')));
-    const avail = new Set(ks), groups = BUILD_GROUPS.map(([label, list, icon]) => ({ label, icon, here: list.filter(k => avail.has(k)) }));
-    if (!groups.some(gp => gp.label === ui.buildCat && gp.here.length)) ui.buildCat = (groups.find(gp => gp.here.length) || {}).label;
-    const tabs = el('div', { className: 'tabs' });
-    for (const gp of groups) {
-      const b = el('button', { className: 'tab' + (ui.buildCat === gp.label ? ' on' : '') }, [el('span', { textContent: gp.icon }), el('small', { textContent: gp.label })]);
-      b.disabled = !gp.here.length; b.onclick = () => { ui.buildCat = gp.label; sheet.rebuild(); };
-      tabs.append(b);
-    }
-    const gp = groups.find(x => x.label === ui.buildCat), grid = el('div', { className: 'cards' });
-    if (gp) for (const k of gp.here) grid.append(card(k));
-    body.append(tabs, grid);
-    syncCards(body);
-  }
-  function card(k) {
-    const d = BUILD[k], b = el('button', { className: 'card' }, [el('span', { className: 'cn', textContent: (d.icon ? d.icon + ' ' : '') + d.name }), el('small', { textContent: fmt(d.cost) || 'Free' }), d.needs || BUILD_FARM(k) ? el('small', { className: 'cneed', textContent: BUILD_FARM(k) || `Needs a ${BUILD[d.needs].name.toLowerCase()}` }) : null]);
-    b.dataset.k = k; b.dataset.tip = 'card-' + k;
-    b.onclick = () => { ui.place = k; ui.rot = 0; ui.ghost = null; ui.line = null; sheet.close(); toast(k === 'path' ? 'Drag across the ground to draw the path.' : 'Tap the ground where it should go.'); };
-    return b;
-  }
-  const BUILD_FARM = k => ({ farm: 1, wheatfield: 1, fiberfield: 1, coop: 1, sheepfold: 1, pasture: 1, apiary: 1 })[k] ? ({ farm: 1, wheatfield: 1, fiberfield: 1 })[k] ? 'Joins a farmhouse: touching it, or a field joined to it' : 'Goes within 4 tiles of a farmhouse' : '';
-  // A greyed card says what it needs right on the card, not only on hover.
-  function syncCards(body) { for (const b of body.querySelectorAll('button.card')) { const why = buildNeeds(g(), b.dataset.k); off(b, why); let e = b.querySelector('.cwhy'); if (why && !e) b.append(e = el('small', { className: 'cwhy' })); if (e) { e.hidden = !why; if (why && e.textContent !== why) e.textContent = why; } } }
-
-  api.openUpgrades = () => {
-    const b0 = ui.selB, at = b0 && (b0.k === 'campfire' ? 'tc' : b0.k);
-    sheet.open({ key: 'up' + b0.id, title: 'Upgrades: ' + buildingTitle(b0), build: body => {
-      const G = g(), list = UPGRADES.filter(u => u.at === at && (!u.req || G.owned[u.req]));
-      for (const u of list) {
-        const owned = G.owned[u.id], need = upgradeNeeds(G, u), b = el('button', { className: 'wide' }, [el('span', { textContent: u.name + (owned ? ' ✓' : '  ' + fmt(researchCost(G, u))) }), el('small', { textContent: u.desc }), need ? el('small', { className: 'cneed', textContent: need }) : null]);
-        b.dataset.tip = 'up-' + u.id; off(b, owned ? 'Already done.' : need);
-        b.onclick = () => { cmd.research(G, u.id); say(`${u.name}: done. ✨`); sheet.rebuild(); };
-        body.append(b);
-      }
-      if (!list.length) body.append(el('small', { textContent: 'Nothing more for now.' }));
-    } });
-  };
-  // The Animal library: every animal ever collected stays here, unlocked, even after it has been spent on a treasure.
-  api.openLibrary = () => {
-    ui.menuOpen = false; pop.close();
-    sheet.open({ key: 'library', title: '📚 Animal library', build: body => {
-      const G = g(), caught = G.caught || {}, spent = G.spent || {};
-      const unlocks = k => Object.values(HOME_DECOR).filter(d => d.critter === k).map(d => `${d.name} (${d.n})`).concat(k === 'firefly' ? [`firefly lantern posts (${LANTERN_UNLOCK} caught)`] : []);
-      const when = C => C.night ? `Wanders in on ${C.night >= 0.4 ? 'some' : C.night >= 0.2 ? 'a few' : C.night >= 0.1 ? 'rare' : 'very rare'} nights.` : 'Out at night in ' + C.seasons.map(i => SEASONS[i].toLowerCase()).join(', ') + '.';
-      body.append(el('small', { textContent: 'Tap animals at night to collect them. Spend them on treasures inside homes (Look inside → Furnish → Treasures).' }));
-      for (const [k, C] of Object.entries(CRITTERS)) {
-        const n = caught[k] || 0, left = n - (spent[k] || 0), seen = n > 0;
-        const row = el('div', { className: 'wide libro' + (seen ? '' : ' unseen') }, [
-          el('span', { textContent: `${seen ? C.icon : '❔'} ${seen ? C.name.charAt(0).toUpperCase() + C.name.slice(1) : 'Not found yet'}${seen ? `  ·  collected ${n} · ${left} to spend` : ''}` }),
-          el('small', { textContent: (seen ? 'Unlocked: ' : 'Unlocks: ') + unlocks(k).join(', ') + '. ' + when(C) })]);
-        body.append(row);
-      }
-    } });
-  };
-  api.openStorage = () => { ui.menuOpen = false; pop.close(); sheet.open({ key: 'storage', title: '📦 Storage', build: body => storageSheet(g())(body) }); };
-  api.openGlossary = () => { ui.menuOpen = false; pop.close(); sheet.open({ key: 'glossary', title: '📖 Glossary', full: true, build: glossarySheet() }); };
-  api.openTree = () => { ui.menuOpen = false; pop.close(); sheet.open({ key: 'tree', title: '🌳 Upgrade trees', full: true, build: body => treeSheet(g(), t => say(t), ui)(body) }); };
-  api.openMarket = () => {
-    sheet.open({ key: 'market', title: 'Marketplace', build: body => {
-      const G = g();
-      const pick = (label, cur, set) => el('div', { className: 'row' }, [el('span', { textContent: label, className: 'lbl' }), ...RES.filter(r => cap(G, r) > 0).map(r => { const b = el('button', { className: 'ic sm' + (cur === r ? ' on' : ''), textContent: ICON[r] }); b.onclick = () => { set(r); sheet.rebuild(); }; return b; })]);
-      const go = el('button', { className: 'pbtn primary', textContent: `Trade ${TRADE.give}${ICON[ui.give]} for ${TRADE.get}${ICON[ui.get]}` });
-      off(go, ui.give === ui.get ? 'Pick two different resources.' : shortOf(G, { [ui.give]: TRADE.give }));
-      go.onclick = () => { cmd.trade(G, ui.give, ui.get); sheet.rebuild(); };
-      body.append(pick('Give', ui.give, r => { ui.give = r; }), pick('Get', ui.get, r => { ui.get = r; }), go);
-      const vis = G.merchant.visit;
-      if (vis && vis.phase === 'trade') {
-        body.append(el('b', { textContent: 'The merchant sells' }));
-        for (const w of waresFor(G)) {
-          const price = warePrice(G, w), b = el('button', { className: 'wide' }, [el('span', { textContent: `${w.name}  ${price}${ICON.gold}` }), el('small', { textContent: w.desc })]);
-          off(b, shortOf(G, { gold: price }));
-          b.onclick = () => { const r = cmd.buyWare(G, w.id); if (!r.ok) say(r.reason); sheet.rebuild(); };
-          body.append(b);
-        }
-      } else body.append(el('small', { textContent: 'When the merchant is here, their wares show up here.' }));
-    } });
-  };
-  api.openDetails = () => {
-    const b0 = ui.selB; if (!b0) return;
-    sheet.open({ key: 'info' + b0.id, title: buildingTitle(b0), build: body => { body.append(el('ul', { className: 'details' }, buildingDetails(g(), b0).map(t => el('li', { textContent: t })))); },
-      refresh: body => { const ul = body.querySelector('ul'), lines = buildingDetails(g(), b0); if (ul && ul.dataset.k !== lines.join('|')) { ul.dataset.k = lines.join('|'); ul.replaceChildren(...lines.map(t => el('li', { textContent: t }))); } } });
-  };
-  api.openInside = b => { if (ui.modal || !b) return; ui.modal = true; pop.close(); openInterior(g(), b, () => { ui.modal = false; }); };
+  // ---------- sheets: build menu, upgrades, library, storage, the Book, market, details (sheets.js) ----------
+  const { CARD_TIPS } = createSheets({ ui, g, sheet, pop, api, say, toast, off, menus: () => menus });
 
   // ---------- placing and moving: preview, then ✓ ----------
   api.startMove = b => { ui.moving = b; ui.place = b.k; ui.rot = b.rot || 0; ui.ghost = [b.x, b.y]; ui.selB = null; say('Tap where it should go, then ✓.'); };
@@ -321,8 +225,9 @@ export function createUI(ctx) {
     // Built by the villagers chosen, or else by whoever is nearest and awake.
     let vs = [...ui.sel];
     if (!vs.length) { const v = G.villagers.filter(v => !v.inside && !(v.act && (v.act.type === 'sleep' || v.act.type === 'leave'))).sort((a, b) => Math.hypot(a.x - x[0], a.y - x[1]) - Math.hypot(b.x - x[0], b.y - x[1]))[0] || G.villagers[0]; if (v) vs = [v]; }
-    const r = cmd.place(G, ui.place, x[0], x[1], vs, ui.rot);
+    const placed = ui.place, r = cmd.place(G, ui.place, x[0], x[1], vs, ui.rot);
     if (!r.ok) { say(r.reason); return; }
+    if (placed === 'flagpole') setTimeout(() => api.openFlag(true), 50);   // a new flag: choose its colours and emblem right away
     ping(x[0] + (r.b.w - 1) / 2, x[1] + (r.b.h - 1) / 2, '#f2c14e'); buzz(); ui.coachPlaced = true;
     say(orderNote(G, 'place', vs, r.b), ui.lastTap);
     clearSel();
@@ -333,11 +238,15 @@ export function createUI(ctx) {
   ui.lineMove = (x, y) => { if (ui.line) ui.line.b = [x, y]; };
   ui.lineUp = moved => { if (ui.line && !moved && ui.line.a[0] === ui.line.b[0] && ui.line.a[1] === ui.line.b[1]) ui.line.tapped = true; };
   function confirmLine() {
-    const G = g(), plan = linePlan(G, ui.line, ui.canPlace); if (!plan || !plan.n) return;
+    const kind = ui.pathKind || 'dirt', G = g(), plan = linePlan(G, ui.line, ui.canPlace, kind); if (!plan || !(plan.n + plan.r)) return;
     let vs = [...ui.sel];
     if (!vs.length) { const t = plan.tiles[0], v = G.villagers.filter(v => !v.inside && !(v.act && (v.act.type === 'sleep' || v.act.type === 'leave'))).sort((a, b) => Math.hypot(a.x - t.x, a.y - t.y) - Math.hypot(b.x - t.x, b.y - t.y))[0] || G.villagers[0]; if (v) vs = [v]; }
-    let n = 0; for (const t of plan.tiles) if (t.ok && ui.canPlace(t.x, t.y)) { const r = cmd.place(G, 'path', t.x, t.y, vs, 0); if (r.ok) n++; else break; }
-    buzz(); say(n ? `${n} tile${n > 1 ? 's' : ''} of path laid out. The villagers will lay it.` : 'Nothing could be placed.', ui.lastTap);
+    let n = 0, r = 0;
+    for (const t of plan.tiles) {
+      if (t.relay) { if (cmd.relayPath(G, t.relay, kind).ok) r++; continue; }
+      if (t.ok && ui.canPlace(t.x, t.y)) { const p = cmd.place(G, 'path', t.x, t.y, vs, 0, kind); if (p.ok) n++; else break; }
+    }
+    buzz(); say(n || r ? [n ? `${n} tile${n > 1 ? 's' : ''} of ${KIND_NAME[kind].toLowerCase()} path laid out; the villagers will lay it.` : '', r ? `${r} re-laid.` : ''].filter(Boolean).join(' ') : 'Nothing could be placed.', ui.lastTap);
     ui.line = null; clearSel();
   }
   function cancelPlace() { const was = ui.moving; ui.place = null; ui.ghost = null; ui.line = null; ui.moving = null; if (was) selectBuilding(was); }
@@ -424,7 +333,7 @@ export function createUI(ctx) {
       if (ui.mode === 'add') { if (ui.sel.has(hitV)) ui.sel.delete(hitV); else ui.sel.add(hitV); }
       else if (ui.sel.size === 1 && ui.sel.has(hitV)) { clearSel(); return; }
       else { clearSel(); ui.sel = new Set([hitV]); }
-      ui.selB = null; ui.selN = null; ui.menuOpen = false;
+      ui.selB = null; ui.selN = null;
       syncHeld(); ping(hitV.x, hitV.y, '#fff3c4'); return;
     }
     const b = buildingAt(rx, ry), n = nodeAt(rx, ry);
@@ -439,11 +348,21 @@ export function createUI(ctx) {
       else note = 'They can\'t walk on water. Tap the shore to fish or fetch water.';
       say(note); clearSel(); return;
     }
+    // Hands-on: a ripe field or a bundle set aside is collected with a tap (the next tap selects as usual).
+    if (b && b.ready) { const r = hands.collectReady(G, b); if (r.ok) { gotIt(r, b.x + (b.w - 1) / 2, b.y + (b.h - 1) / 2); return; } say(r.reason); }
+    if (b && hands.ripe(G, b) && ui.selB !== b) { const r = hands.tapHarvest(G, b); if (r.ok) { gotIt(r, b.x + 0.5, b.y + 0.5); return; } }
+    if (n >= 0 && nodeKind(G.w, n) === NODE.FISH) { clearSel(); openFishing({ g: G, ui, i: n, say, buzz }); return; }
     if (b) { selectBuilding(b); return; }
     if (n >= 0) { clearSel(); ui.selN = { type: 'node', i: n }; ping(n % N, (n / N) | 0, '#fff3c4'); return; }
     if (inMap(rx, ry) && G.w.G[idx(rx, ry)] > 0) { clearSel(); ui.selN = { type: 'sapling', i: idx(rx, ry) }; ping(rx, ry, '#fff3c4'); return; }
     clearSel();
   }
+  function gotIt(r, x, y) {
+    const [sx, sy] = toScreen(...isoW(x, y)), ic = r.res === 'food' ? (PANTRY_ICON[r.kind] || ICON.food) : ICON[r.res];
+    floatText(`+${r.n} ${ic}`, sx, sy - 30 * view.cam.z); buzz(10); audio && audio.sfx && audio.sfx('tap'); ping(x, y, '#fff3a0');
+  }
+  api.openQuilt = () => { pop.close(); openQuilt({ g: g(), ui, say, buzz }); };
+  api.openSorting = () => { sheet.close(); openSorting({ g: g(), ui, say, buzz }); };
   function hoverAt(rx, ry) {
     ui.hover = [rx, ry];
     if (!ui.sel.size || ui.place) { ui.hoverCells = null; return; }
@@ -451,51 +370,25 @@ export function createUI(ctx) {
     ui.hoverCells = n >= 0 ? [[n % N, (n / N) | 0]] : b && b.k !== 'tc' ? Array.from({ length: b.w * b.h }, (_, i) => [b.x + i % b.w, b.y + ((i / b.w) | 0)]) : null;
   }
 
-  // ---------- tips: hover with a mouse, press and hold on touch ----------
-  const tipEl = $('tip'); let tipT = 0, lpT = 0, lpFired = false;
-  function showTip(b) {
-    const k = b.dataset.tip, a = ACT[k] || CARD_TIPS[k]; if (!a || !a.tip) return;
-    const [name, desc] = val(a.tip); const c = a.cost ? val(a.cost) : null;
-    tipEl.replaceChildren(el('b', { textContent: name }), el('div', { textContent: oneLine(desc) }), ...(c ? [costEl(g(), c, 'tipcost')] : []), ...(b.dataset.why ? [el('div', { className: 'tipwhy', textContent: '🔒 ' + b.dataset.why })] : []));
-    tipEl.hidden = false;
-    // Clear of the bubble or panel it came from: above it, else below, else beside it.
-    const r = b.getBoundingClientRect(), box = b.closest('#pop, #sheet, #hud, #dir'), R = box ? box.getBoundingClientRect() : r, th = tipEl.offsetHeight, tw = 240;
-    let left = Math.max(8, Math.min(innerWidth - tw - 8, r.left + r.width / 2 - tw / 2)), top;
-    if (R.top - th - 8 >= 8) top = R.top - th - 8;
-    else if (R.bottom + th + 8 <= innerHeight - 8) top = R.bottom + 8;
-    else { top = Math.max(8, Math.min(innerHeight - th - 8, r.top)); left = R.left >= tw + 16 ? R.left - tw - 8 : Math.min(innerWidth - tw - 8, R.right + 8); }
-    tipEl.style.left = left + 'px'; tipEl.style.top = top + 'px';
-    clearTimeout(tipT); tipT = setTimeout(() => { tipEl.hidden = true; }, 4000);
-  }
-  const tipTarget = e => e.target.closest && e.target.closest('[data-tip]');
-  document.addEventListener('pointerover', e => { if (e.pointerType === 'mouse') { const b = tipTarget(e); if (b) showTip(b); } });
-  document.addEventListener('pointerout', e => { if (e.pointerType === 'mouse' && tipTarget(e)) tipEl.hidden = true; });
-  document.addEventListener('pointerdown', e => { tipEl.hidden = true; if (e.pointerType === 'mouse') return; const b = tipTarget(e); clearTimeout(lpT); lpFired = false; if (b) lpT = setTimeout(() => { lpFired = true; showTip(b); buzz(8); }, 450); });
-  document.addEventListener('pointerup', () => clearTimeout(lpT));
-  document.addEventListener('click', e => { if (lpFired && tipTarget(e)) { lpFired = false; e.stopPropagation(); e.preventDefault(); return; }
-    const dis = e.target.closest && e.target.closest('[aria-disabled="true"]');
-    if (dis) { e.stopPropagation(); e.preventDefault(); if (dis.dataset.why) say(dis.dataset.why); }
-  }, true);
+  // ---------- tips (tooltips.js) ----------
+  const tips = createTooltips({ g, ACT, CARD_TIPS, say });
 
   // ---------- resource bar ----------
   { const h = $('hud'), item = (r, adv) => { const e = el('span', { id: 's-' + r, className: adv ? 'adv' : '' }, [ICON[r] + ' ', el('b', { id: 'r-' + r })]); e.dataset.tip = 'res-' + r; addFill(e); return e; }, grp = (id, label) => el('span', { id: 'g-' + id, className: 'grp adv' }, [label]);
-    h.replaceChildren(...BASICS.map(r => item(r)), el('span', { id: 'pantry', className: 'grp sub adv' }), grp('farm', 'Farm'), ...FARM.map(r => item(r, true)), grp('goods', 'Goods'), ...GOODS.map(r => item(r, true)), el('span', { className: 'grp' }, ['']), (() => { const e = el('span', {}, ['🏠 ', el('b', { id: 'r-pop' })]); e.dataset.tip = 'res-pop'; return e; })(), (() => { const e = el('span', { id: 'r-age' }); e.dataset.tip = 'res-age'; return e; })());
-    h.append(el('div', { id: 'hfull', className: 'hfull', hidden: true }));
-    h.addEventListener('click', e => { const t = e.target.closest('[data-tip]'); if (t) showTip(t); }); }
+    h.replaceChildren(...BASICS.map(r => item(r)), el('span', { id: 'pantry', className: 'grp sub adv' }), grp('farm', 'Farm'), ...FARM.map(r => item(r, true)), grp('goods', 'Goods'), ...GOODS.map(r => item(r, true)), el('span', { className: 'grp adv' }, ['']), (() => { const e = el('span', {}, ['🏠 ', el('b', { id: 'r-pop' })]); e.dataset.tip = 'res-pop'; return e; })(), (() => { const e = el('span', { id: 'r-age', className: 'adv' }); e.dataset.tip = 'res-age'; return e; })());
+    h.append(el('div', { id: 'hfull', className: 'hfull adv', hidden: true }));
+    h.addEventListener('click', e => { const t = e.target.closest('[data-tip]'); if (t && ui.hudMode === 2) tips.show(t); }); }   // compact bar: a tap opens it out; open: a tap explains
 
-  // ---------- Director overlay (for the curious) ----------
-  function drawDirectors() {
-    const m = g().manager, d = $('dir'); d.replaceChildren(el('b', { textContent: 'Directors' }));
-    for (const dir of m.directors) {
-      const wishes = m.wishes.filter(w => w.dir === dir.name).sort((a, b) => b.w - a.w), dem = (m.demands || []).filter(x => x.from === dir.name);
-      const box2 = el('div', { className: 'dirbox' }, [el('div', { className: 'dn', textContent: dir.name }), el('small', { textContent: dir.seeks || '' })]);
-      for (const w of wishes) box2.append(el('div', { className: 'wl', textContent: `${w.key} ${w.w.toFixed(2)} · ${w.why}` }));
-      for (const x of dem) box2.append(el('div', { className: 'wl dem', textContent: `asks ${x.to} for ${x.what}${x.why ? ' (' + x.why + ')' : ''}` }));
-      if (dir.eval && dir.eval.length) for (const c of dir.eval.slice(0, 5)) box2.append(el('div', { className: 'wl', textContent: `plans ${BUILD[c.k].name.toLowerCase()} ${c.score.toFixed(2)} · ${c.why}` }));
-      if (!wishes.length && !dem.length && !(dir.eval && dir.eval.length)) box2.append(el('div', { className: 'wl', textContent: 'content for now' }));
-      d.append(box2);
-    }
-  }
+  // ---------- Director overlay (for the curious): directorview.js ----------
+  const drawDirectors = () => directorView(g(), $('dir'));
+
+  // One thing at a time: a menu sheet (Village, Book, Game, Build) tucks the bubble away. Sheets opened from a bubble
+  // (Details, Upgrades, Market) keep it, so you can see what they belong to — except on a phone, where there is no room.
+  const MENU_SHEETS = new Set(['build', 'village', 'storage', 'library', 'glossary', 'tree', 'game', 'flag']);
+  const sheetHidesBubble = () => !!sheet.key && (MENU_SHEETS.has(sheet.key) || innerWidth < 700);
+
+  // The compact bar: just the number, shortened from a thousand (1.4k); the line under it shows how full the store is.
+  const short = n => n >= 1e6 ? (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'm' : n >= 10000 ? Math.round(n / 1000) + 'k' : n >= 1000 ? (Math.floor(n / 100) / 10).toFixed(1).replace(/\.0$/, '') + 'k' : String(n);
 
   // ---------- every frame ----------
   function sync() {
@@ -505,14 +398,13 @@ export function createUI(ctx) {
     if (ui.moving && !G.bmap.has(ui.moving.id)) { ui.moving = null; ui.place = null; ui.ghost = null; }
     if (ui.selN && !(ui.selN.type === 'sapling' ? G.w.G[ui.selN.i] > 0 : G.w.A[ui.selN.i] > 0)) ui.selN = null;
     // The bubble: open what is selected, keep it pointing at its target.
-    if (!ui.modal) { const s = bubbleSpec(); if (!s) pop.close(); else pop.open(s); pop.tick(); }
+    if (!ui.modal && !sheetHidesBubble()) { const s = bubbleSpec(); if (!s) pop.close(); else pop.open(s); pop.tick(); }
     else pop.close();
     sheet.tick();
-    $('hud').hidden = !ui.hudOpen; $('hud').classList.toggle('simple', ui.hudMode === 1); document.body.classList.toggle('hud-open', !!ui.hudOpen);
-    $('fab').classList.toggle('on', !!ui.menuOpen);
+    menus.tick();
     for (const r of RES) {
       const c = Math.floor(cap(G, r)), n = Math.floor(G.res[r]);
-      $('r-' + r).textContent = `${n}/${c}`; syncFill(G, r, $('s-' + r));
+      { const t = ui.hudMode === 2 ? `${n}/${c}` : short(n); const e = $('r-' + r); if (e.textContent !== t) e.textContent = t; } syncFill(G, r, $('s-' + r));
       $('s-' + r).hidden = (GOODS.includes(r) || FARM.includes(r)) && !c && !n;
     }
     { const t = fullLine(G), e = $('hfull'); e.hidden = !t; if (e.textContent !== t) e.textContent = t; }
@@ -520,12 +412,15 @@ export function createUI(ctx) {
     { const p = G.pantry || {}, kinds = PANTRY.filter(k => (p[k] || 0) >= 1); $('pantry').hidden = !kinds.length; const key = kinds.map(k => k + Math.floor(p[k])).join(); if ($('pantry').dataset.k !== key) { $('pantry').dataset.k = key; $('pantry').replaceChildren(...kinds.map(k => { const e = el('span', { textContent: `${PANTRY_ICON[k]} ${Math.floor(p[k])}  ` }); e.dataset.tip = 'pan-' + k; return e; })); } }
     $('dir').hidden = ui.overlay !== 'directors';
     if (ui.overlay === 'directors' && (ui.dirT = (ui.dirT || 0) + 1) % 30 === 1) drawDirectors();
-    $('r-pop').textContent = `${G.villagers.length}/${popCap(G)}`;
+    { const t = `${G.villagers.length}/${popCap(G)}`; if ($('r-pop').textContent !== t) $('r-pop').textContent = t; }
     $('r-age').textContent = `${AGES[G.age].name} Age · 🎭 ${Math.floor(G.culture || 0)}${AGES[G.age + 1] ? '/' + AGES[G.age + 1].culture : ''} · ${SEASONS[seasonIndex(G)]}${darkness(G) > 0.6 ? ' 🌙' : ''}`;
-    $('buildbtn').classList.toggle('on', sheet.key === 'build' || !!ui.place);
     coach.tick();
     syncButtons();
   }
+
+  // One thing at a time: opening a sheet clears the short notes and tips; menu sheets put the bubble away (sync).
+  sheet.onOpen(() => { tips.hide(); sayEl.classList.remove('show'); });
+  const menus = createMenus({ ui, g, sheet, pop, ACT, api, ctx, settings, audio, say, toast, cancelPlace, willLevel: () => cmd.willLevel(g()) });
 
   // ---------- keyboard ----------
   addEventListener('keydown', e => {
@@ -535,8 +430,8 @@ export function createUI(ctx) {
     if (k === 'r' && (ui.place || ui.selB)) { ACT.rotate.run(); return; }
     if (k === 'enter' && ui.place) { confirmPlace(); return; }
     if (k === 'b') api.openBuild();
-    else if (k === 'm') { const was = ui.menuOpen; clearSel(); ui.menuOpen = !was; }
-    else if (k === 'h') { const tc = hub(g()); selectBuilding(tc); center(tc.x + 0.5, tc.y + 0.5); }
+    else if (k === 'm') menus.tap('game');
+    else if (k === 'h') api.goHome();
     else if (k === '.') nextIdle();
     else if (k === 'escape') { if (pop.confirming) pop.close(); else if (sheet.key) sheet.close(); else if (ui.place) cancelPlace(); else clearSel(); }
   });

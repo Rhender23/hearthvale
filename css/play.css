@@ -1,0 +1,22 @@
+/* Hands-on moments: the card, floating "+6", fishing, quilting, sorting (js/ui/play/). */
+.play{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:rgba(40,30,20,.25)}
+.play-card{width:min(92vw,360px);border-radius:20px;background:var(--bar);border:2px solid var(--line);box-shadow:0 10px 30px rgba(40,30,20,.3);padding:10px 14px 14px;position:relative}
+.play-head{display:flex;flex-direction:column;padding:4px 40px 8px 2px}.play-head small{opacity:.75}.play-head .sh-x{position:absolute;right:6px;top:6px}
+.play-body{display:flex;flex-direction:column;gap:10px;align-items:center}
+.play-canvas{border-radius:14px;touch-action:none;cursor:pointer}
+.play-msg{font-size:14px;text-align:center;min-height:20px}
+.floaty{position:fixed;z-index:15;transform:translate(-50%,-50%);font-weight:700;font-size:17px;color:#fff;text-shadow:0 1px 3px rgba(60,40,20,.8);pointer-events:none;animation:floaty 1.3s ease-out forwards}
+@keyframes floaty{from{opacity:1;margin-top:0}to{opacity:0;margin-top:-46px}}
+.quiltrow{display:flex;gap:14px;align-items:center}
+.quilt{display:grid;grid-template-columns:repeat(4,46px);gap:3px;padding:6px;border-radius:10px;background:#efe4cc;border:2px dashed #c9b88f}
+.quilt button{width:46px;height:46px;border:0;border-radius:6px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.25)}
+.quilt.small{grid-template-columns:repeat(4,14px);gap:2px;padding:3px}.quilt.small i{display:block;width:14px;height:14px;border-radius:2px}
+.quiltaim{display:flex;flex-direction:column;align-items:center;gap:4px}
+.pbtn.glow{box-shadow:0 0 0 3px var(--glow)}
+.cart{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:10px;border-radius:14px;background:#c9a874;min-height:70px;width:100%}
+.piece{width:44px;height:44px;border-radius:12px;border:2px solid rgba(0,0,0,.15);background:#f3ead8;font-size:22px;transition:transform .15s}
+.piece.on{box-shadow:0 0 0 3px var(--glow);transform:scale(1.12)!important}
+.piece.hop{animation:hop .4s}@keyframes hop{50%{transform:translateY(-12px)}}
+.crates{display:flex;gap:6px;width:100%}
+.crate{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:12px;border:2px solid #8a6a3e;background:#d9b98a;font-size:20px}
+.crate small{font-size:11px}.crate .cn{font-size:12px}

@@ -1,0 +1,51 @@
+// Hearthvale's own icons: soft, rounded line drawings on a 24-unit grid, drawn in the current text colour, so they sit
+// well in light and dark, on any button. Resources keep their little pictures in text; the menus use these.
+const P = {
+  build: '<path d="M14 4l6 6-3 3-6-6z"/><path d="M11 7L4 14v3l3 3h3l7-7"/><path d="M6 18l4-4"/>',
+  village: '<path d="M3 11l5-4 5 4v9H3z"/><path d="M13 13l4-3 4 3v7h-8"/><path d="M7 20v-4h2v4"/>',
+  book: '<path d="M4 5c3-1 6-1 8 1v14c-2-2-5-2-8-1z"/><path d="M20 5c-3-1-6-1-8 1v14c2-2 5-2 8-1z"/>',
+  game: '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.2 2.2M16.2 16.2l2.2 2.2M5.6 18.4l2.2-2.2M16.2 7.8l2.2-2.2"/>',
+  people: '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-4 3-6 6-6s6 2 6 6"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.5c3 0 5.5 1.8 5.5 5.5"/>',
+  storage: '<path d="M3 8l9-4 9 4v10l-9 4-9-4z"/><path d="M3 8l9 4 9-4M12 12v10"/>',
+  trade: '<path d="M12 4v16M7 20h10"/><path d="M4 8h16"/><path d="M4 8l-2 6h4zM20 8l-2 6h4z"/>',
+  save: '<path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4"/><rect x="8" y="13" width="8" height="5" rx="1"/>',
+  load: '<path d="M4 14v6h16v-6"/><path d="M12 4v11M8 11l4 4 4-4"/>',
+  export: '<path d="M4 14v6h16v-6"/><path d="M12 15V4M8 8l4-4 4 4"/>',
+  play: '<path d="M8 5l11 7-11 7z"/>',
+  pause: '<path d="M8 5v14M16 5v14"/>',
+  speed: '<path d="M4 6l7 6-7 6zM12 6l7 6-7 6z"/>',
+  sound: '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9c1.5 1.5 1.5 4.5 0 6M18.5 6.5c3 3 3 8 0 11"/>',
+  mute: '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/>',
+  hints: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 00-4 10.5c1 1 1 2 1 3h6c0-1 0-2 1-3A6 6 0 0012 3z"/>',
+  map: '<path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/>',
+  glossary: '<path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3z"/><path d="M5 17a3 3 0 013-3h11"/><path d="M9 8h6"/>',
+  tree: '<circle cx="12" cy="5" r="2"/><circle cx="6" cy="14" r="2"/><circle cx="18" cy="14" r="2"/><circle cx="12" cy="19" r="2"/><path d="M12 7v10M11 6l-4 6M13 6l4 6"/>',
+  animals: '<circle cx="7" cy="9" r="1.8"/><circle cx="12" cy="6.5" r="1.8"/><circle cx="17" cy="9" r="1.8"/><path d="M8 17c0-3 2-5 4-5s4 2 4 5c0 2-2 3-4 3s-4-1-4-3z"/>',
+  sandbox: '<path d="M9 3h6M10 3v6l-5 9a2 2 0 002 3h10a2 2 0 002-3l-5-9V3"/><path d="M7 15h10"/>',
+  festival: '<path d="M12 3v3"/><path d="M8 6h8l-1 9H9z"/><path d="M9 15l-1 3h8l-1-3"/><path d="M12 9v3"/>',
+  newgame: '<path d="M3 18h18"/><path d="M6 18a6 6 0 0112 0"/><path d="M12 6V3M5 9L3 7M19 9l2-2"/>',
+  free: '<path d="M4 18c3-8 8-12 16-12-1 7-5 12-12 13"/><path d="M4 18l7-7"/>',
+  close: '<path d="M6 6l12 12M18 6L6 18"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
+  up: '<path d="M12 20V5M6 11l6-6 6 6"/>',
+  move: '<path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/>',
+  turn: '<path d="M20 12a8 8 0 11-3-6.2"/><path d="M20 4v5h-5"/>',
+  trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
+  furnish: '<path d="M6 10V6a2 2 0 012-2h8a2 2 0 012 2v4"/><path d="M4 10h16v6H4zM6 16v4M18 16v4"/>',
+  flag: '<path d="M5 21V4"/><path d="M5 4h12l-2 4 2 4H5"/>',
+  paint: '<path d="M12 3a9 9 0 100 18c1.5 0 2-1 1.5-2s0-2 1.5-2H18a3 3 0 003-3c0-6-4-11-9-11z"/><circle cx="8" cy="10" r="1"/><circle cx="12" cy="7" r="1"/><circle cx="16" cy="10" r="1"/>',
+  overlay: '<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
+  slot: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 15l5-4 4 3 3-2 6 4"/>',
+  rename: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+  more: '<circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/>',
+  heart: '<path d="M12 20s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.5-7 10-7 10z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>',
+  moon: '<path d="M20 14A8 8 0 0110 4a8 8 0 1010 10z"/>',
+  idle: '<circle cx="12" cy="7" r="3"/><path d="M6 21c0-5 3-8 6-8s6 3 6 8"/><path d="M17 4l3-1M18 7h3"/>',
+  home: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
+};
+export const ICONS = Object.keys(P);
+// An icon as an inline SVG string (for innerHTML) at a size in CSS pixels.
+export const iconSvg = (name, size = 22) => `<svg class="ico" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || P.more}</svg>`;
+// An icon as an element.
+export function icon(name, size = 22) { const s = document.createElement('span'); s.className = 'icw'; s.innerHTML = iconSvg(name, size); return s; }

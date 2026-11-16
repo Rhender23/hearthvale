@@ -1,10 +1,13 @@
 // Buildings: one drawing function per kind (DB), their heights (for bubbles and labels), farm pens and animals,
 // the campfire, and construction progress bars.
-import { N, TW, TH, BUILD, NODE, SEASON, dims } from '../../core/config.js';
-import { idx, inMap, nodeKind, WATER, SAND } from '../../core/world.js';
-import { darkness, hour, isNight, seasonIndex } from '../../core/state.js';
+import { TW, TH, BUILD, ICON, PANTRY_ICON } from '../../core/config.js';
+
+import { hour } from '../../core/state.js';
 import { hash } from '../../core/rng.js';
 import { iso } from './kit.js';
+import { drawPath } from './paths.js';
+import { drawFlag } from '../flag.js';
+import { ripe } from '../../core/handson.js';
 import { chain, SEASON_NAMES } from './sprites.js';
 const AW = [['#e8d2a6', '#d4b887'], ['#ece0c4', '#d8c6a0'], ['#efe6d6', '#d9ccb6'], ['#f3ecdf', '#ddd2bf']];
 const RA = [['#c9684a', '#a9503a'], ['#b9583f', '#98432f'], ['#4e7ca0', '#3b6283'], ['#7a5aa0', '#5f4584']];
@@ -102,6 +105,24 @@ export function createBuildings(K) {
     monument(b) { const c = iso(b.x + 0.5, b.y + 0.5), t = [c[0], c[1] - 80]; box(c, 0.95, 14, '#cfc7b8', '#b9b0a0', '#ddd6c8'); box([c[0], c[1] - 14], 0.62, 20, '#d8d1c3', '#c2baab', '#e6e0d3'); box([c[0], c[1] - 34], 0.34, 46, '#e6dfd2', '#cfc7b8', '#f1ece1'); poly([[t[0] - 0.34 * TW, t[1]], [t[0], t[1] + 0.34 * TH], [t[0], t[1] - 36]], '#d9a441'); poly([[t[0], t[1] + 0.34 * TH], [t[0] + 0.34 * TW, t[1]], [t[0], t[1] - 36]], '#b8862c'); },
     farm(b) { const c = iso(b.x + 0.5, b.y + 0.5); ctx.fillStyle = '#8a6a3e'; dia(c[0], c[1], TW, TH); ctx.fill(); ctx.strokeStyle = b.food > 0 ? (st.sea === 2 ? '#d9b44a' : st.sea === 3 ? '#a89a80' : '#8fbf55') : '#6a5030'; ctx.lineWidth = 3; for (let i = 0; i < 4; i++) { const a = iso(b.x - 0.35 + i * 0.5, b.y - 0.35), e = iso(b.x - 0.35 + i * 0.5, b.y + 1.35); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(e[0], e[1]); ctx.stroke(); }
       if (b.food > 0 && st.sea < 3) for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { const p = iso(b.x - 0.35 + i * 0.5, b.y - 0.2 + j * 0.45); ctx.fillStyle = (i + j) % 3 === 0 ? '#e8873a' : (i + j) % 3 === 1 ? '#5f9e4a' : '#b5d06a'; ctx.beginPath(); ctx.arc(p[0], p[1] - 2, 2.6, 0, 7); ctx.fill(); } },
+    pumpkin(b) {   // vines over dark soil; in autumn, orange pumpkins among the leaves (fewer as they are picked)
+      const c = iso(b.x + 0.5, b.y + 0.5), sea = st.sea; ctx.fillStyle = '#7a5a36'; dia(c[0], c[1], TW, TH); ctx.fill();
+      ctx.fillStyle = 'rgba(0,0,0,.08)'; dia(c[0], c[1], TW - 6, TH - 3); ctx.fill();
+      const leaf = sea === 3 ? null : sea === 0 ? '#8fbf55' : sea === 2 ? '#7a9a3e' : '#5f9a44', ripe = sea === 2 && b.food > 0, left = Math.min(1, (b.food || 0) / 140);
+      const spots = []; for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) spots.push([b.x - 0.35 + i * 0.42 + (hash(i, j + b.x) - 0.5) * 0.12, b.y - 0.35 + j * 0.42 + (hash(j, i + b.y) - 0.5) * 0.12, hash(i * 7 + b.x, j * 3 + b.y)]);
+      if (leaf) {
+        ctx.strokeStyle = sea === 2 ? '#8a8a3e' : '#4f8a3a'; ctx.lineWidth = 1.2;   // the runners, row to row
+        for (let j = 0; j < 5; j++) { ctx.beginPath(); for (let i = 0; i < 5; i++) { const p = iso(spots[i * 5 + j][0], spots[i * 5 + j][1]); i ? ctx.lineTo(p[0], p[1] - 2) : ctx.moveTo(p[0], p[1] - 2); } ctx.stroke(); }
+        for (const [x, y, h] of spots) { const p = iso(x, y), r = sea === 0 ? 2.5 : 4.2; ctx.fillStyle = leaf; for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.ellipse(p[0] + (k - 1) * r * 0.8, p[1] - 3 - (k % 2) * 2, r, r * 0.6, 0, 0, 7); ctx.fill(); } }
+      } else for (const [x, y] of spots) { const p = iso(x, y); ctx.fillStyle = '#b39a64'; ctx.fillRect(p[0] - 3, p[1] - 1, 6, 1.2); }   // straw over the bare beds
+      if (sea === 1 || ripe) for (const [x, y, h] of spots) {
+        if (h > (ripe ? left : 0.35)) continue;
+        const p = iso(x + 0.1, y + 0.1), r = ripe ? 3.6 + h * 2.6 : 2.2;
+        ctx.fillStyle = ripe ? (h > 0.5 ? '#e0832a' : '#ec9a3a') : '#9ab84a'; ctx.beginPath(); ctx.ellipse(p[0], p[1] - r * 0.5, r * 1.15, r * 0.8, 0, 0, 7); ctx.fill();
+        ctx.strokeStyle = 'rgba(120,60,20,.35)'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.ellipse(p[0], p[1] - r * 0.5, r * 0.45, r * 0.8, 0, 0, 7); ctx.stroke();
+        ctx.fillStyle = '#5a7a2a'; ctx.fillRect(p[0] - 0.6, p[1] - r * 1.35, 1.4, 2.2);
+      }
+    },
     wheatfield(b) {
       const c = iso(b.x + 0.5, b.y + 0.5); ctx.fillStyle = '#9a7a46'; dia(c[0], c[1], TW, TH); ctx.fill();
       const ripe = b.food > 0 && st.sea < 3, col = st.sea === 0 ? '#9cc25a' : '#e3c35a', head = st.sea === 0 ? '#b8d070' : '#f2d77a';
@@ -222,32 +243,7 @@ export function createBuildings(K) {
       poly([[c[0] - 15, c[1] - 4], [c[0] + 15, c[1] - 11], [c[0] + 15, c[1] - 7], [c[0] - 15, c[1]]], '#a8784a');
       poly([[c[0] - 15, c[1] - 12], [c[0] + 15, c[1] - 19], [c[0] + 15, c[1] - 15], [c[0] - 15, c[1] - 8]], '#94673e');
     },
-    path(b) {
-      const c = iso(b.x, b.y), L = b.lvl || 0, h = hash(b.x, b.y);
-      if (L === 1) {   // gravel lane: packed sand-coloured ground, speckled
-        ctx.fillStyle = '#d8c9a4'; dia(c[0], c[1], TW / 2 - 1, TH / 2 - 0.5); ctx.fill();
-        for (let k = 0; k < 22; k++) { const u = hash(h * 97 + k, k) - 0.5, w = hash(k, h * 53 + 3) - 0.5, px = c[0] + (u - w) * (TW / 2 - 4), py = c[1] + (u + w) * (TH / 2 - 2); ctx.fillStyle = k % 3 ? '#b9a883' : '#ece0c4'; ctx.fillRect(px, py, 1.6, 1.2); }
-        return;
-      }
-      if (L >= 2) {   // cobbled road: rounded grey setts in rows, a darker kerb
-        ctx.fillStyle = '#8f8a80'; dia(c[0], c[1], TW / 2 - 0.5, TH / 2 - 0.25); ctx.fill();
-        for (let r = 0; r < 4; r++) for (let q = 0; q < 4; q++) { const u = (q + 0.5) / 4 - 0.5 + (r % 2 ? 0.06 : 0), w = (r + 0.5) / 4 - 0.5, px = c[0] + (u - w) * (TW / 2 - 3), py = c[1] + (u + w) * (TH / 2 - 1.5); ctx.fillStyle = ['#b8b2a6', '#a9a397', '#c4beb2'][(q + r + (h * 7 | 0)) % 3]; ctx.beginPath(); ctx.ellipse(px, py, 3.6, 2, 0, 0, 7); ctx.fill(); }
-        return;
-      }
-      // Dirt path: the grass stays; a worn dirt track runs down the middle and out to each neighbouring path.
-      const G = st.G, at = (x, y) => { if (!inMap(x, y)) return false; const id = G.w.occ[idx(x, y)], o = id > 0 && G.bmap.get(id); return !!o && o.k === 'path'; };
-      const arms = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => at(b.x + dx, b.y + dy)).map(([dx, dy]) => [(dx - dy) * TW / 4, (dx + dy) * TH / 4]);
-      const track = (w, col) => {
-        ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = w; ctx.lineCap = 'round';
-        if (!arms.length) { ctx.beginPath(); ctx.ellipse(c[0], c[1], w * 0.9, w * 0.45, 0, 0, 7); ctx.fill(); return; }
-        ctx.beginPath(); for (const [ax, ay] of arms) { ctx.moveTo(c[0], c[1]); ctx.lineTo(c[0] + ax, c[1] + ay); } ctx.stroke();
-        ctx.beginPath(); ctx.ellipse(c[0], c[1], w * 0.5, w * 0.3, 0, 0, 7); ctx.fill();
-      };
-      track(11, 'rgba(150,120,80,.35)');   // the trodden edge, fading into the grass
-      track(7, '#a88a5e');                 // bare earth
-      track(3, 'rgba(120,94,62,.55)');      // the deepest wear, where most feet go
-      for (let k = 0; k < 5; k++) { const u = hash(h * 31 + k, k * 7) - 0.5, w = hash(k * 13, h + 5) - 0.5; ctx.fillStyle = k % 2 ? '#c4ab82' : '#8f744e'; ctx.fillRect(c[0] + u * 14, c[1] + w * 6, 1.4, 1); }
-    },
+    path(b) { drawPath(ctx, st.G, b, iso(b.x, b.y)); },
     fireflylamp(b) {
       const c = iso(b.x, b.y), lit = st.dark > 0.15;
       ctx.strokeStyle = '#7a5638'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(c[0], c[1]); ctx.lineTo(c[0], c[1] - 20); ctx.lineTo(c[0] + 6, c[1] - 20); ctx.stroke();
@@ -451,21 +447,46 @@ export function createBuildings(K) {
     box(c, 0.32 * s, h, '#d9c4a0', '#c4ad86', '#e8d6b4');
     poly([[c[0] - 0.34 * s * TW, c[1] - h], [c[0], c[1] - h - 14 * s], [c[0] + 0.34 * s * TW, c[1] - h], [c[0], c[1] - h + 0.34 * s * TH]], '#a8584a');
   }
+  // Live touches on top of the art: torch and lamp flames (and their glow after dark), the village flag.
+  const UNIT = 46;   // screen pixels per model unit of height
+  function flame(x, y, size) {
+    const t = st.T0, f = 1 + Math.sin(t * 13 + x) * 0.12 + Math.sin(t * 7.3 + y) * 0.08, d = st.dark;
+    if (d > 0.1) {
+      const r = 26 * size * (0.9 + 0.1 * f), gr = ctx.createRadialGradient(x, y, 1, x, y, r); gr.addColorStop(0, `rgba(255,200,110,${0.55 * d})`); gr.addColorStop(1, 'rgba(255,190,100,0)');
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+    }
+    ctx.fillStyle = '#f2a03a'; ctx.beginPath(); ctx.moveTo(x - 3 * size, y); ctx.quadraticCurveTo(x - 3.2 * size, y - 5 * size * f, x + Math.sin(st.T0 * 9) * size, y - 9 * size * f); ctx.quadraticCurveTo(x + 3.2 * size, y - 5 * size * f, x + 3 * size, y); ctx.fill();
+    ctx.fillStyle = '#ffe08a'; ctx.beginPath(); ctx.ellipse(x, y - 2.5 * size, 1.5 * size, 3 * size * f, 0, 0, 7); ctx.fill();
+  }
+  function groundGlow(x, y, r) { const d = st.dark; if (d < 0.1) return; const gr = ctx.createRadialGradient(x, y, 2, x, y, r); gr.addColorStop(0, `rgba(255,205,120,${0.32 * d})`); gr.addColorStop(1, 'rgba(255,205,120,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.ellipse(x, y, r, r / 2, 0, 0, 7); ctx.fill(); }
+  function extras(b, g, gx, gy) {
+    const c = iso(b.x, b.y), F = BUILD[b.k].flame;
+    // Hands-on: a ripe field twinkles; a bundle set aside floats over its workshop in a little bubble.
+    if (ripe(g, b)) { const m = iso(b.x + 0.5, b.y + 0.5), k = (st.T0 * 1.3 + b.x * 0.7) % 3; for (let i = 0; i < 3; i++) { const a = Math.max(0, Math.sin((k + i) * 2.1 + st.T0 * 3)), px = m[0] + (i - 1) * 16, py = m[1] - 12 - i % 2 * 6; if (a < 0.2) continue; ctx.fillStyle = `rgba(255,248,200,${a})`; ctx.beginPath(); ctx.moveTo(px, py - 5 * a); ctx.lineTo(px + 1.4, py - 1.4); ctx.lineTo(px + 5 * a, py); ctx.lineTo(px + 1.4, py + 1.4); ctx.lineTo(px, py + 5 * a); ctx.lineTo(px - 1.4, py + 1.4); ctx.lineTo(px - 5 * a, py); ctx.lineTo(px - 1.4, py - 1.4); ctx.fill(); } }
+    if (b.ready) { const top = gy - heightOf(b, g.age) - 18 + Math.sin(st.T0 * 2.4 + b.x) * 2.5, ic = b.ready.res === 'food' ? (PANTRY_ICON[b.ready.kind] || ICON.food) : ICON[b.ready.res];
+      ctx.fillStyle = 'rgba(255,247,230,.95)'; ctx.strokeStyle = '#f2c14e'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(gx, top, 11, 0, 7); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(gx - 4, top + 9); ctx.lineTo(gx, top + 15); ctx.lineTo(gx + 4, top + 9); ctx.fill();
+      ctx.font = '13px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#000'; ctx.fillText(ic || '✨', gx, top + 1); ctx.textBaseline = 'alphabetic'; }
+    if (F === 1) { groundGlow(c[0], c[1], 46); flame(c[0], c[1] - 0.43 * UNIT, 1); }
+    else if (F === 2) { groundGlow(c[0], c[1], 64); const y = c[1] - 0.74 * UNIT; if (st.dark > 0.1) flame(c[0], y + 4, 0.7); else { ctx.fillStyle = 'rgba(255,224,150,.5)'; ctx.beginPath(); ctx.ellipse(c[0], y, 2, 3, 0, 0, 7); ctx.fill(); } }
+    if (b.k === 'flagpole') drawFlag(ctx, g.flag, c[0] + 1, c[1] - 1.12 * UNIT, 26, 17, st.T0);
+  }
   function drawBuilding(b, g) {
     ctx.globalAlpha = b.done ? 1 : 0.4 + 0.6 * b.prog / b.time;
     // Art slot first: building/<kind>/<level>/<season> (… down to building/<kind>); sites: site/<kind>, site/<w>x<h>, site.
     // Ground point: the footprint's front (bottom) point, centred across it. Turned houses are mirrored.
     const season = SEASON_NAMES[st.sea], gx = iso(b.x + (b.w - 1) / 2, b.y + (b.h - 1) / 2)[0], gy = iso(b.x + b.w - 0.5, b.y + b.h - 0.5)[1];
     const lv = b.k === 'tc' ? g.age : (b.lvl || 0);   // the town center's look follows the Age
-    const base = 'building/' + b.k, turned = b.done && b.rot && (BUILD[b.k].turns || BUILD[b.k].faces) ? chain(base + '/turned', lv, season) : [];
+    const base = b.k === 'house' && b.brick && (lv === 5 || lv === 6) ? 'building/house-brick' : 'building/' + b.k, turned = b.done && b.rot && (BUILD[b.k].turns || BUILD[b.k].faces) ? chain(base + '/turned', lv, season) : [];
     const hasTurned = turned.length && K.sprites.has(turned);   // turned art is drawn as it is; without it a turned house's art is mirrored
-    const keys = !b.done ? ['site/' + b.k, `site/${b.w}x${b.h}`, 'site'] : hasTurned ? turned : BUILD[b.k].turns && b.rot ? [...turned, ...chain(base, lv, season)] : chain(base, lv, season);
+    const keys0 = !b.done ? ['site/' + b.k, `site/${b.w}x${b.h}`, 'site'] : hasTurned ? turned : BUILD[b.k].turns && b.rot ? [...turned, ...chain(base, lv, season)] : chain(base, lv, season);
+    const keys = base === 'building/house-brick' && b.done ? [...keys0, ...chain('building/house/turned', lv, season), ...chain('building/house', lv, season)] : keys0;   // brick art first, stone art if it is missing
     if (K.sprites.draw(ctx, keys, gx, gy, { t: st.T0, flip: !hasTurned && !!(BUILD[b.k].faces && b.rot), winter: st.sea === 3, night: st.dark })) { /* drawn from art */ }
     else if (BUILD[b.k].faces && b.rot) { // a turned house: mirrored so its front faces the other way
       const cx = iso(b.x + (b.w - 1) / 2, b.y + (b.h - 1) / 2)[0];
       ctx.save(); ctx.translate(cx * 2, 0); ctx.scale(-1, 1); DB[b.k](b, g.age); ctx.restore();
     } else (DB[b.k] || generic)(b, g.age);
     ctx.globalAlpha = 1;
+    if (b.done) extras(b, g, gx, gy);
     if (!b.done) bar(b, g.age, g);
     if (b.demolish && b.demo) { // taking down: the bar empties as the villager works
       const p = iso(b.x + (b.w - 1) / 2, b.y + (b.h - 1) / 2), y = p[1] - heightOf(b, g.age) - 40, w = 46, q = 1 - b.demo / b.demoNeed;
@@ -478,5 +499,23 @@ export function createBuildings(K) {
       ctx.fillStyle = '#f2c14e'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('✦', p[0], y);
     }
   }
-  return { DB, heightOf, drawBuilding, drawFire, bar, pen, herd, animal, HOME_LOOK };
+  // After dark, over the night tint: the warm pools of torch and lamp light, and the flames bright again on top.
+  const lit = { sig: '', list: [] };
+  function nightLights(g) {
+    const d = st.dark; if (d < 0.1) return;
+    // the torches and lamps, found again only when buildings come or go (or finish)
+    const sig = g.buildings.length + ':' + g.buildings.reduce((n, b) => n + (b.done ? 1 : 0), 0);
+    if (lit.sig !== sig) { lit.sig = sig; lit.list = g.buildings.filter(b => b.done && BUILD[b.k].flame); }
+    for (const b of lit.list) { const F = BUILD[b.k].flame; if (!g.bmap.has(b.id)) continue;
+      const c = iso(b.x, b.y), y = c[1] - (F === 1 ? 0.43 : 0.74) * UNIT, r = F === 1 ? 70 : 96, f = 1 + Math.sin(st.T0 * 11 + b.x) * 0.06;
+      ctx.globalCompositeOperation = 'lighter';
+      let gr = ctx.createRadialGradient(c[0], c[1], 2, c[0], c[1], r * f); gr.addColorStop(0, `rgba(255,170,80,${0.42 * d})`); gr.addColorStop(1, 'rgba(255,170,80,0)');
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.ellipse(c[0], c[1], r * f, r * f / 2, 0, 0, 7); ctx.fill();
+      gr = ctx.createRadialGradient(c[0], y, 1, c[0], y, 22); gr.addColorStop(0, `rgba(255,220,140,${0.7 * d})`); gr.addColorStop(1, 'rgba(255,200,120,0)');
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(c[0], y, 22, 0, 7); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      flame(c[0], F === 1 ? y : y + 4, F === 1 ? 1 : 0.7);
+    }
+  }
+  return { DB, heightOf, drawBuilding, drawFire, bar, pen, herd, animal, HOME_LOOK, nightLights };
 }

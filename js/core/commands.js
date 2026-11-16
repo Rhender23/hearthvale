@@ -1,16 +1,17 @@
 // Player commands: the only way the interface changes the village.
 // Player orders always win over autonomy and lock it until the task ends.
+import { queueRecruit, waiting } from './recruit.js';
 import { researchCost } from './research.js';
-import { dims, BUILD, TIERS, UPGRADES, AGES, ADVANCE_TIME, VILLAGER_COST, TRADE, KEY_NODE, NODE_INFO } from './config.js';
+import { dims, BUILD, TIERS, UPGRADES, AGES, ADVANCE_TIME, VILLAGER_COST, TRADE, NODE_INFO, PATH_KINDS } from './config.js';
 import { bfs } from './path.js';
-import { idx, isOpen, nodeKind, besideRect, walkable, inMap, DIRS8 } from './world.js';
-import { canStore, slotKind, farmFor, siteOk, relocate, canTakeDown, takeDown, have, pay, addBuilding, removeBuilding, popCap, notice, addRes, levelName, hub, townCenter, hasMarket } from './state.js';
+import { isOpen, nodeKind, besideRect, walkable } from './world.js';
+import { canStore, slotKind, farmFor, siteOk, relocate, canTakeDown, takeDown, have, pay, addBuilding, removeBuilding, popCap, notice, levelName, hub, townCenter, hasMarket } from './state.js';
 import { upgradeTarget } from './directors.js';
 import { workFor } from './autonomy.js';
-import { dutyOf, dutyAction, resumeDuty, isJob } from './duty.js';
+import { dutyOf, dutyAction, isJob } from './duty.js';
 import { stepCost } from './actions.js';
 import { homeScore, beautyLabel } from './beauty.js';
-import { PRI, RES } from './config.js';
+import { PRI } from './config.js';
 import { action, command, enqueue, createVillager, finish } from './villagers.js';
 import { shortOf } from './requires.js';
 import { SEASON, DAY } from './config.js';
@@ -67,26 +68,42 @@ export const canPlace = (g, k, x, y, rot = 0) => {
 // Pick a building up and set it down somewhere else.
 export const moveBuilding = (g, b, x, y, rot) => relocate(g, b, x, y, rot, (a, c) => isOpen(g.w, a, c));
 // Returns { ok, reason, b }
-export function place(g, k, x, y, vs, rot = 0) {
-  const def = BUILD[k];
+export function place(g, k, x, y, vs, rot = 0, kind = null) {
+  const def = BUILD[k], pk = k === 'path' && kind ? PATH_KINDS.find(p => p[0] === kind) : null, cost = pk ? pk[2] : def.cost;
+  if (pk && TIERS.path[pk[1]].age > g.age) return { ok: false, reason: `${TIERS.path[pk[1]].name}s arrive in the ${AGES[TIERS.path[pk[1]].age].name} Age.` };
   if (!def || def.age > g.age) return { ok: false, reason: 'Not available yet.' };
   if (def.unlock && !g.unlocked[k]) return { ok: false, reason: 'Catch 10 fireflies at night to unlock this.' };
   if (def.needs && !g.buildings.some(b => b.k === def.needs && b.done)) return { ok: false, reason: `Build a ${BUILD[def.needs].name.toLowerCase()} first.` };
   if (k === 'tc' && g.buildings.some(b => b.k === 'tc')) return { ok: false, reason: 'The village already has a town center.' };
+  if (def.onlyOne && g.buildings.some(b => b.k === k)) return { ok: false, reason: `The village already has its ${def.name.toLowerCase()}.` };
   if (!vs.length) return { ok: false, reason: 'Select a villager to build.' };
   if (!canPlace(g, k, x, y, rot)) return { ok: false, reason: slotKind(k) && !farmFor(g, k, x, y, rot) ? (slotKind(k) === 'fields' ? 'A field must touch a farmhouse with a free field slot, or a field joined to one.' : 'It needs a free animal slot at a farmhouse within 4 tiles.') : def.nearWater ? 'It needs open ground near water.' : 'That spot is not free.' };
-  if (!have(g, def.cost)) return { ok: false, reason: 'Not enough resources yet.' };
+  if (!have(g, cost)) return { ok: false, reason: 'Not enough resources yet.' };
   const b = addBuilding(g, k, x, y, false, rot);
+  if (pk) b.lvl = pk[1];
   const reach = vs.filter(v => bfs(g.w, Math.round(v.x), Math.round(v.y), (a, c) => besideRect(a, c, x, y, b.w, b.h)));
   if (!reach.length) { removeBuilding(g, b); return { ok: false, reason: 'Your villagers cannot reach that spot.' }; }
-  pay(g, def.cost);
+  pay(g, cost);
   for (const v of reach) enqueue(g, v, action('build', { b: b.id, key: 'build', why: 'Building what you asked for.' }));
   return { ok: true, b };
 }
 
+// Lay a different kind of path over one already there (it joins the same way; no building work needed).
+export function relayPath(g, b, kind) {
+  const pk = PATH_KINDS.find(p => p[0] === kind);
+  if (!pk || !b || b.k !== 'path' || (b.lvl || 0) === pk[1]) return { ok: false };
+  if (TIERS.path[pk[1]].age > g.age || !have(g, pk[2])) return { ok: false, reason: 'Not enough resources yet.' };
+  pay(g, pk[2]); b.lvl = pk[1]; b.wear = 0; g.beautyDirty = true; return { ok: true };
+}
+
+// Welcome a villager: paid now, they arrive once the welcome is done (see recruit.js). Waiting welcomes count toward the room.
 export function train(g) {
-  if (g.villagers.length >= popCap(g)) return { ok: false, reason: 'The village is full for now.' };
+  if (g.villagers.length + waiting(g) >= popCap(g)) return { ok: false, reason: 'The village is full for now.' };
   if (!pay(g, VILLAGER_COST)) return { ok: false, reason: 'Not enough food yet.' };
+  queueRecruit(g);
+  return { ok: true, queued: waiting(g) };
+}
+export function welcome(g) {
   const tc = hub(g);
   const p = bfs(g.w, tc.x, tc.y, (x, y) => besideRect(x, y, tc.x, tc.y, tc.w, tc.h) && walkable(g.w, x, y));
   const [sx, sy] = p && p.length ? p[p.length - 1] : [tc.x - 1, tc.y + 1];

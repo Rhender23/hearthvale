@@ -1,12 +1,14 @@
 // Drawing. Reads the game state and the view; never changes the game.
 import { linePlan } from './pathline.js';
 import { N, TW, TH, BUILD, NODE, SEASON, DAY, dims } from '../core/config.js';
-import { idx, inMap, nodeKind, WATER, SAND } from '../core/world.js';
-import { darkness, hour, isNight, seasonIndex } from '../core/state.js';
+import { idx, nodeKind, WATER, SAND } from '../core/world.js';
+import { darkness, isNight } from '../core/state.js';
 import { hash } from '../core/rng.js';
 import { createKit } from './render/kit.js';
 import { chain, SEASON_NAMES } from './render/sprites.js';
-import { createBuildings, HOME_LOOK } from './render/buildings.js';
+import { createBuildings } from './render/buildings.js';
+import { createFigures } from './render/villagers.js';
+const FIG = createFigures();
 import { createWorkerBadges } from './render/workers.js';
 import { createSeasonal } from './render/seasonal.js';
 
@@ -22,7 +24,7 @@ export function createRenderer(canvas) {
   if (!ctx.roundRect) ctx.roundRect = function (x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); this.moveTo(x + r, y); this.arcTo(x + w, y, x + w, y + h, r); this.arcTo(x + w, y + h, x, y + h, r); this.arcTo(x, y + h, x, y, r); this.arcTo(x, y, x + w, y, r); this.closePath(); };
   let gc = SG[0], fol = SF[0].map(rgb);
   const K = createKit(ctx), { st, dia, poly, upp, mid, lerp, cor, box, walls, door, c0 } = K, S = K.sprites;
-  const { DB, heightOf, drawBuilding, drawFire, bar, pen, herd, animal } = createBuildings(K);
+  const { DB, heightOf, drawBuilding, drawFire, bar, pen, herd, animal, nightLights } = createBuildings(K);
   const drawWorkBadges = createWorkerBadges(K, heightOf);
 
   function drawTree(x, y, amt, grow = 1, sapling = false) {
@@ -166,16 +168,18 @@ export function createRenderer(canvas) {
     }
     const F = g.festival, cheering = F && F.phase === 'parade' && !v.moving && ((v.act && v.act.type === 'festival' && v.act.role === 'cheer') || v.visitor);
     const bob = cheering ? -Math.abs(Math.sin(st.T0 * 8 + v.x * 3)) * 6 : v.moving ? Math.abs(Math.sin(st.T0 * 12)) * -2.5 : 0;
-    if (cheering && !ghost) { ctx.strokeStyle = v.skin || '#c08a5d'; ctx.lineWidth = 2; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(sx + s * 4, sy - 15 + bob); ctx.lineTo(sx + s * 8, sy - 25 + bob + Math.sin(st.T0 * 10 + s) * 2); ctx.stroke(); } if (Math.random() < 0.08) confetti(sx, sy - 26 + bob); }
+    if (cheering && !ghost && !FIG.ready) { ctx.strokeStyle = v.skin || '#c08a5d'; ctx.lineWidth = 2; for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(sx + s * 4, sy - 15 + bob); ctx.lineTo(sx + s * 8, sy - 25 + bob + Math.sin(st.T0 * 10 + s) * 2); ctx.stroke(); } if (Math.random() < 0.08) confetti(sx, sy - 26 + bob); }
     if (F && F.phase === 'parade' && v.act && v.act.type === 'festival' && v.act.role === 'march' && v.act.rank === 0) { // the banner
       ctx.strokeStyle = '#6a4a2c'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(sx + 7, sy - 8); ctx.lineTo(sx + 7, sy - 46); ctx.stroke();
       const wv = Math.sin(st.T0 * 4) * 2; poly([[sx + 7, sy - 46], [sx + 27, sy - 44 + wv], [sx + 25, sy - 34 + wv], [sx + 7, sy - 32]], '#d9534f'); poly([[sx + 7, sy - 41], [sx + 26, sy - 40 + wv], [sx + 25.5, sy - 37 + wv], [sx + 7, sy - 37]], '#f2c94c');
     }
-    if (!ghost) { ctx.fillStyle = 'rgba(40,60,40,.25)'; ctx.beginPath(); ctx.ellipse(sx, sy + 1, 8, 4, 0, 0, 7); ctx.fill(); }
+    if (!ghost && !FIG.ready) { ctx.fillStyle = 'rgba(40,60,40,.25)'; ctx.beginPath(); ctx.ellipse(sx, sy + 1, 8, 4, 0, 0, 7); ctx.fill(); }
     if (sel) { ctx.strokeStyle = '#fff3c4'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.ellipse(sx, sy + 1, 13, 6.5, 0, 0, 7); ctx.stroke(); }
-    // Art slots: villager/work, villager/walk, villager/carry, villager/idle (→ villager), at the feet, mirrored when facing left.
+    // The 3D-rendered figure (render/villagers.js), in this villager's colours, mirrored when facing left.
     const pose = v.act && !v.moving && v.act.phase === 'work' ? 'work' : v.moving ? (v.carry > 0 ? 'carry' : 'walk') : 'idle';
-    if (!S.draw(ctx, ['villager/' + pose, ...(pose === 'carry' ? ['villager/walk'] : []), 'villager'], sx, sy + bob, { t: st.T0 + v.id * 0.37, flip: v.dir < 0 })) {
+    const fpose = cheering ? 'cheer' : pose;
+    if (FIG.draw(ctx, v, fpose, sx, sy + (cheering ? bob : 0), st.T0 + v.id * 0.37, v.dir < 0)) { /* the 3D-rendered figure, in their colours */ }
+    else {   // until the villager sheet has loaded: a simple figure in their colours
       ctx.fillStyle = v.col; ctx.beginPath(); ctx.roundRect(sx - 5, sy - 17 + bob, 10, 14, 4); ctx.fill();
       ctx.fillStyle = v.skin || '#c08a5d'; ctx.beginPath(); ctx.arc(sx, sy - 21 + bob, 5, 0, 7); ctx.fill();
       ctx.fillStyle = v.hair || '#3d2b20'; ctx.beginPath(); ctx.ellipse(sx, sy - 24 + bob, 6.5, 2.6, 0, 0, 7); ctx.fill();
@@ -243,7 +247,7 @@ export function createRenderer(canvas) {
     if (ui.selN) { const p = iso(ui.selN.i % N, (ui.selN.i / N) | 0); ctx.strokeStyle = '#fff3c4'; ctx.lineWidth = 3; dia(p[0], p[1], TW / 2 - 2, TH / 2 - 1); ctx.stroke(); }
     // Overlays on the ground: placement ghost, hover, selection
     if (ui.place === 'path' && !ui.moving && ui.line) {   // a drawn path line: every tile, yellow where it can go
-      for (const t of linePlan(g, ui.line, ui.canPlace).tiles) { const [gx, gy] = iso(t.x, t.y); ctx.fillStyle = t.ok ? 'rgba(255,255,200,.55)' : 'rgba(220,70,60,.45)'; dia(gx, gy, TW / 2, TH / 2); ctx.fill(); }
+      for (const t of linePlan(g, ui.line, ui.canPlace, ui.pathKind).tiles) { const [gx, gy] = iso(t.x, t.y); ctx.fillStyle = t.ok ? 'rgba(255,255,200,.55)' : t.relay ? 'rgba(160,210,255,.5)' : t.same ? 'rgba(255,255,255,.18)' : 'rgba(220,70,60,.45)'; dia(gx, gy, TW / 2, TH / 2); ctx.fill(); }
     } else if (ui.place) {
       const gh = ui.ghost || ui.hover, [pw, ph] = dims(ui.place, ui.rot || 0), okp = ui.canPlace(gh[0], gh[1]);   // the preview: where it was tapped, or under the mouse
       for (let j = 0; j < ph; j++) for (let i = 0; i < pw; i++) { const [gx, gy] = iso(gh[0] + i, gh[1] + j); ctx.fillStyle = okp ? 'rgba(255,255,200,.55)' : 'rgba(220,70,60,.5)'; dia(gx, gy, TW / 2, TH / 2); ctx.fill(); }
@@ -293,6 +297,7 @@ export function createRenderer(canvas) {
       for (const b of g.buildings) { if (!b.done || BUILD[b.k].flat || BUILD[b.k].decor || b.k === 'monument' || b.k === 'well' || b.k === 'campfire') continue; const p = iso(b.x + (b.w - 1) / 2, b.y + (b.h - 1) / 2), gr = ctx.createRadialGradient(p[0], p[1] - 14, 2, p[0], p[1] - 14, 46); gr.addColorStop(0, `rgba(255,190,90,${0.2 * nt})`); gr.addColorStop(1, 'rgba(255,190,90,0)'); ctx.fillStyle = gr; ctx.fillRect(p[0] - 46, p[1] - 62, 92, 92); }
       { const p = iso(w.fire.x, w.fire.y), gr = ctx.createRadialGradient(p[0], p[1] - 6, 2, p[0], p[1] - 6, 70); gr.addColorStop(0, `rgba(255,170,70,${0.45 * nt})`); gr.addColorStop(1, 'rgba(255,170,70,0)'); ctx.fillStyle = gr; ctx.fillRect(p[0] - 70, p[1] - 76, 140, 140); }
       ctx.globalCompositeOperation = 'source-over';
+      nightLights(g);
     }
     if (isNight(g)) for (const b of g.buildings) if (b.sleepers > 0) { const p = iso(b.x + (b.w - 1) / 2, b.y + (b.h - 1) / 2); ctx.fillStyle = '#fff'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('z', p[0] + 10, p[1] - 50 - Math.sin(st.T0 * 2 + b.x) * 3); }
   }

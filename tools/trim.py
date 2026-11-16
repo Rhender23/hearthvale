@@ -185,6 +185,7 @@ def main():
     man['slots'] = dict(sorted(man['slots'].items()))
     json.dump(man, open(mpath, 'w'), indent=1)
     print(f'  installed: art/{name} → slot {o.slot}')
+    import pack_atlas; pack_atlas.pack(ART)   # the game draws from the atlases
 
 
 if __name__ == '__main__':

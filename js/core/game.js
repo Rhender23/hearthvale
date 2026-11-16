@@ -1,5 +1,7 @@
 // Creates a village and advances it in time. This is the only entry point the
 // browser layer (or a test) needs: createGame(), update(g, dt), plus commands.js.
+import { recruitTick } from './recruit.js';
+import { welcome } from './commands.js';
 import { DAY, ADVANCE_TIME, AGES, WAKE } from './config.js';
 import { zeroRes } from './config.js';
 import { createWorld, C, layRoad } from './world.js';
@@ -71,6 +73,7 @@ export function update(g, dt) {
   g.nightlife.tick(dt);
   g.seasons.tick(dt);
   g.manager.tick(g, dt);
+  recruitTick(g, dt, welcome);
   for (const v of g.villagers) { autonomyTick(g, v, dt); stepVillager(g, v, dt); }
   if (g.villagers.some(v => v.gone)) { for (const v of g.villagers) if (v.gone) g.events.emit('left', v); g.villagers = g.villagers.filter(v => !v.gone); }
   g.beautyT -= dt;

@@ -13,6 +13,7 @@ export function createSheet() {
   root.setAttribute('role', 'dialog');
   document.body.append(root);
   let spec = null, onClose = null;
+  const opened = [];   // called whenever a sheet opens: the one-thing-at-a-time rule (ui.js tidies notes, tips, the bubble)
 
   function open(s) {
     const same = spec && spec.key === s.key && !root.hidden;
@@ -20,7 +21,7 @@ export function createSheet() {
     title.textContent = s.title || '';
     body.replaceChildren(); s.build(body);
     root.classList.toggle('full', !!s.full);
-    if (!same) { root.hidden = false; root.classList.remove('in'); if (!reduceMotion()) { void root.offsetWidth; root.classList.add('in'); } }
+    if (!same) { for (const f of opened) f(s.key); root.hidden = false; root.classList.remove('in'); if (!reduceMotion()) { void root.offsetWidth; root.classList.add('in'); } }
   }
   function close() { if (root.hidden) return; root.hidden = true; const f = onClose; spec = null; onClose = null; f && f(); }
   function rebuild() { if (spec && !root.hidden) { body.replaceChildren(); spec.build(body); } }
@@ -36,5 +37,10 @@ export function createSheet() {
     if (dy > 70) close(); else if (dy < -50) root.classList.add('full'); else if (Math.abs(dy) < 4) root.classList.toggle('full');
   };
   head.addEventListener('pointerup', end); head.addEventListener('pointercancel', end);
-  return { open, close, rebuild, tick, root, get key() { return spec && !root.hidden ? spec.key : null; } };
+  // Pulling down on the list when it is already at its top closes the sheet too (like a phone's own sheets).
+  let pull = null;
+  body.addEventListener('touchstart', e => { pull = body.scrollTop <= 0 ? { y: e.touches[0].clientY, dy: 0 } : null; }, { passive: true });
+  body.addEventListener('touchmove', e => { if (!pull) return; pull.dy = e.touches[0].clientY - pull.y; if (pull.dy > 0 && body.scrollTop <= 0) root.style.transform = `translateY(${Math.min(160, pull.dy * 0.6)}px)`; else if (pull.dy < 0) { pull = null; root.style.transform = ''; } }, { passive: true });
+  body.addEventListener('touchend', () => { if (!pull) return; const dy = pull.dy; pull = null; root.style.transform = ''; if (dy > 110) close(); });
+  return { open, close, rebuild, tick, root, onOpen: f => opened.push(f), get key() { return spec && !root.hidden ? spec.key : null; } };
 }

@@ -1,11 +1,12 @@
 // What something still needs. Every greyed-out button asks here, so it can always say why: the age, a building that
 // must stand first, an earlier tier, fireflies caught, a free farm slot, or exactly how much more of each
 // material. Each function returns null when nothing is missing, else one short sentence.
+import { waiting } from './recruit.js';
 import { researchCost } from './research.js';
 import { MAX_VILLAGERS, BUILD, AGES, UPGRADES, TIERS, VILLAGER_COST } from './config.js';
 import { townCenter, popCap, farmSlots, slotKind, slotsUsed } from './state.js';
 
-const NAME = { wood: 'wood', stone: 'stone', gold: 'gold', food: 'food', water: 'water', clay: 'clay', fiber: 'fiber', pottery: 'pottery', cloth: 'cloth', furniture: 'furniture', jewelry: 'jewelry', candles: 'candles', wheat: 'wheat', flour: 'flour', beer: 'beer', wool: 'wool', milk: 'milk', wax: 'wax' };
+const NAME = { bricks: 'bricks', wood: 'wood', stone: 'stone', gold: 'gold', food: 'food', water: 'water', clay: 'clay', fiber: 'fiber', pottery: 'pottery', cloth: 'cloth', furniture: 'furniture', jewelry: 'jewelry', candles: 'candles', wheat: 'wheat', flour: 'flour', beer: 'beer', wool: 'wool', milk: 'milk', wax: 'wax' };
 const a = k => /^[aeiou]/i.test(BUILD[k].name) ? 'an' : 'a';
 const bname = k => `${a(k)} ${BUILD[k].name.toLowerCase()}`;
 const list = xs => xs.length < 2 ? xs.join('') : xs.slice(0, -1).join(', ') + ' and ' + xs[xs.length - 1];
@@ -58,8 +59,9 @@ export function ageNeeds(g) {
 
 // A new villager.
 export function villagerNeeds(g) {
-  if (g.villagers.length >= MAX_VILLAGERS) return `Hearthvale is home to ${MAX_VILLAGERS} villagers: as many as it will ever hold.`;
-  if (g.villagers.length >= popCap(g)) return 'No room for anyone else: homes or a town center raise the limit.';
+  const n = g.villagers.length + waiting(g);
+  if (n >= MAX_VILLAGERS) return `Hearthvale is home to ${MAX_VILLAGERS} villagers: as many as it will ever hold.`;
+  if (n >= popCap(g)) return waiting(g) ? 'Everyone there is room for is already on the way.' : 'No room for anyone else: homes or a town center raise the limit.';
   return shortOf(g, VILLAGER_COST);
 }
 

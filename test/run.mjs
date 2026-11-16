@@ -7,6 +7,7 @@ import { CRITTERS, NIGHT_ANIMALS, HOME_DECOR } from '../js/core/critters.js';
 import { addBuilding, completeBuilding, hour, calDay, keepsWay, farmFor } from '../js/core/state.js';
 import { isOpen } from '../js/core/world.js';
 import { orderGather, canPlace } from '../js/core/commands.js';
+import * as cmd from '../js/core/commands.js';
 import { go, footing } from '../js/core/actions.js';
 import { besideRect, walkable } from '../js/core/world.js';
 import { workersAt } from '../js/ui/render/workers.js';
@@ -14,7 +15,7 @@ import { popCap } from '../js/core/state.js';
 import { villagerWants, buildingWants } from '../js/ui/panels.js';
 import { NODE } from '../js/core/config.js';
 import { serialize, deserialize } from '../js/core/save.js';
-import { syncLayout, floorsOf, itemsOn, moveItem, turnItem, placePiece } from '../js/core/furnish.js';
+import { syncLayout, floorsOf, itemsOn, moveItem, turnItem, placePiece, bedCount, PER_FLOOR, removeBed, addBed } from '../js/core/furnish.js';
 import { beds, takeDown } from '../js/core/state.js';
 import { orchardDawn } from '../js/core/orchards.js';
 import { stageDone, canWork, beginNext } from '../js/core/grand.js';
@@ -24,7 +25,8 @@ import { everyDays } from '../js/core/merchant.js';
 import { restBoost } from '../js/core/leisure.js';
 import { festivalCulture } from '../js/core/festival.js';
 import { outputPerDay } from '../js/core/planner.js';
-import { place } from '../js/core/commands.js';
+import { place, train, welcome } from '../js/core/commands.js';
+import { recruitTime, recruitTick } from '../js/core/recruit.js';
 import { buildNeeds, upgradeNeeds, ageNeeds, villagerNeeds, shortOf } from '../js/core/requires.js';
 import { improveInfo, skipToFestival } from '../js/core/commands.js';
 import { evaluate } from '../js/core/planner.js';
@@ -198,7 +200,7 @@ for (const fw of [false, true]) {
 
 // ---------------------------------------------------------------- paths wear into roads by use
 {
-  check('paths are a little quicker underfoot: 1%, 2%, 3%', TIERS.path.map(t => t.speed).join() === '1.01,1.02,1.03');
+  check('paths are a little quicker underfoot: 1%, 2%, 3%', TIERS.path.map(t => t.speed).join() === '1.01,1.02,1.03,1.03,1.03');
   const g = createGame({ seed: 8, sandbox: false }); g.freeWill = true; g.freeBuild = true;
   simulate(g, DAY * 4, 0.1);
   const f = g.w.fire, paths = [];
@@ -256,15 +258,19 @@ for (const fw of [false, true]) {
 {
   const g = createGame({ seed: 4, sandbox: true });
   const h = addBuilding(g, 'house', 30, 30, true); h.lvl = 2; syncLayout(h);
-  check('every bed has a place in the room', h.beds.length === beds(h) && floorsOf(h) === 1, `${h.beds.length} of ${beds(h)}`);
+  check('a cozy cottage sleeps in bunks, every bed placed', bedCount(h) === beds(h) && floorsOf(h) === 1 && h.beds.some(x => x.n === 2), `${bedCount(h)} of ${beds(h)}`);
   h.lvl = 8; syncLayout(h);
-  check('a grand manor has two floors and all its beds', floorsOf(h) === 2 && h.beds.length === beds(h) && h.beds.some(x => x.floor === 1), JSON.stringify(h.beds.map(x => x.floor)));
-  g.res.furniture = 5; const it = itemsOn(h, 0)[0]; moveItem(h, it, 0.3, 0.5); turnItem(it);
+  check('a grand manor has two floors and an attic, with every bed upstairs', floorsOf(h) === 3 && bedCount(h) === beds(h) && h.beds.every(x => x.floor >= 1) && h.beds.some(x => x.floor === 2), JSON.stringify(h.beds.map(x => x.floor)));
+  check('no floor is crowded: six frames at most', [1, 2].every(fl => h.beds.filter(x => x.floor === fl).length <= PER_FLOOR));
+  g.res.furniture = 5; const it = itemsOn(h, 1)[0]; moveItem(h, it, 0.3, 0.5); turnItem(it);
   const r = placePiece(g, h, 'chair', 0.5, 0.7, 1);
   const s = deserialize(serialize(g)), h2 = s.buildings.find(b => b.x === 30 && b.y === 30);
   check('a rearranged home keeps its layout', h2.beds.some(x => Math.abs(x.u - 0.3) < 1e-6 && x.flip) && h2.furn.some(f => f.id === 'chair' && f.floor === 1), r.reason);
+  const cap0 = popCap(g), before = beds(h); removeBed(h, h.beds[0]);
+  check('taking a bed away means one less person can live there', beds(h) === before - 1 && popCap(g) === cap0 - 1 && bedCount(h) === beds(h));
+  addBed(h); check('and it can be put back', beds(h) === before && bedCount(h) === before);
   h.lvl = 1; syncLayout(h);
-  check('a home that slips back brings everything downstairs', h.beds.every(x => !x.floor) && h.furn.every(f => !f.floor) && h.beds.length === beds(h));
+  check('a home that slips back brings everything downstairs', h.beds.every(x => !x.floor) && h.furn.every(f => !f.floor) && bedCount(h) === beds(h));
 }
 
 // ---------------------------------------------------------------- v45: new buildings and grand projects
@@ -314,9 +320,113 @@ for (const fw of [false, true]) {
   check('festivals give twice the culture with a great hall', festivalCulture(g, 30) === 30 && (addBuilding(g, 'greathall', 30, 30, true), festivalCulture(g, 30) === 60));
   check('the church raises a grand steeple, dear in stone', TIERS.church && TIERS.church[1].name === 'Grand steeple' && TIERS.church[1].bell && TIERS.church[1].cost.stone >= 400);
   for (let i = 0; i < 30; i++) addBuilding(g, 'lodge', 2 + (i % 10) * 3, 2 + Math.floor(i / 10) * 3, true);
-  check('the village holds 215 villagers at most', popCap(g) === 215, popCap(g));
+  for (let i = 0; i < 30; i++) addBuilding(g, 'lodge', 2 + (i % 10) * 3, 32 + Math.floor(i / 10) * 3, true);
+  check('the village holds 300 villagers at most', popCap(g) === 300, popCap(g));
   check('the well\'s top level is the pump house', TIERS.well[2].name === 'Pump house' && BUILD.watertower.store.water > 0);
   check('the blacksmith makes tools from wood and stone', BUILD.blacksmith.craft.out.tools && BUILD.blacksmith.craft.in.wood && BUILD.blacksmith.craft.in.stone);
+}
+
+
+// ---------------------------------------------------------------- v46: welcomes take time, faster in good spirits
+{
+  const g = createGame({ seed: 6, sandbox: true });
+  g.social = 1; const t1 = recruitTime(g); g.social = 0.5; const t5 = recruitTime(g); g.social = 0; const t0 = recruitTime(g);
+  check('a welcome takes half a day in the best spirits', t1 === DAY / 2, t1);
+  check('twice as long at 50% spirits, three times at 0%', t5 === DAY && t0 === DAY * 1.5, `${t5} ${t0}`);
+  addBuilding(g, 'lodge', 40, 40, true); const n = g.villagers.length, r = train(g);
+  check('the villager arrives when the welcome is done, not at once', r.ok && g.villagers.length === n && g.recruits.length === 1);
+  g.social = 1; let left = DAY; while (g.recruits.length && left > 0) { recruitTick(g, 1, welcome); left -= 1; }
+  check('and does arrive', g.villagers.length === n + 1, g.villagers.length);
+}
+
+// ---------------------------------------------------------------- v46: one table of gathering places; interiors from 3D
+{
+  const { LEISURE } = await import('../js/core/leisure.js');
+  check('every gathering place lives in one table', ['tavern', 'school', 'theater', 'church', 'library', 'playground', 'bandstand', 'bathhouse'].every(k => LEISURE[k] && LEISURE[k].key));
+  const fs = await import('node:fs'), spec = JSON.parse(fs.readFileSync(new URL('../art/interior/rooms.json', import.meta.url)));
+  const { home } = await import('../js/ui/interior/scenes/home.js'), P = await import('../js/ui/interior/scenes/places.js');
+  const g = createGame({ seed: 9, sandbox: true });
+  const kinds = Object.keys(BUILD).filter(k => !BUILD[k].flat && !BUILD[k].decor && !['campfire', 'quarry', 'claypit', 'goldmine', 'well', 'monument', 'playground', 'apiary', 'watertower', 'bandstand'].includes(k) && !BUILD[k].orchard);
+  let bad = [];
+  for (const k of kinds) {
+    const b = addBuilding(g, k, 2 + (kinds.indexOf(k) % 12) * 4, 2 + Math.floor(kinds.indexOf(k) / 12) * 4, true);
+    for (let lvl = 0; lvl < ((TIERS[k] || []).length || 1); lvl++) for (const floor of [0, 1]) {
+      b.lvl = lvl; const c = { floor, h: 19, T: 0 };
+      const S = BUILD[k].home ? home(g, b, c) : (k === 'tc' || k === 'greathall') ? P.hall(g, b, c) : P[k] ? P[k](g, b, c) : BUILD[k].craft ? P.workshop(g, b, c) : P.storage(g, b, c);
+      if (!spec.rooms[S.style]) bad.push(`${k}: no room ${S.style}`);
+      for (const it of S.items) if (!spec.props[it.id]) bad.push(`${k}: no piece ${it.id}`);
+    }
+  }
+  check('every room and piece a scene asks for has been rendered', !bad.length, [...new Set(bad)].slice(0, 5).join('; '));
+  const h = addBuilding(g, 'house', 50, 50, true); h.lvl = 8;
+  const n = lv => { h.lvl = lv; return home(g, h, { floor: 0, h: 12 }).items.length + home(g, h, { floor: 1, h: 12 }).items.length; };
+  check('finer homes hold more', n(8) > n(5) && n(5) > n(2) && n(2) > n(0), `${n(0)} ${n(2)} ${n(5)} ${n(8)}`);
+  h.lvl = 2; syncLayout(h); h.lvl = 3; syncLayout(h);
+  check('a home that gains an upstairs moves its bedrooms up', h.beds.every(x => x.floor === 1));
+}
+
+// ---------------------------------------------------------------- v47 paths: eight ways, joined, of five kinds
+{
+  const { lineTiles } = await import('../js/ui/pathline.js');
+  const t = lineTiles([0, 0], [5, 2]);
+  check('a drawn path goes straight, then cuts across: no zig-zag', t.length === 6 && t.every((p, i) => !i || Math.max(Math.abs(p[0] - t[i - 1][0]), Math.abs(p[1] - t[i - 1][1])) === 1) && t[5][0] === 5 && t[5][1] === 2);
+  const { arms } = await import('../js/ui/render/paths.js');
+  const g = createGame({ seed: 4, sandbox: true }); g.age = 2; const tc = g.buildings[0]; let ox = tc.x + 8, oy = tc.y - 8;
+  for (let k = 0; k < 40 && ![[0,0],[1,1],[2,1],[1,0]].every(([i, j]) => canPlace(g, 'path', ox + i, oy + j)); k++) { ox = tc.x - 20 + (k * 7) % 40; oy = tc.y - 20 + Math.floor(k / 6) * 6; }
+  const lay = (x, y, k) => { const r = cmd.place(g, 'path', x, y, g.villagers, 0, k); return r.ok ? r.b : null; };
+  const a = lay(ox, oy, 'stone'), b = lay(ox + 1, oy + 1, 'stone'), c = lay(ox + 2, oy + 1, 'stone');
+  check('paths are laid in the kind you choose', a && a.lvl === 2 && TIERS.path[a.lvl].name === 'Stone path');
+  check('a diagonal neighbour joins when no straight one makes the turn', a && arms(g, a).some(([dx, dy]) => dx === 1 && dy === 1));
+  const d = lay(ox + 1, oy, 'stone');
+  check('…and not when it would make a little triangle', d && !arms(g, a).some(([dx, dy]) => dx && dy));
+  a.done = true; const before = g.res.stone;
+  check('a path can be re-laid in another kind', cmd.relayPath(g, a, 'gravel').ok && a.lvl === 1 && g.res.stone < before);
+}
+
+// ---------------------------------------------------------------- v47 bricks and pumpkins
+{
+  const { levelName } = await import('../js/core/state.js');
+  const { stepCost } = await import('../js/core/actions.js');
+  check('the brickyard fires bricks from clay and wood', BUILD.brickyard.craft.out.bricks && BUILD.brickyard.craft.in.clay && BUILD.brickyard.craft.in.wood);
+  check('the pumpkin patch bears in autumn only', JSON.stringify(Object.keys(BUILD.pumpkin.orchard.seasons)) === '["2"]');
+  const g = createGame({ seed: 5, sandbox: true }), h = g.buildings.find(b => b.k === 'house') || addBuilding(g, 'house', 2, 2, true);
+  h.lvl = 4; h.brick = true; const c = stepCost(h, 5);
+  check('a home built in brick spends bricks instead of most of the stone', c.bricks > 0 && c.stone < TIERS.house[5].cost.stone);
+  h.lvl = 5; check('…and is a brick house', levelName(h) === 'Brick house');
+  h.brick = false; check('in stone it stays a stone house', levelName(h) === 'Stone house');
+}
+
+// ---------------------------------------------------------------- v47 hands-on moments
+{
+  const H = await import('../js/core/handson.js');
+  const g = createGame({ seed: 6, sandbox: false }); g.res.food = 0;
+  const f = addBuilding(g, 'farm', 3, 3, true); f.food = 50;
+  const r = H.tapHarvest(g, f);
+  check('tapping a ripe field brings in a basket at once, with a little extra', r.ok && r.n === H.HANDS.basket + H.HANDS.extra && f.food === 50 - H.HANDS.basket);
+  check('…and it rests a while before the next tap', !H.ripe(g, f) && !H.tapHarvest(g, f).ok);
+  const w = addBuilding(g, 'potter', 6, 6, true); w.ready = { res: 'pottery', n: 2 };
+  const c = H.collectReady(g, w);
+  check('a bundle set aside is collected with a tap', c.ok && g.res.pottery === 2 && !w.ready);
+  let fi = -1; for (let k = 0; k < g.w.A.length; k++) if (g.w.A[k] > 0 && g.w.R[k] === 5) { fi = k; break; }
+  if (fi >= 0) { const before = g.w.A[fi], a = H.landFish(g, fi, 0), b = H.landFish(g, fi, 1); check('any tap catches a fish; a perfect one catches more', a.ok && b.ok && b.n > a.n && g.w.A[fi] === before - 2); }
+  g.res.cloth = 5; const h = addBuilding(g, 'house', 9, 9, true), q = H.finishQuilt(g, Array(16).fill('#b5523e'));
+  check('a finished quilt goes on a bed in a home', q.ok && (h.quilts || []).length === 1 && g.res.cloth === 3);
+}
+
+// ---------------------------------------------------------------- v48: saves from earlier versions still open
+{
+  const { serialize, deserialize } = await import('../js/core/save.js');
+  const g = createGame({ seed: 8, sandbox: true }); for (let k = 0; k < 600; k++) update(g, 0.1);
+  for (const v of [45, 46, 47]) {   // the save format is the same (5); older games just lack the newer fields
+    const d = JSON.parse(serialize(g));
+    if (v < 47) { delete d.flag; delete d.fishBack; delete d.pets; for (const b of d.B) { delete b.beds; delete b.bedFloors; delete b.bedsOff; delete b.brick; delete b.art; delete b.quilts; delete b.ready; } }
+    let ok = true; try { const h = deserialize(JSON.stringify(d)); for (let k = 0; k < 200; k++) update(h, 0.1); ok = h.villagers.length === g.villagers.length; } catch (e) { ok = false; console.log(e); }
+    check(`a save from v${v} opens and plays on`, ok);
+  }
+  const f = createGame({ seed: 9, sandbox: true }); f.age = 1; const t = f.buildings[0];
+  let spot = null; for (let r = 3; r < 20 && !spot; r++) for (let dx = -r; dx <= r && !spot; dx++) if (canPlace(f, 'flagpole', t.x + dx, t.y + r)) spot = [t.x + dx, t.y + r];
+  const a = cmd.place(f, 'flagpole', spot[0], spot[1], f.villagers), b = cmd.place(f, 'flagpole', spot[0] + 2, spot[1], f.villagers);
+  check('the village flag costs gold, and there is one a village', BUILD.flagpole.cost.gold === 50 && a.ok && !b.ok);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -24,9 +24,16 @@ export function createSprites(base = 'art/') {
     fetch(base + 'manifest.json', { cache: 'no-cache' }).then(r => (r.ok ? r.json() : null)).then(m => {
       if (!m) return;
       scale = m.scale ?? scale;
+      // Packed into atlases (tools/pack_atlas.py): a few big sheets, each slot a rectangle on one. Else one file a slot.
+      const sheets = Array.from({ length: m.atlases || 0 }, (_, k) => { const i = new Image(); i.src = base + `atlas-${k}.png`; return i; });
       for (const [key, s] of Object.entries(m.slots || {})) {
+        if (s.rect && sheets[s.atlas]) {
+          const img = sheets[s.atlas], set = () => { slots[key] = { ...s, img, sx: s.rect[0], sy: s.rect[1], fw: s.rect[2] / (s.frames || 1), fh: s.rect[3] }; loaded++; };
+          if (img.complete && img.naturalWidth) set(); else img.addEventListener('load', set, { once: true });
+          continue;
+        }
         const img = new Image();
-        img.onload = () => { slots[key] = { ...s, img, fw: img.width / (s.frames || 1), fh: img.height }; loaded++; };
+        img.onload = () => { slots[key] = { ...s, img, sx: 0, sy: 0, fw: img.width / (s.frames || 1), fh: img.height }; loaded++; };
         img.src = base + s.file;
       }
     }).catch(() => {});
@@ -37,8 +44,8 @@ export function createSprites(base = 'art/') {
     const k = (s.scale ?? scale) * (o.mul || 1), n = s.frames || 1;
     const f = n > 1 ? (s.random ? (o.seed || 0) % n : Math.floor((o.t || 0) * (s.fps || 6)) % n) : 0;   // "random": true picks a frame by position (variety), not time
     const ax = s.anchor ? s.anchor[0] : s.fw / 2, ay = s.anchor ? s.anchor[1] : (o.centre ? s.fh / 2 : s.fh);
-    if (o.flip) { ctx.save(); ctx.translate(x, y); ctx.scale(-1, 1); ctx.drawImage(s.img, f * s.fw, 0, s.fw, s.fh, -ax * k, -ay * k, s.fw * k, s.fh * k); ctx.restore(); }
-    else ctx.drawImage(s.img, f * s.fw, 0, s.fw, s.fh, x - ax * k, y - ay * k, s.fw * k, s.fh * k);
+    if (o.flip) { ctx.save(); ctx.translate(x, y); ctx.scale(-1, 1); ctx.drawImage(s.img, s.sx + f * s.fw, s.sy, s.fw, s.fh, -ax * k, -ay * k, s.fw * k, s.fh * k); ctx.restore(); }
+    else ctx.drawImage(s.img, s.sx + f * s.fw, s.sy, s.fw, s.fh, x - ax * k, y - ay * k, s.fw * k, s.fh * k);
   }
   return {
     // Draw the first slot of `keys` that has an image, at ground point (x, y). Returns false when none does.

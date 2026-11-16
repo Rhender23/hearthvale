@@ -18,7 +18,13 @@ settings.persist = () => store.set('hv-settings', JSON.stringify({ sound: settin
 let game = null, loadedFrom = 'new';
 function loadGame() {
   const s = store.get(SAVE_KEY);
-  if (s) { try { loadedFrom = 'save'; return deserialize(s); } catch (e) { console.warn('Save could not be read', e); } }
+  if (s) {
+    try { loadedFrom = 'save'; return deserialize(s); }
+    catch (e) {   // never lose a village: keep the save it could not read before a new one starts over it
+      console.warn('Save could not be read', e);
+      if (!store.get('hearthvale-unread')) store.set('hearthvale-unread', s);
+    }
+  }
   const old = store.get(LEGACY_KEY);
   if (old) { try { loadedFrom = 'legacy'; return migrateLegacy(old); } catch (e) { console.warn('Old save could not be migrated', e); } }
   loadedFrom = 'new';
@@ -47,6 +53,12 @@ const ui = createUI({
     game = createGame({ seed: 1 + (Date.now() % 999983), sandbox: settings.sandbox });
     audio.bind(game); ui.rebind(); view.cam.x = 0; view.cam.y = N * TH / 2; save();
     ui.toast('A new village begins.');
+  },
+  // Save slots: the village as text, and swapping in a village from text (a slot, or an imported file).
+  store, canvas, current: () => serialize(game),
+  loadText(text) {
+    const next = deserialize(text);   // throws on a bad file; the old village stays
+    game = next; audio.bind(game); ui.rebind(); save();
   },
 });
 const input = createInput(canvas, view, ui);

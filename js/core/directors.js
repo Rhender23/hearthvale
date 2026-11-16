@@ -458,7 +458,7 @@ export const Social = {
   name: 'Social',
   seeks: 'Connection, gatherings and a growing village',
   rules: ['Never forces anyone to attend'],
-  prefs: { fireWish: 0.5, tavernWish: 0.65, companyTarget: 72, lowSocial: 0.6, arriveChance: 0.5, foodDays: 4 },
+  prefs: { fireWish: 0.5, companyTarget: 72, lowSocial: 0.6, arriveChance: 0.5, foodDays: 4 },
   patterns: ['Evenings together from 6 PM, at the tavern if there is one', 'Welcomes newcomers when there is room, food and good company', 'Wants a festival more every day; asks Economy to stock up and plans one as soon as the village can afford it'],
   lastLeft: -99,
   tick(g) {
@@ -494,8 +494,7 @@ export const Social = {
   think(g, post, demand) {
     const p = this.prefs, h = hour(g), lonely = (g.social ?? 1) < p.lowSocial, mult = lonely ? 2 : 1;
     if (h >= 18 && h < 23) {
-      if (g.buildings.some(b => b.k === 'tavern' && b.done)) post('Social', 'tavern', Math.min(1.4, p.tavernWish * mult), lonely ? 'people need time together' : 'an evening at the tavern');
-      else post('Social', 'fire', Math.min(1.4, p.fireWish * mult), lonely ? 'people need time together' : 'evening by the fire');
+      if (!g.buildings.some(b => b.k === 'tavern' && b.done)) post('Social', 'fire', Math.min(1.4, p.fireWish * mult), lonely ? 'people need time together' : 'evening by the fire');
     }
     const want = festivalWant(g);
     if (!g.festival) post('Social', 'festival', want, want >= FESTIVAL.declareAt ? 'the village longs to celebrate' : 'looking forward to the next festival');
@@ -545,7 +544,7 @@ export const Culture = {
   name: 'Culture',
   seeks: 'A village that learns, makes art, gathers for performances and keeps moving forward through the ages',
   rules: ['Never spends the last day of food, water or wood', 'Only acts while free will is on'],
-  prefs: { learnWish: 0.25, theaterWish: 0.6, ambition: 0.3, every: 15 },
+  prefs: { ambition: 0.3, every: 15 },   // when to visit the school, theater, library and church: leisure.js
   patterns: ['Lessons at the schoolhouse during the day', 'Stories by the fire and plays at the theater in the evening', 'Wants finer homes', 'Researches the best tools of the age', 'Grows into the next age when ready'],
   t: 5,
   tick(g, dt) {
@@ -564,11 +563,8 @@ export const Culture = {
     // Culture accrues while villagers are at the fire, the schoolhouse or the theater.
     for (const v of g.villagers) {
       const a = v.act;
-      leisureTick(g, v, dt);
-      if (a && a.type === 'sit' && a.phase === 'wait' && CULTURE[a.key]) g.culture = (g.culture || 0) + CULTURE[a.key] * dt * (a.key === 'church' ? churchCulture(g, a.tavern) : 1);
-      if (a && a.type === 'sit' && a.phase === 'wait' && a.key === 'play') v.comp = (v.comp || 0) + dt * 0.5;   // laughter is good company
-      // Beer at the tavern: spirits (social) rise twice as fast and the evening adds a little culture.
-      if (a && a.type === 'sit' && a.phase === 'wait' && a.key === 'tavern' && g.res.beer > 0) { g.res.beer = Math.max(0, g.res.beer - CULTURE.beerPerSec * dt); v.tav = (v.tav || 0) + dt; g.culture = (g.culture || 0) + CULTURE.tavernBeer * dt; }
+      leisureTick(g, v, dt, churchCulture);   // gathering places: culture, company, beer (leisure.js)
+      if (a && a.type === 'sit' && a.phase === 'wait' && a.key === 'fire') g.culture = (g.culture || 0) + CULTURE.fire * dt;
     }
     this.t -= dt;
     if (this.t > 0 || !g.freeBuild) return;   // researching and advancing ages on their own: only with Free build
@@ -588,11 +584,6 @@ export const Culture = {
   },
   think(g, post, demand) {
     const p = this.prefs, h = hour(g), has = k => g.buildings.some(b => b.k === k && b.done);
-    if (h >= 8 && h < 17 && has('school')) post('Culture', 'learn', p.learnWish, 'learning something new');
-    if (h >= 18 && h < 23 && has('theater')) post('Culture', 'theater', p.theaterWish, 'there is a play tonight');
-    if (has('library') && h >= 9 && h < 20) post('Culture', 'read', 0.3, 'a good book');
-    if (has('church')) { if (g.dawns % 7 === 0 && h >= 9 && h < 11) post('Culture', 'church', 1.3, 'the weekly service'); else if (h >= 7 && h < 19) post('Culture', 'church', 0.12, 'a quiet moment'); }
-    if (has('playground') && h >= 13 && h < 18) post('Social', 'play', 0.35, 'an afternoon at the playground');
     leisureWishes(g, post);
     if (g.buildings.some(b => b.pending > b.lvl)) post('Culture', 'upgrade', p.ambition, 'the village wants finer homes');
     const nx = AGES[g.age + 1], short = nx && (g.culture || 0) < (nx.culture || 0);

@@ -17,6 +17,7 @@
     opts.fit     true: scale the model to fill its footprint (for models from image-to-3D tools, which come in any size)
     opts.front   which way the model's front faces as it comes in: '+z' (default), '-z', '+x', '-x'
     opts.ss      supersampling (default 3)
+    opts.ids     { material name: [r, g, b] }: flat colours, no light or ground (which part each pixel is)
   No libraries: WebGL2 and a small .glb reader, so it runs anywhere Chrome does.
 -->
 <style>body{margin:0;background:#9cc27e;font:14px sans-serif}#out{display:flex;gap:16px;padding:16px;flex-wrap:wrap}#out img{background:#9cc27e;image-rendering:auto}</style>
@@ -26,7 +27,8 @@
 <script>
 'use strict';
 // ---------------------------------------------------------------- the view (the game's 2:1 isometric)
-const S = 90.51;   // pixels per world unit at art scale (a tile is 128 × 64 in the file)
+const S0 = 90.51;   // pixels per world unit at art scale (a tile is 128 × 64 in the file)
+let S = S0;          // opts.zoom: bigger pictures of small things (villagers for the interiors)
 const RIGHT = [Math.SQRT1_2, 0, -Math.SQRT1_2], UP = [-0.35355, 0.86603, -0.35355], TOCAM = [0.61237, 0.5, 0.61237];
 const LIGHT = norm([-0.42, 0.86, 0.5]);   // towards the sun: upper left of the screen, a little in front
 function norm(v) { const l = Math.hypot(...v); return v.map(x => x / l); }
@@ -129,7 +131,7 @@ function place(prims, o) {
   }
   // the footprint swaps when a non-square building turns
   const [fw, fh] = o.turn ? [th, tw] : [tw, th];
-  let s = 1, tx, ty, tz;
+  let s = 1, tx = 0, ty = 0, tz = 0;   // keepPlace: the model stays where it was built (villager frames line up)
   if (o.fit) s = 0.92 * Math.min(fw / (hi[0] - lo[0]), fh / (hi[2] - lo[2]));
   if (o.fit || !o.keepPlace) { tx = fw / 2 - s * (lo[0] + hi[0]) / 2; tz = fh / 2 - s * (lo[2] + hi[2]) / 2; ty = -s * lo[1]; }
   for (const p of prims) for (let k = 0; k < p.P.length; k += 3) { p.P[k] = p.P[k] * s + tx; p.P[k + 1] = p.P[k + 1] * s + ty; p.P[k + 2] = p.P[k + 2] * s + tz; }
@@ -160,6 +162,7 @@ vec3 toSRGB(vec3 c){ return pow(clamp(c, 0.0, 1.0), vec3(1.0 / 2.2)); }
 void main(){
   if (uMode == 2) { o = vec4(0.0); return; }
   if (uMode == 3) { o = vec4(toSRGB(uEmis * 1.2), 1.0); return; }
+  if (uMode == 4) { o = vec4(uColor, 1.0); return; }   // flat colour: which part each pixel belongs to (villager recolouring)
   float sh = lit();
   if (uMode == 1) { o = vec4(0.16, 0.2, 0.12, (1.0 - sh) * 0.32); return; }   // ground: only the shadow shows
   vec3 n = normalize(vN); if (!gl_FrontFacing) n = -n;
@@ -194,6 +197,7 @@ function ortho(right, up, back, x0, x1, y0, y1, z0, z1) {
 }
 
 async function render(bytes, o = {}) {
+  S = S0 * (o.zoom || 1);
   const prims = await readGLB(bytes instanceof ArrayBuffer ? bytes : bytes.buffer);
   const [fw, fh] = place(prims, o);
   const season = o.season || 'summer', SS = o.ss || 3;
@@ -258,14 +262,14 @@ async function render(bytes, o = {}) {
   gl.enable(gl.BLEND); gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   for (const b of buffers) {
     const glow = !!b.mat.emis;
-    gl.uniform1i(U('uMode'), o.night ? (glow ? 3 : 2) : 0);
+    gl.uniform1i(U('uMode'), o.ids ? 4 : o.night ? (glow ? 3 : 2) : 0);
     if (o.night && !glow) gl.colorMask(false, false, false, false); else gl.colorMask(true, true, true, true);
-    gl.uniform3fv(U('uColor'), b.mat.color); gl.uniform3fv(U('uEmis'), b.mat.emis || [0, 0, 0]); gl.uniform1f(U('uAlpha'), b.mat.alpha ?? 1);
+    gl.uniform3fv(U('uColor'), o.ids ? (o.ids[b.mat.name] || [0, 0, 0]) : b.mat.color); gl.uniform3fv(U('uEmis'), b.mat.emis || [0, 0, 0]); gl.uniform1f(U('uAlpha'), b.mat.alpha ?? 1);
     gl.uniform1i(U('uHasTex'), b.tex ? 1 : 0); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, b.tex);
     gl.bindVertexArray(b.vao); gl.drawArrays(gl.TRIANGLES, 0, b.n);
   }
   gl.colorMask(true, true, true, true);
-  if (!o.night) { gl.uniform1i(U('uMode'), 1); gl.depthMask(false); gl.bindVertexArray(gvao); gl.drawArrays(gl.TRIANGLES, 0, 6); gl.depthMask(true); }
+  if (!o.night && !o.ids) { gl.uniform1i(U('uMode'), 1); gl.depthMask(false); gl.bindVertexArray(gvao); gl.drawArrays(gl.TRIANGLES, 0, 6); gl.depthMask(true); }
 
   // 3. down to art size (and at night, a soft halo around what glows)
   const out = document.createElement('canvas'); out.width = W; out.height = H;

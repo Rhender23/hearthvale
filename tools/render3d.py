@@ -41,6 +41,8 @@ def variants(m):
         if turned:   # building/house/1 → building/house/turned/1
             parts = slot.split('/'); s = '/'.join(parts[:2] + ['turned'] + parts[2:])
         o = {**base, 'turn': turned}
+        if m.get('indoor'):   # insides: one picture (no snow, and the game lights the room itself)
+            out.append((s, {**o, 'season': 'summer', 'evergreen': True})); continue
         if m.get('seasons'):
             for season in ('spring', 'summer', 'autumn', 'winter'): out.append((f'{s}/{season}', {**o, 'season': season}))
         else:
@@ -88,23 +90,31 @@ async def run(models, preview_only):
                     rs.append(r)
                 if all(r.get('empty') for r in rs): continue   # nothing glows: no night picture
                 r = join_frames(rs) if len(rs) > 1 else rs[0]
-                r['meta'] = {k: m[k] for k in ('random', 'fps') if k in m}
+                r['meta'] = {k: m[k] for k in ('random', 'fps') if k in m}; r['indoor'] = bool(m.get('indoor'))
                 results.append((key, r))
                 print(f'  {key:40s} {r["w"]}×{r["h"]}  anchor {r["anchor"]}' + (f'  {r["frames"]} frames' if r.get('frames') else ''))
         await b.close()
     os.makedirs(os.path.join(HERE, 'previews'), exist_ok=True)
-    manifest_path = os.path.join(ART, 'manifest.json')
-    man = json.load(open(manifest_path)) if os.path.exists(manifest_path) else {'scale': 0.5, 'slots': {}}
+    # Outdoor art goes to art/ (loaded with the game); insides go to art/interior/ (loaded when a door is first opened).
+    mans = {}
+    def manifest(indoor):
+        d = os.path.join(ART, 'interior') if indoor else ART
+        if d not in mans: p = os.path.join(d, 'manifest.json'); os.makedirs(d, exist_ok=True); mans[d] = json.load(open(p)) if os.path.exists(p) else {'scale': 0.5, 'slots': {}}
+        return d, mans[d]
     for key, r in results:
         png = b64png(r)
         name = key.replace('/', '-') + '.png'
         open(os.path.join(HERE, 'previews', '3d-' + name), 'wb').write(png)
         if preview_only: continue
-        open(os.path.join(ART, name), 'wb').write(png)
+        d, man = manifest(r.get('indoor'))
+        open(os.path.join(d, name), 'wb').write(png)
         man['slots'][key] = {'file': name, 'anchor': r['anchor'], **({'frames': r['frames']} if r.get('frames') else {}), **r.get('meta', {}), 'from': '3d'}
     if not preview_only:
-        json.dump(man, open(manifest_path, 'w'), indent=1)
-        print(f'installed {len(results)} pictures into art/ and art/manifest.json')
+        for d, man in mans.items(): json.dump(man, open(os.path.join(d, 'manifest.json'), 'w'), indent=1)
+        # the game draws from atlases: pack them again so the new pictures are in (tools/pack_atlas.py)
+        import pack_atlas
+        for d in mans: pack_atlas.pack(d)
+        print(f'installed {len(results)} pictures into ' + ', '.join(os.path.relpath(d, ROOT) for d in mans))
     return results
 
 

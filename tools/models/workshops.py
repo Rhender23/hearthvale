@@ -209,6 +209,31 @@ def claypit():
     return M
 
 
+def brickyard():
+    M = Mesh()
+    M.box('mud', 0.05, 0, 0.05, 1.95, 0.02, 1.95)
+    # the kiln: a round brick dome with a chimney and a glowing mouth
+    M.cylinder('wall-brick', 0.62, 0.62, 0.42, 0, 0.42, n=14)
+    M.blob('wall-brick', 0.62, 0.42, 0.62, 0.42, seed=2, squash=0.7)
+    M.cylinder('wall-brick', 0.62, 0.62, 0.09, 0.6, 1.0, n=8)
+    M.box('soot', 0.52, 0, 1.02, 0.72, 0.18, 1.05); M.box('lamp', 0.55, 0.02, 1.04, 0.69, 0.14, 1.06)
+    # an open shed of drying bricks on racks
+    for x in (1.15, 1.85):
+        for z in (0.25, 0.95): M.box('dark-wood', x - 0.03, 0, z - 0.03, x + 0.03, 0.5, z + 0.03)
+    M.lean('roof-shingle', 1.08, 1.92, 0.18, 1.02, 0.5, 0.62)
+    for r, y in enumerate((0.08, 0.24)):
+        M.box('plank', 1.2, y, 0.32, 1.8, y + 0.02, 0.88)
+        for i in range(5):
+            for j in range(3): M.box('clay' if r else 'wall-brick', 1.24 + i * 0.11, y + 0.02, 0.38 + j * 0.17, 1.33 + i * 0.11, y + 0.07, 0.5 + j * 0.17)
+    # finished bricks stacked in the yard, and a barrow of clay
+    for i in range(3):
+        for k in range(3): M.box('wall-brick', 1.25 + i * 0.16, k * 0.06, 1.35, 1.39 + i * 0.16, k * 0.06 + 0.055, 1.6)
+    M.box('wood', 0.25, 0.08, 1.45, 0.5, 0.2, 1.7); M.blob('clay', 0.37, 0.2, 1.57, 0.1, seed=4, squash=0.5)
+    M.box('wood', 0.9, 0, 1.55, 1.05, 0.25, 1.75)   # woodpile for the firing
+    for k in range(3): M.rod('wood', (0.9, 0.05 + k * 0.07, 1.6), (1.05, 0.05 + k * 0.07, 1.6), 0.03, n=6)
+    return M
+
+
 def goldmine():
     M = Mesh()
     M.blob('rock-dark', 0.8, 0.4, 0.7, 0.75, seed=11, squash=0.75)
@@ -322,6 +347,7 @@ MODELS = [
     ('building/dairy', dairy, {'tiles': [1, 1]}),
     ('building/quarry', quarry, {'tiles': [2, 2]}),
     ('building/claypit', claypit, {'tiles': [2, 2]}),
+    ('building/brickyard', brickyard, {'tiles': [2, 2]}),
     ('building/goldmine', goldmine, {'tiles': [2, 2]}),
     ('building/blacksmith', blacksmith, {'tiles': [1, 1]}),
     ('building/watertower', watertower, {'tiles': [1, 1]}),

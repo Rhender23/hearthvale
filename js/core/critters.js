@@ -2,7 +2,7 @@
 //   firefly  spring and summer, drifting near trees and water (glows)
 //   moth     spring to autumn, fluttering around lit windows and lanterns
 //   frog     spring to autumn, sitting on pond banks, hopping now and then
-//   owl      any season, perched in a tree
+//   owl      any season, perched in a tree (rare: about one try in twelve of the others')
 // Night animals: on a random night one of these may wander in from the woods (at most one a night):
 //   fox 40% of nights · raccoon 20% · wolf 10% · bear 5%. Tap it to collect it. Every animal ever collected stays
 //   unlocked in the Animal library; each one can be spent on a home treasure.
@@ -15,7 +15,7 @@ export const CRITTERS = {
   firefly: { name: 'firefly', icon: '✨', seasons: [0, 1], max: 10 },
   moth:    { name: 'moth', icon: '🦋', seasons: [0, 1, 2], max: 4 },
   frog:    { name: 'frog', icon: '🐸', seasons: [0, 1, 2], max: 3 },
-  owl:     { name: 'owl', icon: '🦉', seasons: [0, 1, 2, 3], max: 2 },
+  owl:     { name: 'owl', icon: '🦉', seasons: [0, 1, 2, 3], max: 1, chance: 0.04 },   // rare: a lucky night
   fox:     { name: 'fox', icon: '🦊', night: 0.40 },
   raccoon: { name: 'raccoon', icon: '🦝', night: 0.20 },
   wolf:    { name: 'wolf', icon: '🐺', night: 0.10 },
@@ -29,9 +29,9 @@ export const HOME_DECOR = {
   lantern:  { name: 'Firefly lantern', critter: 'firefly', n: 5, desc: 'A jar of fireflies that glows by the bed.' },
   aquarium: { name: 'Frog aquarium', critter: 'frog', n: 3, desc: 'A little glass tank with a frog and some pond weed.' },
   owlcage:  { name: 'Owl in a cage', critter: 'owl', n: 2, desc: 'A tame owl on a perch in a hanging cage.' },
-  foxhearth:  { name: 'Fox by the hearth', critter: 'fox', n: 1, desc: 'A fox curled up asleep by the fire.' },
+  foxhearth:  { name: 'Fox family', critter: 'fox', n: 1, desc: 'A mother fox and her three cubs by the fire. The cubs grow up over the year.' },
   curio:      { name: 'Raccoon curio cabinet', critter: 'raccoon', n: 1, desc: 'A glass cabinet of shiny finds, with its collector peeking out.' },
-  wolfbasket: { name: 'Wolf-cub basket', critter: 'wolf', n: 1, desc: 'A wolf cub snoozing in a blanket-lined basket.' },
+  wolfbasket: { name: 'Wolf cub', critter: 'wolf', n: 1, desc: 'A wolf cub snoozing in a blanket-lined basket. Over the year it grows into a gentle wolf who lies by the hearth.' },
   bearnook:   { name: 'Bear-cub reading nook', critter: 'bear', n: 1, desc: 'A cosy corner with books and a sleepy bear cub.' },
 };
 export const critterLeft = (g, type) => (g.caught[type] || 0) - ((g.spent || {})[type] || 0);
@@ -84,7 +84,7 @@ export function createCritters(g) {
       t += dt; if (t < 2) return; t = 0;
       for (const type in CRITTERS) {
         const C = CRITTERS[type]; if (C.night || !C.seasons.includes(sea)) continue;
-        if (g.critters.filter(c => c.type === type).length >= C.max || g.rng() > 0.5) continue;
+        if (g.critters.filter(c => c.type === type).length >= C.max || g.rng() > (C.chance ?? 0.5)) continue;
         const p = spot(type); if (p) g.critters.push({ id: nextId++, type, x: p[0], y: p[1], hx: p[0], hy: p[1], a: g.rng() * 6.28, t: 0, next: 2, hop: 0 });
       }
     },

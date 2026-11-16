@@ -171,6 +171,36 @@ def grand_manor():
     return M
 
 
+# ---------------------------------------------------------------- v47: the stone houses built in brick instead
+def brick_house():
+    M = Mesh()
+    M.box('wall-brick', 0.12, 0, 0.2, 0.88, 0.88, 0.8)
+    for x, z in ((0.12, 0.8), (0.88, 0.8), (0.88, 0.2)): M.box('white', x - 0.03, 0, z - 0.03, x + 0.03, 0.88, z + 0.03)   # pale quoins
+    M.box('white', 0.1, 0.86, 0.18, 0.9, 0.9, 0.82)   # a pale band under the eaves
+    M.gable('roof-slate', 'wall-brick', 0.12, 0.88, 0.2, 0.8, 0.9, 1.32)
+    chimney(M, 0.16, 0.5, 0.86, 1.48, w=0.12, mat='wall-brick'); chimney(M, 0.84, 0.5, 0.86, 1.48, w=0.12, mat='wall-brick')
+    door(M, 0.5, 0.8, h=0.34); M.box('white', 0.41, 0.34, 0.8, 0.59, 0.38, 0.84)
+    M.box('step', 0.36, 0, 0.8, 0.64, 0.05, 0.9)
+    windows_z(M, (0.25, 0.75), 0.22, 0.8); windows_z(M, (0.25, 0.5, 0.75), 0.58, 0.8, w=0.13, h=0.18)
+    windows_x(M, (0.35, 0.65), 0.22, 0.88); windows_x(M, (0.35, 0.65), 0.58, 0.88, w=0.13, h=0.18)
+    flowerbox(M, 0.17, 0.33, 0.8); flowerbox(M, 0.67, 0.83, 0.8)
+    M.blob('bush', 0.08, 0.08, 0.88, 0.08, seed=17); M.blob('bush', 0.94, 0.08, 0.86, 0.07, seed=18)
+    return M
+
+
+def fine_brick_house():
+    M = brick_house()
+    # a white porch with columns, a dormer, a little bay window
+    for x in (0.4, 0.6): M.rod('white', (x, 0, 0.94), (x, 0.4, 0.94), 0.018)
+    M.box('white', 0.37, 0.4, 0.8, 0.63, 0.44, 0.97); M.lean('roof-slate', 0.36, 0.64, 0.8, 0.98, 0.44, 0.52)
+    M.box('wall-brick', 0.16, 0, 0.8, 0.34, 0.42, 0.9); M.lean('roof-slate', 0.14, 0.36, 0.8, 0.92, 0.42, 0.5)
+    window(M, 0.25, 0.16, 0.9, w=0.12, h=0.18)
+    M.box('wall-brick', 0.42, 0.92, 0.66, 0.58, 1.1, 0.86); M.gable('roof-slate', 'white', 0.42, 0.58, 0.66, 0.86, 1.1, 1.22, over=0.03)
+    window(M, 0.5, 0.95, 0.86, w=0.09, h=0.1)
+    M.blob('pink-flowers', 0.74, 0.05, 0.9, 0.06, seed=19)
+    return M
+
+
 HOUSE = [hut, cottage, cozy_cottage, timber_house, fine_timber_house, stone_house, fine_stone_house, manor, grand_manor]
 
 

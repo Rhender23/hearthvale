@@ -1,4 +1,4 @@
-// The stable's carts: a villager who loads up within 2 tiles of a path or road, with a stable in the village,
+// The stable's horses: everyone gets about 5% quicker (rides and lifts along the way), and its carts: a villager who loads up within 2 tiles of a path or road, with a stable in the village,
 // carries twice as much (the cart takes the load along the way).
 import { idx, inMap } from './world.js';
 
@@ -15,3 +15,7 @@ export function carryOf(g, v) {
   const base = g.mods.carry;
   return hasStable(g) && nearRoad(g, Math.round(v.x), Math.round(v.y)) ? base * 2 : base;
 }
+
+// Horses in the village: everyone walks 5% faster. (Cached per tick: the check is made on every step.)
+export const HORSE_SPEED = 1.05;
+export function horseSpeed(g) { if (g._horseAt !== g.clock) { g._horseAt = g.clock; g._horse = hasStable(g) ? HORSE_SPEED : 1; } return g._horse; }

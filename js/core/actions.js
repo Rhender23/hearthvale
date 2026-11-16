@@ -10,9 +10,12 @@ import { dutyFailed } from './duty.js';
 import { besideThirstyHome, anyThirstyHome, fillHomeAt } from './household.js';
 import { isGrand, stageDone, canWork, beginNext } from './grand.js';
 import { isOrchard, restingWhy } from './orchards.js';
-import { carryOf } from './stable.js';
+import { carryOf, horseSpeed } from './stable.js';
 const RUN = 0, DONE = 1, FAIL = 2;
+import { maybePaint } from './paintings.js';
+import { maybeSetAside } from './handson.js';
 const FARM_KIND = 6;
+const PIE = { pumpkins: 3, more: 4 };   // a batch of pies: 3 pumpkins become 7 food, on top of the bread
 const at = v => [Math.round(v.x), Math.round(v.y)];
 const cheb = (x, y, a, b) => Math.max(Math.abs(x - a), Math.abs(y - b));
 const phase = (a, p) => { a.phase = p; a.t = 0; a.tries = 0; return RUN; };
@@ -139,7 +142,7 @@ const H = {
         if (a.t < 0.9 * g.mods.farmRate) return RUN;
         a.t = 0; b.food--;
         if (v.carryRes !== crop) v.carry = 0;
-        v.carryKind = isOrchard(b) ? KIND_CODE.fruit : FARM_KIND; v.carryRes = crop; v.carry++;
+        v.carryKind = BUILD[b.k].kind ? KIND_CODE[BUILD[b.k].kind] : isOrchard(b) ? KIND_CODE.fruit : FARM_KIND; v.carryRes = crop; v.carry++;
         return v.carry >= carryOf(g, v) ? phase(a, 'haul') : RUN;
       }
       case 'haul': return hauling(g, v, a, 'go');
@@ -216,11 +219,14 @@ const H = {
       case 'work':
         a.t += dt;
         if (a.t < c.time * (a.slow || 1) * ((g.mods.craft || {})[b.k] || 1) * ((TIERS[b.k] && TIERS[b.k][b.lvl || 0].craftMul) || 1)) return RUN;
-        if (outRes === 'culture') { g.culture = (g.culture || 0) + c.out.culture; g.events.emit('crafted', { v, b, res: outRes, n: c.out.culture }); return a.src === 'auto' ? DONE : phase(a, 'go'); }
+        if (outRes === 'culture') { g.culture = (g.culture || 0) + c.out.culture; g.events.emit('crafted', { v, b, res: outRes, n: c.out.culture }); if (b.k === 'studio') maybePaint(g, b); return a.src === 'auto' ? DONE : phase(a, 'go'); }
         { const an = BUILD[b.k].animals, scale = an ? 0.5 + 0.5 * (b.animals ?? an.start) / (an.cap + (g.mods.penAdd || 0)) : 1; v.carry = Math.max(1, Math.round(c.out[outRes] * scale)); }
         v.carryRes = outRes; v.carryKind = KIND_CODE[c.kind] || 9;
+        if (b.k === 'bakery' && g.pantry && (g.pantry.pumpkins || 0) >= PIE.pumpkins && g.res.food >= PIE.pumpkins) {   // pumpkin pies: three pumpkins in, more food out
+          g.pantry.pumpkins -= PIE.pumpkins; g.res.food -= PIE.pumpkins; v.carry += PIE.pumpkins + PIE.more; v.carryKind = KIND_CODE.pies;
+        }
         if (c.extra) for (const r in c.extra) if (canStore(g, r)) { addRes(g, r, c.extra[r]); record(g, 'in', r, c.extra[r]); }
-        g.events.emit('crafted', { v, b, res: outRes, n: v.carry });
+        g.events.emit('crafted', { v, b, res: outRes, n: v.carry }); maybeSetAside(g, b, outRes, v.carry);
         return phase(a, 'haul');
       case 'haul': {
         const s = haul(g, v, a);
@@ -426,7 +432,7 @@ export function footing(g, x, y) {
 function move(g, v, dt) {
   const [nx, ny] = v.path[0];
   if (!walkable(g.w, nx, ny)) { v.path = []; v.moving = false; return; }
-  const dx = nx - v.x, dy = ny - v.y, d = Math.hypot(dx, dy), st = g.mods.speed * dt * footing(g, nx, ny);   // quicker on paths and roads
+  const dx = nx - v.x, dy = ny - v.y, d = Math.hypot(dx, dy), st = g.mods.speed * dt * footing(g, nx, ny) * horseSpeed(g);   // quicker on paths and roads, and with horses
   v.moving = true;
   if (dx - dy !== 0) v.dir = dx - dy > 0 ? 1 : -1;
   if (d <= st) { v.x = nx; v.y = ny; v.path.shift(); if (!v.path.length) v.moving = false; const id = g.w.occ[idx(nx, ny)], p = id && g.bmap.get(id); if (p && p.k === 'path') p.wear = (p.wear || 0) + 1; }   // footfall wears the path
@@ -463,6 +469,8 @@ export function registerAction(type, fn) { H[type] = fn; ACTION_TYPES.push(type)
 export function stepCost(b, to) {
   const c = {}, tiers = TIERS[b.k];
   for (let l = b.lvl + 1; l <= to; l++) for (const r in tiers[l].cost) c[r] = (c[r] || 0) + tiers[l].cost[r];
+  // Built in brick: the stone of a stone-house level is mostly bricks instead (two bricks for every three stone).
+  if (b.k === 'house' && b.brick) for (let l = b.lvl + 1; l <= to; l++) if ([5, 6].includes(l) && tiers[l].cost.stone) { const st = tiers[l].cost.stone; c.stone -= Math.round(st * 0.75); c.bricks = (c.bricks || 0) + Math.round(st * 0.5); }
   // A home moving up needs one of each good its new level uses, in stock.
   for (const r of tiers[to].goods || []) c[r] = (c[r] || 0) + 1;
   return c;

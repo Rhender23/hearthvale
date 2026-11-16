@@ -5,11 +5,11 @@
 //
 // Everything in a home stands where the player puts it: 'back' pieces against the back wall (bookcases, cupboards,
 // treasures), the rest anywhere on the floor (tables, chairs, chests, rugs). Beds are part of the layout too, one for
-// every bed the home has, and can be moved and turned like anything else. Homes from the Timber house up (and the
-// lodge) have an upstairs. Positions are in room units: u runs left to right (0..1), d from the back wall (0) to the
+// every bed the home has, and can be moved, turned and taken away like anything else. Homes from the Timber house up
+// have an upstairs, and the biggest an attic too. Positions are in room units: u runs left to right (0..1), d from the back wall (0) to the
 // front (1); floor 0 is downstairs.
-//   b.furn = [{ id, u, d, floor, flip }]      b.beds = [{ u, d, floor, flip }]
-import { BUILD } from './config.js';
+//   b.furn = [{ id, u, d, floor, flip, at }]      b.beds = [{ u, d, floor, flip, n }] (n: 1 a single bed, 2 a bunk)
+import { DAY, BUILD } from './config.js';
 import { HOME_DECOR, critterLeft, CRITTERS } from './critters.js';
 import { pay, have, addRes, notice, levelName, beds } from './state.js';
 
@@ -27,9 +27,9 @@ export const PIECES = {
   lantern:  { name: 'Firefly lantern', icon: '🏮', critter: 'firefly', spot: 'back', w: 0.3, h: 0.4, treasure: true, age: 0 },
   aquarium: { name: 'Frog aquarium', icon: '🐸', critter: 'frog', spot: 'floor', w: 0.6, h: 0.9, treasure: true, age: 0 },
   owlcage:  { name: 'Owl in a cage', icon: '🦉', critter: 'owl', spot: 'back', w: 0.5, h: 1.5, treasure: true, age: 0 },
-  foxhearth:  { name: 'Fox by the hearth', icon: '🦊', critter: 'fox', spot: 'floor', w: 0.8, h: 0.4, treasure: true, age: 0 },
+  foxhearth:  { name: 'Fox family', icon: '🦊', critter: 'fox', spot: 'floor', w: 0.8, h: 0.4, treasure: true, age: 0, grows: true },
   curio:      { name: 'Raccoon curio cabinet', icon: '🦝', critter: 'raccoon', spot: 'back', w: 0.9, h: 1.6, treasure: true, age: 0 },
-  wolfbasket: { name: 'Wolf-cub basket', icon: '🐺', critter: 'wolf', spot: 'floor', w: 0.8, h: 0.5, treasure: true, age: 0 },
+  wolfbasket: { name: 'Wolf cub', icon: '🐺', critter: 'wolf', spot: 'floor', w: 0.8, h: 0.5, treasure: true, age: 0, grows: true },
   bearnook:   { name: 'Bear-cub reading nook', icon: '🐻', critter: 'bear', spot: 'back', w: 1.1, h: 1.6, treasure: true, age: 0 },
 };
 export const FURNITURE = Object.keys(PIECES).filter(k => !PIECES[k].treasure);
@@ -40,13 +40,37 @@ const critterCost = id => HOME_DECOR[id] ? HOME_DECOR[id].n : 0;
 export const isHome = b => !!b && b.done && !!BUILD[b.k].home;
 const furn = b => (b.furn = b.furn || []);
 
-// How many floors: an upstairs from the Timber house (level 3) up, and in the lodge.
-export const floorsOf = b => (!isHome(b) ? 1 : b.k === 'lodge' || (b.k === 'house' && (b.lvl || 0) >= 3) ? 2 : 1);
+// How many floors: one for huts and cottages; an upstairs from the Timber house (level 3); an attic as well in the
+// manor, the grand manor and the lodge.
+export const floorsOf = b => (!isHome(b) ? 1 : b.k === 'lodge' || (b.k === 'house' && (b.lvl || 0) >= 7) ? 3 : b.k === 'house' && (b.lvl || 0) >= 3 ? 2 : 1);
+export const FLOOR_NAMES = ['downstairs', 'upstairs', 'the attic'];
 
-// Where new beds go: down one side downstairs (only two downstairs once there is an upstairs), in rows upstairs.
-const BEDS_ONE = [[0.74, 0.1], [0.74, 0.36], [0.74, 0.62], [0.74, 0.88], [0.3, 0.88], [0.3, 0.12]];
-const BEDS_DOWN = [[0.6, 0.1], [0.55, 0.88], [0.15, 0.88], [0.64, 0.5]];   // the stairs take the right-hand side; the last two only when upstairs is full
-const BEDS_UP = [[0.18, 0.1], [0.5, 0.1], [0.82, 0.1], [0.18, 0.5], [0.5, 0.5], [0.18, 0.9], [0.5, 0.9], [0.82, 0.9]];   // three rows, clear of the stairwell (right, middle)
+// Beds stand in frames: a single bed (n: 1) or a bunk (n: 2). Cottages and cozy cottages sleep in bunks; the hut has
+// straw pallets. In homes with an upstairs, downstairs is kitchen and parlour, and every bed is upstairs (and in the
+// attic): six frames to a floor, bunks once there are more beds than that.
+//   b.beds = [{ u, d, floor, flip, n }]
+const ROWS = [0.14, 0.38, 0.62, 0.86];
+const SLOTS_ONE = ROWS.map(d => [0.8, d]);                                       // down the right-hand side
+const SLOTS_UP = [...ROWS.map(d => [0.2, d]), [0.8, 0.14], [0.8, 0.86]];         // both sides, clear of the stairwell (right, middle)
+export const PER_FLOOR = 6;
+const bunkHome = b => b.k === 'house' && (b.lvl || 0) >= 1 && (b.lvl || 0) <= 2;
+export const bedCount = b => (b.beds || []).reduce((s, f) => s + (f.n || 1), 0);
+
+// A fresh layout: where every bed goes.
+function planBeds(b, want) {
+  const floors = floorsOf(b), out = [];
+  if (floors === 1) {
+    const frames = bunkHome(b) ? Math.ceil(want / 2) : Math.min(want, SLOTS_ONE.length + 2);
+    for (let i = 0; i < frames; i++) { const [u, d] = SLOTS_ONE[i] || [0.3, 0.86 - (i - 4) * 0.24]; out.push({ u, d, floor: 0, flip: false, n: 1 }); }
+  } else {
+    for (let fl = 1; fl < floors; fl++) for (const [u, d] of SLOTS_UP) out.push({ u, d, floor: fl, flip: false, n: 1 });
+    out.length = Math.min(out.length, want);
+  }
+  // more beds than frames: frames become bunks, upstairs first
+  let extra = want - out.length;
+  for (const f of out) { if (extra <= 0) break; f.n = 2; extra--; }
+  return out;
+}
 // Older saves placed pieces at numbered spots; this is where those spots were.
 const OLD_SPOTS = { b1: [0.36, 0.04], f1: [0.36, 0.52], f2: [0.18, 0.72], f3: [0.56, 0.66], b2: [0.6, 0.04], f4: [0.5, 0.88], f5: [0.26, 0.34], b3: [0.74, 0.04], f6: [0.72, 0.88], f7: [0.1, 0.9], b4: [0.48, 0.04], f8: [0.4, 0.24] };
 export const BACK_D = 0.04;
@@ -60,16 +84,30 @@ export function syncLayout(b) {
     if (f.u == null) { const o = OLD_SPOTS[f.spot] || [0.5, 0.6]; f.u = o[0]; f.d = o[1]; f.floor = 0; delete f.spot; }
     if ((f.floor || 0) >= floors) f.floor = 0;
   }
-  const want = beds(b), list = (b.beds = b.beds || []);
-  for (const bd of list) if ((bd.floor || 0) >= floors) bd.floor = 0;
-  while (list.length > want) list.pop();
-  while (list.length < want) {
-    const taken = (fl, u, d) => list.some(x => (x.floor || 0) === fl && Math.abs(x.u - u) < 0.2 && Math.abs(x.d - d) < 0.12);
-    const plan = floors > 1 ? [...BEDS_DOWN.slice(0, 2).map(p => [0, ...p]), ...BEDS_UP.map(p => [1, ...p]), ...BEDS_DOWN.slice(2).map(p => [0, ...p])] : BEDS_ONE.map(p => [0, ...p]);
-    const free = plan.find(([fl, u, d]) => !taken(fl, u, d)) || [floors - 1, 0.5, 0.5 + 0.05 * (list.length % 8)];
-    list.push({ floor: free[0], u: free[1], d: free[2], flip: false });
+  // A home whose floors changed lays its beds out afresh (the bedrooms move up). Otherwise beds are added or taken
+  // away one at a time, keeping where the household put the rest. (Furniture stays.)
+  const want = beds(b);
+  if ((b.bedFloors || 1) !== floors || !b.beds) b.beds = planBeds(b, want);
+  b.bedFloors = floors;
+  const list = b.beds;
+  for (const f of list) { f.n = f.n || 1; if ((f.floor || 0) >= floors) f.floor = floors - 1; if (floors > 1 && !f.floor) f.floor = 1; }
+  while (bedCount(b) > want) { const f = list[list.length - 1]; if (f.n > 1) f.n--; else list.pop(); }
+  while (bedCount(b) < want) {
+    const fresh = planBeds(b, want).find(p => !list.some(x => x.floor === p.floor && Math.abs(x.u - p.u) < 0.2 && Math.abs(x.d - p.d) < 0.12));
+    const onFloor = fl => list.filter(x => x.floor === fl).length;
+    if (fresh && (floors === 1 || onFloor(fresh.floor) < PER_FLOOR) && !(bunkHome(b) && list.some(x => x.n === 1))) list.push({ ...fresh, n: 1 });
+    else { const single = list.find(x => x.n === 1); if (single) single.n = 2; else list.push({ u: 0.5, d: 0.5, floor: floors - 1, flip: false, n: 1 }); }
   }
 }
+// Take a bed away (a bunk becomes a single): one less person can live here. At least one bed always stays.
+export function removeBed(b, frame) {
+  if (beds(b) <= 1) return { ok: false, reason: 'Every home keeps at least one bed.' };
+  b.bedsOff = (b.bedsOff || 0) + 1;
+  if ((frame.n || 1) > 1) frame.n--; else b.beds = b.beds.filter(f => f !== frame);
+  return { ok: true };
+}
+// Put a bed back (up to the level's own number of beds).
+export function addBed(b) { if (!(b.bedsOff > 0)) return { ok: false }; b.bedsOff--; syncLayout(b); return { ok: true }; }
 // Everything on one floor, as { kind: 'bed'|'piece', ref, i }.
 export function itemsOn(b, floor) {
   syncLayout(b);
@@ -112,7 +150,7 @@ export function placePiece(g, b, id, u, d, floor = 0) {
   const p = PIECES[id];
   if (p.treasure) { g.spent = g.spent || {}; g.spent[p.critter] = (g.spent[p.critter] || 0) + critterCost(id); (b.decor = b.decor || []).push(id); g.beautyDirty = true; notice(g, `A ${p.name.toLowerCase()} now brightens the ${levelName(b).toLowerCase()}.`); }
   else pay(g, p.cost);
-  const [pu, pd] = fitPos(p.spot, u, d), f = { id, u: pu, d: pd, floor: Math.min(floor, floorsOf(b) - 1), flip: false };
+  const [pu, pd] = fitPos(p.spot, u, d), f = { id, u: pu, d: pd, floor: Math.min(floor, floorsOf(b) - 1), flip: false, at: g.clock };   // at: when it arrived (the cubs grow from then)
   furn(b).push(f);
   return { ok: true, f };
 }
@@ -133,3 +171,7 @@ export function putAway(g, b, item) {
   b.furn = furn(b).filter(x => x !== f);
   return { ok: true };
 }
+
+// The fox cubs and the wolf cub grow up over a year: cubs, then young, then grown (0, 1, 2).
+export const GROW_DAYS = 8;   // days at each stage (a year is 24 days)
+export const growStage = (g, f) => { if (!PIECES[f.id] || !PIECES[f.id].grows) return 0; if (f.at == null) f.at = g.clock; return Math.min(2, Math.floor(Math.max(0, g.clock - f.at) / (GROW_DAYS * DAY))); };   // older saves start growing now

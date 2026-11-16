@@ -7,8 +7,7 @@ import { levelName } from './state.js';
 const GATHER = { wood: ['chop wood', 'Chopping wood', 'the trees'], stone: ['mine stone', 'Mining stone', 'the rocks'], gold: ['mine gold', 'Mining gold', 'the gold seam'],
   berry: ['pick berries', 'Picking berries', 'the berry bushes'], fish: ['fish', 'Fishing', 'the water'], clay: ['dig clay', 'Digging clay', 'the clay bank'] };
 const FIELD = { farm: 'Tending the vegetables', wheatfield: 'Harvesting wheat', fiberfield: 'Harvesting fiber' };
-const SIT = { tavern: 'Having a drink at the tavern', learn: 'At lessons in the schoolhouse', theater: 'Watching a play at the theater', church: 'At church',
-  read: 'Reading at the library', play: 'Playing at the playground', fire: 'Telling stories by the fire', ...Object.fromEntries(Object.values(LEISURE).map(L => [L.key, L.doing])) };
+const SIT = { fire: 'Telling stories by the fire', ...Object.fromEntries(Object.values(LEISURE).map(L => [L.key, L.doing])) };   // gathering places: leisure.js
 const FOOD_NAME = { bread: 'bread', cheese: 'cheese', eggs: 'eggs', honey: 'honey' };
 // Workshops whose work is not "making" something.
 const CRAFT_DOING = { studio: 'Painting', coop: 'Collecting eggs', pasture: 'Milking the cows', sheepfold: 'Shearing the sheep', apiary: 'Tending the bees' };

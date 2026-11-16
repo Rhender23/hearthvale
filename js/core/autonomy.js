@@ -2,7 +2,7 @@
 //   score = 100 x wish weight (from the Manager) + quality - distance penalty + a little noise
 // then picks among the top few so the village never looks robotic.
 // Autonomy only ever fills an empty slot or replaces another autonomous choice.
-import { LEISURE, LEISURE_KEY } from './leisure.js';
+import { LEISURE, LEISURE_KEY, leisureAction } from './leisure.js';
 import { canWork } from './grand.js';
 import { NODE_INFO, KEY_NODE, BUILD, FARM_MAX_WORKERS } from './config.js';
 import { scan, bfs } from './path.js';
@@ -32,12 +32,6 @@ function probeFor(g) {
         else if (!bl.done && canWork(g, bl)) (out = out || []).push(['build', id]);
         if (bl.done && bl.pending > bl.lvl && !g.villagers.some(u => u.act && u.act.type === 'upgrade' && u.act.b === id)) (out = out || []).push(['upgrade', id]);
         if (bl.k === 'well' && bl.done && bl.water >= 1) (out = out || []).push(['well', id]);
-        if (bl.k === 'tavern' && bl.done) (out = out || []).push(['tavern', id]);
-        if (bl.k === 'school' && bl.done) (out = out || []).push(['learn', id]);
-        if (bl.k === 'theater' && bl.done) (out = out || []).push(['theater', id]);
-        if (bl.k === 'church' && bl.done) (out = out || []).push(['church', id]);
-        if (bl.k === 'library' && bl.done) (out = out || []).push(['read', id]);
-        if (bl.k === 'playground' && bl.done) (out = out || []).push(['play', id]);
         if (bl.k === 'bench' && bl.done) (out = out || []).push(['bench', id]);
         if (bl.done && LEISURE[bl.k]) (out = out || []).push([LEISURE[bl.k].key, id]);
       }
@@ -83,10 +77,6 @@ export function options(g, v) {
     else if (found.shore) add('water', found.shore.d, thirst, { shore: true });
   }
   if (found.upgrade) add('upgrade', found.upgrade.d, 0, found.upgrade.target);
-  if (found.tavern) add('tavern', found.tavern.d, 0, found.tavern.target);
-  if (found.learn) add('learn', found.learn.d, 0, found.learn.target);
-  if (found.theater) add('theater', found.theater.d, 0, found.theater.target);
-  for (const k of ['church', 'read', 'play']) if (found[k]) add(k, found[k].d, 0, found[k].target);
   for (const k of Object.keys(LEISURE_KEY)) if (found[k]) add(k, found[k].d, 0, found[k].target);
   if (found.build) add('build', found.build.d, 0, found.build.target);
   if (found.fire) add('fire', found.fire.d, 0, null);
@@ -113,13 +103,7 @@ function makeAction(g, v, o) {
   if (o.key === 'craft') return action('craft', { b: o.target, key: 'craft', why });
   if (o.key === 'water') return action('water', { well: o.target && o.target.well, key: 'water', why });
   if (o.key === 'upgrade') { const b = g.bmap.get(o.target); return b ? action('upgrade', { b: b.id, to: b.pending, key: 'upgrade', why }) : null; }
-  if (o.key === 'tavern') return action('sit', { tavern: o.target, dur: 20 + g.rng() * 15, key: 'tavern', why });
-  if (o.key === 'learn') return action('sit', { tavern: o.target, dur: 20 + g.rng() * 10, key: 'learn', why });
-  if (o.key === 'theater') return action('sit', { tavern: o.target, dur: 25 + g.rng() * 15, key: 'theater', why });
-  if (o.key === 'church') return action('sit', { tavern: o.target, dur: 30 + g.rng() * 20, key: 'church', why });
-  if (o.key === 'read') return action('sit', { tavern: o.target, dur: 25 + g.rng() * 15, key: 'read', why });
-  if (LEISURE_KEY[o.key]) { const L = LEISURE_KEY[o.key]; return action('sit', { tavern: o.target, dur: L.dur[0] + g.rng() * L.dur[1], key: o.key, why }); }
-  if (o.key === 'play') return action('sit', { tavern: o.target, dur: 15 + g.rng() * 10, key: 'play', why });
+  if (LEISURE_KEY[o.key]) return action('sit', { ...leisureAction(g, o.key, o.target), why });   // every gathering place (leisure.js)
   if (o.key === 'build') return action('build', { b: o.target, key: 'build', why });
   if (o.key === 'fire') return action('sit', { dur: 14 + g.rng() * 10, key: 'fire', why });
   if (o.key === 'rest') return action('rest', { dur: 6 + g.rng() * 10, wander: g.rng() < 0.5, bench: o.target, key: 'rest', why: v.energy < 0.3 ? 'Taking a breather: feeling tired.' : 'Taking a moment to enjoy the day.' });
