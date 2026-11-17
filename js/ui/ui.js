@@ -27,6 +27,7 @@ import { costEl, stepEl, refreshStep } from './costs.js';
 import { addFill, syncFill, fullLine } from './storage.js';
 
 import { createMenus } from './menus.js';
+import { createAsk } from './ask.js';
 import { createSheets } from './sheets.js';
 import { createTooltips } from './tooltips.js';
 import { directorView } from './directorview.js';
@@ -206,6 +207,10 @@ export function createUI(ctx) {
   // ---------- the menus around the map (top bar, tab bar, Village / Book / Game sheets) live in menus.js ----------
   api.refreshGame = () => sheet.rebuild();
   api.goHome = () => { const tc = hub(g()); selectBuilding(tc); center(tc.x + 0.5, tc.y + 0.5); };
+
+  // ---------- asking before anything that can't be undone, and asking for names (ask.js) ----------
+  Object.assign(api, createAsk({ sheet, pop, ui }));
+  api.closeAll = () => { sheet.close(); pop.close(); clearSel(); };
 
   // ---------- sheets: build menu, upgrades, library, storage, the Book, market, details (sheets.js) ----------
   const { CARD_TIPS } = createSheets({ ui, g, sheet, pop, api, say, toast, off, menus: () => menus });

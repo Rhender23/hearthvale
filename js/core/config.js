@@ -1,5 +1,5 @@
 // Build number, shown in the game menu. Raise it with every published build.
-export const VERSION = 48;
+export const VERSION = 48.1;
 export const MAX_VILLAGERS = 300;   // the most villagers Hearthvale will ever hold
 // Static game data. No logic, no state. Every other module reads from here.
 export const N = 40, TW = 64, TH = 32;

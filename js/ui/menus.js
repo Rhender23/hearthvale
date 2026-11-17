@@ -118,16 +118,11 @@ export function createMenus(m) {
       try { ctx.loadText(slots.read(i)); sheet.close(); toast('Welcome back.'); } catch (e) { console.warn(e); toast('That save could not be read.'); }
     });
   }
-  function rename(i) { const s = slots.list()[i]; const n = prompt('Name this village', s.meta ? s.meta.name : ''); if (n && n.trim()) { slots.rename(i, n.trim().slice(0, 32)); sheet.rebuild(); } }
+  function rename(i) { const s = slots.list()[i]; api.askText({ text: 'Name this village', value: s.meta ? s.meta.name : '', onOk: n => { slots.rename(i, n); sheet.rebuild(); } }); }
   function wipe(i) { confirmIn(`Delete slot ${i + 1}?`, 'The village kept there is gone for good.', 'Delete', () => { slots.clear(i); sheet.rebuild(); }); }
-  // A confirm that sits inside the sheet, not a second layer over it.
-  function confirmIn(text, sub, ok, onOk) {
-    const body = sheet.root.querySelector('.sh-body'), box = el('div', { className: 'inconfirm' }, [el('b', { textContent: text }), el('small', { textContent: sub })]);
-    const yes = el('button', { className: 'pbtn primary', textContent: ok }), no = el('button', { className: 'pbtn', textContent: 'Cancel' });
-    yes.onclick = () => { box.remove(); onOk(); }; no.onclick = () => box.remove();
-    box.append(el('div', { className: 'row end' }, [no, yes]));
-    body.querySelectorAll('.inconfirm').forEach(x => x.remove()); body.prepend(box); body.scrollTop = 0;
-  }
+  // Questions go through the one asking rule (ask.js): here, inside the Game sheet.
+  const confirmIn = (text, sub, ok, onOk) => api.ask({ text, sub, ok, onOk });
+
   function exportFile() {
     const G = g(), blob = new Blob([ctx.current()], { type: 'application/json' }), a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = `hearthvale-day${dayNumber(G)}.json`; document.body.append(a); a.click(); a.remove();

@@ -56,6 +56,28 @@ async def run(p, label, w, h, touch):
         await pg.click(f'[data-tab={tab}]'); await pg.wait_for_timeout(300)
         closed = await pg.evaluate("() => document.querySelector('.sheet').hidden || !document.body.classList.contains('sheet-open')")
         check(f'{tab}: tapping its tab again closes it', closed)
+    # questions never get lost: New game and Rename from the Game sheet
+    await pg.click('[data-tab=game]'); await pg.wait_for_timeout(300)
+    await pg.click('.slot .sm button'); await pg.wait_for_timeout(300)
+    btns = await pg.query_selector_all('.slot .sm button')
+    ren = [b for b in btns if (await b.text_content()) == 'Rename']
+    if ren:
+        await ren[0].click(); await pg.wait_for_timeout(250)
+        f = await pg.query_selector('input.asktext')
+        check('game: Rename asks for a name inside the sheet', f is not None)
+        if f:
+            await f.fill('Willowmere'); await pg.click('.inconfirm .pbtn.primary'); await pg.wait_for_timeout(250)
+            check('game: the slot takes its new name', 'Willowmere' in (await pg.text_content('.slot')))
+    else: check('game: a saved slot offers Rename', False)
+    await pg.evaluate("() => { __hv.game.clock += 432 * 3; }")
+    await pg.click('.lrow[data-k=newgame]'); await pg.wait_for_timeout(250)
+    q = await pg.query_selector('.inconfirm')
+    check('game: New game asks first, inside the sheet', q is not None)
+    if q:
+        await pg.click('.inconfirm .pbtn.danger'); await pg.wait_for_timeout(600)
+        fresh = await pg.evaluate("async () => { const st = await import('/js/core/state.js'); return st.dayNumber(__hv.game) === 1 && !document.body.classList.contains('sheet-open'); }")
+        check('game: New game starts a fresh village and closes the menu', fresh)
+    await pg.evaluate("() => { for (let i = 0; i < 5; i++) { localStorage.removeItem('hv-slot-' + i); localStorage.removeItem('hv-slot-meta-' + i); } }")
     # stores bar: the five basics and the homes are all visible without scrolling
     fits = await pg.evaluate("""() => { const h = document.getElementById('hud'), r = h.getBoundingClientRect();
       return [...h.children].filter(c => !c.classList.contains('adv') && getComputedStyle(c).display !== 'none').every(c => { const q = c.getBoundingClientRect(); return q.right <= r.right + 1 && q.left >= r.left - 1; }); }""")
